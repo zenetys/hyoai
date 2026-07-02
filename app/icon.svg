@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Local Chat">
+    <defs>
+        <linearGradient id="lc" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6366F1" />
+            <stop offset="1" stop-color="#8B5CF6" />
+        </linearGradient>
+    </defs>
+    <rect width="512" height="512" rx="124" fill="url(#lc)" />
+    <g fill="#c4b5fd">
+        <rect x="230" y="220" width="200" height="140" rx="46" />
+        <path d="M384 356C388 378 399 391 412 396C386 393 362 383 346 358Z" />
+    </g>
+    <g fill="#ffffff">
+        <rect x="84" y="124" width="200" height="140" rx="46" />
+        <path d="M128 260C124 282 113 295 100 300C126 297 150 287 166 262Z" />
+    </g>
+    <g fill="url(#lc)">
+        <circle cx="150" cy="194" r="13" />
+        <circle cx="184" cy="194" r="13" />
+        <circle cx="218" cy="194" r="13" />
+    </g>
+</svg>
