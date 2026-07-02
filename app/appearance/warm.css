@@ -1,0 +1,70 @@
+/*
+ * WARM skin: cozy sand/amber, the warm counterpart to Soft. Terracotta
+ * primary, warm diffuse shadows, generous radius.
+ */
+html[data-skin="warm"] {
+    --radius: 0.875rem;
+    --bubble-radius: 1.25rem;
+    --panel-radius: 1.125rem;
+    --background: oklch(0.972 0.012 75);
+    --foreground: oklch(0.24 0.02 60);
+    --card: oklch(0.99 0.008 80);
+    --card-foreground: oklch(0.24 0.02 60);
+    --popover: oklch(0.99 0.008 80);
+    --popover-foreground: oklch(0.24 0.02 60);
+    --primary: oklch(0.55 0.13 45);
+    --primary-foreground: oklch(0.99 0.01 70);
+    --secondary: oklch(0.93 0.02 70);
+    --secondary-foreground: oklch(0.34 0.03 55);
+    --muted: oklch(0.945 0.015 70);
+    --muted-foreground: oklch(0.5 0.025 55);
+    --accent: oklch(0.92 0.035 55);
+    --accent-foreground: oklch(0.34 0.05 50);
+    --border: oklch(0.87 0.018 70 / 70%);
+    --input: oklch(0.86 0.018 70);
+    --ring: oklch(0.6 0.11 50);
+    --elevation-surface: 0 1px 2px oklch(0.3 0.04 50 / 6%), 0 2px 8px oklch(0.3 0.04 50 / 7%);
+    --elevation-raised:
+        0 2px 6px oklch(0.3 0.04 50 / 8%), 0 12px 28px -8px oklch(0.3 0.04 50 / 14%);
+    --elevation-overlay:
+        0 8px 16px oklch(0.3 0.04 50 / 9%), 0 24px 56px -12px oklch(0.3 0.04 50 / 19%);
+    --sidebar: oklch(0.955 0.014 72);
+    --sidebar-foreground: oklch(0.24 0.02 60);
+    --sidebar-primary: oklch(0.55 0.13 45);
+    --sidebar-primary-foreground: oklch(0.99 0.01 70);
+    --sidebar-accent: oklch(0.91 0.025 60);
+    --sidebar-accent-foreground: oklch(0.3 0.04 55);
+    --sidebar-border: oklch(0.87 0.018 70 / 55%);
+    --sidebar-ring: oklch(0.6 0.11 50);
+}
+
+html[data-skin="warm"].dark {
+    --background: oklch(0.18 0.012 60);
+    --foreground: oklch(0.95 0.012 75);
+    --card: oklch(0.235 0.014 60);
+    --card-foreground: oklch(0.95 0.012 75);
+    --popover: oklch(0.27 0.016 60);
+    --popover-foreground: oklch(0.95 0.012 75);
+    --primary: oklch(0.7 0.12 50);
+    --primary-foreground: oklch(0.2 0.05 50);
+    --secondary: oklch(0.29 0.018 60);
+    --secondary-foreground: oklch(0.92 0.012 72);
+    --muted: oklch(0.28 0.016 60);
+    --muted-foreground: oklch(0.73 0.018 68);
+    --accent: oklch(0.32 0.03 55);
+    --accent-foreground: oklch(0.93 0.02 65);
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 14%);
+    --ring: oklch(0.62 0.11 50);
+    --elevation-surface: 0 0 0 1px oklch(1 0 0 / 4%);
+    --elevation-raised: 0 0 0 1px oklch(1 0 0 / 6%), 0 8px 24px oklch(0 0 0 / 38%);
+    --elevation-overlay: 0 0 0 1px oklch(1 0 0 / 7%), 0 24px 48px oklch(0 0 0 / 52%);
+    --sidebar: oklch(0.215 0.013 60);
+    --sidebar-foreground: oklch(0.95 0.012 75);
+    --sidebar-primary: oklch(0.7 0.12 50);
+    --sidebar-primary-foreground: oklch(0.2 0.05 50);
+    --sidebar-accent: oklch(0.3 0.025 58);
+    --sidebar-accent-foreground: oklch(0.93 0.012 70);
+    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-ring: oklch(0.62 0.11 50);
+}
