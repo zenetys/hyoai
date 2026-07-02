@@ -1,0 +1,80 @@
+{
+    "appName": "HYOAI",
+    "defaultModel": "ollama",
+    "models": [
+        {
+            "id": "ollama",
+            "name": "Ollama (local)",
+            "baseUrl": "http://127.0.0.1:11434/v1",
+            "type": "openai",
+            "model": "llama3.2:1b",
+            "streaming": true,
+            "sendContext": true
+        },
+        {
+            "id": "openrouter",
+            "name": "OpenRouter (public API)",
+            "baseUrl": "https://openrouter.ai/api/v1",
+            "type": "openai",
+            "model": "openai/gpt-4o-mini",
+            "apiKey": "sk-or-xxxxxxxx",
+            "streaming": true,
+            "sendContext": true,
+            "modalities": { "image": true }
+        },
+        {
+            "id": "claude",
+            "name": "Claude (Anthropic)",
+            "baseUrl": "https://api.anthropic.com/v1",
+            "type": "openai",
+            "model": "claude-sonnet-4-6",
+            "apiKey": "sk-ant-xxxxxxxx",
+            "streaming": true,
+            "headers": { "anthropic-dangerous-direct-browser-access": "true" },
+            "modalities": { "image": true }
+        },
+        {
+            "id": "llamacpp",
+            "name": "Local llama.cpp",
+            "baseUrl": "http://127.0.0.1:8080",
+            "type": "llama.cpp",
+            "streaming": true,
+            "effort": {
+                "default": "medium",
+                "levels": [
+                    { "id": "low", "label": "Low", "body": { "reasoning_effort": "low" } },
+                    { "id": "medium", "label": "Medium", "body": { "reasoning_effort": "medium" } },
+                    { "id": "high", "label": "High", "body": { "reasoning_effort": "high" } }
+                ]
+            }
+        },
+        {
+            "id": "vllm",
+            "name": "vLLM server",
+            "baseUrl": "http://127.0.0.1:8000/v1",
+            "type": "vllm",
+            "model": "Qwen/Qwen2.5-7B-Instruct",
+            "disabled": true
+        },
+        {
+            "id": "proxy",
+            "name": "Same-origin reverse proxy (no CORS)",
+            "baseUrl": "/llm",
+            "type": "llama.cpp",
+            "sendContext": true
+        }
+    ],
+    "thinking": {
+        "on": { "chat_template_kwargs": { "enable_thinking": true } },
+        "off": { "chat_template_kwargs": { "enable_thinking": false } }
+    },
+    "integrations": [
+        {
+            "id": "feedback",
+            "kind": "feedback",
+            "url": "https://collector.example.com/feedback",
+            "headers": { "Authorization": "Bearer xxxxxxxx" },
+            "models": ["ollama"]
+        }
+    ]
+}
