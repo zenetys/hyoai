@@ -107,7 +107,7 @@ export function ModelInfoDialog() {
                     <DialogTitle>{t("title")}</DialogTitle>
                     <DialogDescription>{t("description")}</DialogDescription>
                 </DialogHeader>
-                <div className="max-h-[60vh] overflow-y-auto pr-3">
+                <div className="min-h-0 overflow-y-auto pr-3 max-md:flex-1 md:max-h-[60vh]">
                     {entry && (
                         <div className="space-y-2 py-4 first:pt-0 last:pb-0">
                             <p className="text-sm font-semibold text-foreground">
