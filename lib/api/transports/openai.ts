@@ -65,7 +65,11 @@ function buildChatBody(endpoint: ModelConfig, params: ChatRequestParams): Record
 async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<StreamEvent> {
     let body: {
         choices?: {
-            message?: { content?: string | null; reasoning_content?: string | null };
+            message?: {
+                content?: string | null;
+                reasoning?: string | null;
+                reasoning_content?: string | null;
+            };
             finish_reason?: string | null;
         }[];
         usage?: { prompt_tokens?: number; completion_tokens?: number } | null;
@@ -88,8 +92,9 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
         return;
     }
     const choice = body.choices?.[0];
-    if (choice?.message?.reasoning_content) {
-        yield { type: "reasoning", text: choice.message.reasoning_content };
+    const reasoning = choice?.message?.reasoning || choice?.message?.reasoning_content;
+    if (reasoning) {
+        yield { type: "reasoning", text: reasoning };
     }
     if (choice?.message?.content) {
         yield { type: "content", text: choice.message.content };
@@ -203,8 +208,9 @@ export async function* streamOpenAiCompatChat(
         if (!choice) {
             continue;
         }
-        if (choice.delta?.reasoning_content) {
-            yield { type: "reasoning", text: choice.delta.reasoning_content };
+        const reasoning = choice.delta?.reasoning || choice.delta?.reasoning_content;
+        if (reasoning) {
+            yield { type: "reasoning", text: reasoning };
         }
         if (choice.delta?.content) {
             yield { type: "content", text: choice.delta.content };
