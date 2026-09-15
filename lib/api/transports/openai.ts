@@ -52,6 +52,9 @@ function buildChatBody(endpoint: ModelConfig, params: ChatRequestParams): Record
 
     const effortLevel = resolveEffortLevel(endpoint.effort, params.effort ?? "");
     if (effortLevel?.body) deepMerge(body, effortLevel.body);
+    else if (effortLevel && body.reasoning_effort === undefined) {
+        body.reasoning_effort = effortLevel.id;
+    }
 
     return stripUndefined(body);
 }
