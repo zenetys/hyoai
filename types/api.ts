@@ -109,6 +109,7 @@ export interface ApiStreamChunk {
         delta?: {
             role?: string;
             content?: string | null;
+            reasoning?: string | null;
             reasoning_content?: string | null;
         };
         finish_reason?: string | null;
