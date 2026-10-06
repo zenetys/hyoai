@@ -3,7 +3,7 @@ import {
     getActiveEntry,
     getUpstreamModel,
     modelsStore,
-    resolveUpstreamModelFor,
+    resolveSelectionUpstream,
 } from "@/lib/stores/models";
 import {
     setEffort as setGlobalEffort,
@@ -42,12 +42,28 @@ export function resolveEntry(selection: Store<ChatModelSelection>): {
         const state = modelsStore.getState();
         const entry = state.entries.find((candidate) => candidate.id === sel.entryId) ?? null;
         if (entry && !entry.disabled) {
-            const model = entry.model ?? sel.upstreamModel ?? resolveUpstreamModelFor(state, entry);
-            return { entry, model };
+            return { entry, model: resolveSelectionUpstream(state, entry, sel.upstreamModel) };
         }
     }
     const entry = getActiveEntry();
     return { entry, model: entry ? getUpstreamModel(entry) : null };
+}
+
+/**
+ * Re-pin a pinned selection onto what it actually resolves to, so a model
+ * removed or changed in the config (or a stale ?compare= link) stops being
+ * shown, persisted and shared while another one answers. A no-op for an
+ * instance following the global model, or while the target is unresolved.
+ *
+ * @param selection - Per-instance model selection store
+ */
+export function reconcileSelection(selection: Store<ChatModelSelection>): void {
+    const sel = selection.getState();
+    if (!sel.entryId) return;
+    const { entry, model } = resolveEntry(selection);
+    if (!entry || !model) return;
+    if (entry.id === sel.entryId && model === sel.upstreamModel) return;
+    selection.setState({ entryId: entry.id, upstreamModel: model });
 }
 
 /**

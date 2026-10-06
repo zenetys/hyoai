@@ -5,6 +5,7 @@ import {
     startNewForeground,
 } from "@/lib/chat/foreground";
 import { ChatInstance } from "@/lib/chat/instance";
+import { reconcileSelection } from "@/lib/chat/model";
 import { parseModelName } from "@/lib/format";
 import {
     addPaneDescriptor,
@@ -18,6 +19,7 @@ import {
     setPanes,
     updatePaneDescriptor,
 } from "@/lib/stores/compare";
+import { modelsStore } from "@/lib/stores/models";
 import { getPath } from "@/lib/tree";
 import { setCompareInUrl } from "@/lib/url";
 import type { Attachment } from "@/types/chat";
@@ -55,6 +57,7 @@ export function getPaneInstance(paneId: string): ChatInstance {
 
     let lastModel = "";
     const unsubModel = instance.model.subscribe(() => {
+        reconcileSelection(instance.model);
         const { entryId, upstreamModel, thinking, effort } = instance.model.getState();
         const key = `${entryId}:${upstreamModel}:${thinking}:${effort}`;
         if (key === lastModel) return;
@@ -62,11 +65,14 @@ export function getPaneInstance(paneId: string): ChatInstance {
         updatePaneDescriptor(paneId, { modelEntryId: entryId, upstreamModel, thinking, effort });
     });
 
+    const unsubConfig = modelsStore.subscribe(() => reconcileSelection(instance.model));
+
     runtimes.set(paneId, {
         instance,
         teardown: () => {
             unsubStore();
             unsubModel();
+            unsubConfig();
             instance.dispose();
         },
     });

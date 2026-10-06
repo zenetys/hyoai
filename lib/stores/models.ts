@@ -59,6 +59,36 @@ function persistSelection(): void {
 }
 
 /**
+ * Identity of the server behind an entry: what decides which models and props
+ * its endpoint reports.
+ *
+ * @param entry - Config entry
+ * @returns A comparable key over the endpoint fields
+ */
+function endpointKey(entry: ModelConfig): string {
+    return JSON.stringify([
+        entry.baseUrl,
+        entry.type,
+        entry.model ?? null,
+        entry.apiKey ?? null,
+        entry.headers ?? null,
+        Boolean(entry.disabled),
+    ]);
+}
+
+/**
+ * Whether an entry still matches the configured one with the same id, so a
+ * fetch started before a config change does not land on the reconfigured entry.
+ *
+ * @param entries - Currently configured entries
+ * @param entry - Entry the fetch was started for
+ */
+function isLive(entries: ModelConfig[], entry: ModelConfig): boolean {
+    const current = entries.find((candidate) => candidate.id === entry.id);
+    return Boolean(current && endpointKey(current) === endpointKey(entry));
+}
+
+/**
  * Fetch config.json and restore the persisted active entry and per-entry
  * model choices over it, falling back to defaultModel then the first entry.
  * Model lists and server properties refresh in the background.
@@ -89,10 +119,21 @@ export async function initModels(): Promise<void> {
         models.find((entry) => !entry.disabled)?.id ??
         null;
 
+    const previous = modelsStore.getState();
+    const unchanged = (id: string) => {
+        const before = previous.entries.find((entry) => entry.id === id);
+        const after = models.find((entry) => entry.id === id);
+        return Boolean(before && after && endpointKey(before) === endpointKey(after));
+    };
+    const keep = <T>(record: Record<string, T>) =>
+        Object.fromEntries(Object.entries(record).filter(([id]) => unchanged(id)));
+
     modelsStore.setState({
         entries: models,
         activeEntryId,
         chosenModels: persisted?.chosenModels ?? {},
+        lists: keep(previous.lists),
+        props: keep(previous.props),
         integrations: integrations ?? [],
         appName,
         configStatus: "ready",
@@ -285,6 +326,30 @@ export function resolveUpstreamModelFor(
 }
 
 /**
+ * Resolve the upstream model a per-instance selection (a compare pane) sends:
+ * the pinned one, else the instance's own pick while the discovered list still
+ * offers it (or cannot confirm it yet), else the entry's default. A pick dropped
+ * from the config, or carried by an old ?compare= link, never reaches requests.
+ *
+ * @param state - Models store state
+ * @param entry - Config entry the instance is pinned to
+ * @param upstreamModel - Upstream model picked by the instance, or null
+ */
+export function resolveSelectionUpstream(
+    state: Pick<ModelsState, "chosenModels" | "lists">,
+    entry: ModelConfig,
+    upstreamModel: string | null,
+): string | null {
+    if (entry.model) return entry.model;
+    if (!upstreamModel) return resolveUpstreamModelFor(state, entry);
+    if (!state.lists[entry.id]?.models.length) return upstreamModel;
+    return resolveUpstreamModelFor(
+        { lists: state.lists, chosenModels: { ...state.chosenModels, [entry.id]: upstreamModel } },
+        entry,
+    );
+}
+
+/**
  * Pure selector for the upstream model id of the active entry.
  *
  * @param state - Models store state
@@ -388,9 +453,9 @@ export async function refreshModelList(entry: ModelConfig, force = false): Promi
     if (!force && current?.status === "ready") return;
 
     const setList = (value: ModelListState) => {
-        modelsStore.setState((state) => ({
-            lists: { ...state.lists, [entry.id]: value },
-        }));
+        modelsStore.setState((state) =>
+            isLive(state.entries, entry) ? { lists: { ...state.lists, [entry.id]: value } } : {},
+        );
     };
     setList({ status: "loading", models: current?.models ?? [] });
     try {
@@ -435,9 +500,9 @@ export async function refreshProps(entry: ModelConfig, force = false): Promise<v
     if (!force && current?.status === "ready") return;
 
     const setProps = (value: PropsState) => {
-        modelsStore.setState((state) => ({
-            props: { ...state.props, [entry.id]: value },
-        }));
+        modelsStore.setState((state) =>
+            isLive(state.entries, entry) ? { props: { ...state.props, [entry.id]: value } } : {},
+        );
     };
     setProps({ status: "loading", props: current?.props });
     try {
