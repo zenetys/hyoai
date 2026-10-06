@@ -9,7 +9,7 @@ import {
     modelsStore,
     refreshModelList,
     refreshProps,
-    resolveUpstreamModelFor,
+    resolveSelectionUpstream,
     selectActiveEntry,
     selectActiveUpstreamModel,
     setActiveModel,
@@ -62,6 +62,7 @@ export function PaneModelSelector({ align = "start" }: { align?: "start" | "end"
     const globalEntry = useStore(modelsStore, selectActiveEntry);
     const globalUpstream = useStore(modelsStore, selectActiveUpstreamModel);
     const lists = useStore(modelsStore, (state) => state.lists);
+    const chosenModels = useStore(modelsStore, (state) => state.chosenModels);
     const globalEffort = useStore(settingsStore, (state) => state.settings.effort);
 
     const paneEntry = selection.entryId
@@ -69,11 +70,10 @@ export function PaneModelSelector({ align = "start" }: { align?: "start" | "end"
         : null;
     const usePane = Boolean(paneEntry && !paneEntry.disabled);
     const entry = usePane ? paneEntry : globalEntry;
-    const upstream = usePane
-        ? (entry?.model ??
-          selection.upstreamModel ??
-          (entry ? resolveUpstreamModelFor({ chosenModels: {}, lists }, entry) : null))
-        : globalUpstream;
+    const upstream =
+        usePane && entry
+            ? resolveSelectionUpstream({ chosenModels, lists }, entry, selection.upstreamModel)
+            : globalUpstream;
     const label =
         entry?.shortName ?? (upstream ? parseModelName(upstream).base : (entry?.name ?? null));
     const effort = selection.effort ?? globalEffort;
