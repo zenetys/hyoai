@@ -1,14 +1,26 @@
 "use client";
 
-import { memo } from "react";
+import { type ComponentProps, memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
+import rehypeKatex, { type Options as KatexOptions } from "rehype-katex";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 
 import { CodeBlock } from "@/components/markdown/CodeBlock";
+import { normalizeMathDelimiters } from "@/lib/math";
 
-const REMARK_PLUGINS = [remarkGfm];
-const REHYPE_PLUGINS = [rehypeHighlight];
+const REMARK_PLUGINS = [remarkGfm, remarkMath];
+
+// KaTeX draws accented letters correctly, so its LaTeX-compatibility warning is noise for French formulas
+const KATEX_OPTIONS: KatexOptions = {
+    strict: (code) => (code === "unicodeTextInMathMode" ? "ignore" : "warn"),
+};
+
+const REHYPE_PLUGINS: ComponentProps<typeof ReactMarkdown>["rehypePlugins"] = [
+    rehypeHighlight,
+    [rehypeKatex, KATEX_OPTIONS],
+];
 
 const COMPONENTS = {
     pre: CodeBlock,
@@ -18,12 +30,15 @@ const COMPONENTS = {
 };
 
 /**
- * Memoized GitHub-flavored markdown renderer with syntax highlighting,
- * styled exclusively through the .chat-markdown rules in globals.css.
+ * Memoized GitHub-flavored markdown renderer with syntax highlighting and
+ * KaTeX math, styled through the .chat-markdown rules in globals.css plus
+ * the KaTeX stylesheet loaded in the root layout. Bracket delimiters
+ * (`\[ ... \]`, `\( ... \)`) are normalized to dollar delimiters first.
  *
  * @param content - Markdown source
  */
 export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { content: string }) {
+    const source = useMemo(() => normalizeMathDelimiters(content), [content]);
     return (
         <div className="chat-markdown">
             <ReactMarkdown
@@ -31,7 +46,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content }: { co
                 rehypePlugins={REHYPE_PLUGINS}
                 components={COMPONENTS}
             >
-                {content}
+                {source}
             </ReactMarkdown>
         </div>
     );
