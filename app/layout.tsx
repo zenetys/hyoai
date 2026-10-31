@@ -5,6 +5,8 @@ import { Providers } from "@/app/providers";
 import { DEFAULT_SETTINGS, SKIN_IDS } from "@/types/settings";
 import { STORAGE_KEYS } from "@/types/storage";
 
+import "katex/dist/katex.min.css";
+
 import "./globals.css";
 
 const inter = Inter({
