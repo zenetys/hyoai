@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import { streamChatCompletion } from "@/lib/api/chat";
+import { shouldPreserveThinking } from "@/lib/api/thinking";
 import { measureCharsPerToken } from "@/lib/api/tokenize";
 import * as lifecycle from "@/lib/chat/lifecycle";
 import * as modelOps from "@/lib/chat/model";
@@ -588,7 +589,11 @@ export class ChatInstance {
         model: string,
     ): Promise<ApiMessage[]> => {
         const compaction = this.store.getState().compaction;
-        const messages = buildCompactedMessages(path, systemPrompt, compaction);
+        const preserveThinking = shouldPreserveThinking(entry, {
+            thinking: this.getThinking(),
+            effort: this.getEffort(),
+        });
+        const messages = buildCompactedMessages(path, systemPrompt, compaction, preserveThinking);
         const settings = settingsStore.getState().settings;
         if (!settings.compaction.enabled) return messages;
 
@@ -601,7 +606,12 @@ export class ChatInstance {
             return messages;
         }
         if (!(await this.runCompaction(nodeId, entry, model, nCtx))) return messages;
-        return buildCompactedMessages(path, systemPrompt, this.store.getState().compaction);
+        return buildCompactedMessages(
+            path,
+            systemPrompt,
+            this.store.getState().compaction,
+            preserveThinking,
+        );
     };
 
     /**

@@ -1,7 +1,7 @@
 import { errorFromResponse, mapThrownError } from "@/lib/api/error";
-import { buildHeaders, buildUrl, deepMerge, stripUndefined } from "@/lib/api/request";
+import { buildHeaders, buildUrl, stripUndefined } from "@/lib/api/request";
 import { parseSseStream } from "@/lib/api/sse";
-import { resolveEffortLevel } from "@/lib/effort";
+import { applyThinkingConfig, preservesThinking } from "@/lib/api/thinking";
 import {
     ApiError,
     type ApiStreamChunk,
@@ -47,13 +47,14 @@ function buildChatBody(endpoint: ModelConfig, params: ChatRequestParams): Record
         body.repetition_penalty = penalties.repeatPenalty;
     }
 
-    const fragment = params.thinking === false ? endpoint.thinking?.off : endpoint.thinking?.on;
-    if (fragment) deepMerge(body, fragment);
-
-    const effortLevel = resolveEffortLevel(endpoint.effort, params.effort ?? "");
-    if (effortLevel?.body) deepMerge(body, effortLevel.body);
-    else if (effortLevel && body.reasoning_effort === undefined) {
-        body.reasoning_effort = effortLevel.id;
+    applyThinkingConfig(body, endpoint, params);
+    // Apply the final merged configuration, including any effort-level override.
+    if (!preservesThinking(body) && Array.isArray(body.messages)) {
+        body.messages = body.messages.map((message: ChatRequestParams["messages"][number]) => {
+            const copy = { ...message };
+            delete copy.reasoning_content;
+            return copy;
+        });
     }
 
     return stripUndefined(body);
