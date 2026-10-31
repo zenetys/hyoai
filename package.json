@@ -8,8 +8,7 @@
         "start": "npx serve out -p 4118",
         "dev": "next dev -H 127.0.0.1 -p 4117",
         "check": "tsc --noEmit && eslint . && prettier --check .",
-        "format": "prettier --write . && eslint --fix .",
-        "test:reasoning-history": "node --test tests/reasoning-history.test.mjs"
+        "format": "prettier --write . && eslint --fix ."
     },
     "dependencies": {
         "@hookform/resolvers": "^5.4.0",
