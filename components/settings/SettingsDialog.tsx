@@ -8,6 +8,7 @@ import { ConfigTab } from "@/components/settings/tabs/ConfigTab";
 import { DataTab } from "@/components/settings/tabs/DataTab";
 import { GeneralTab } from "@/components/settings/tabs/GeneralTab";
 import { GenerationTab } from "@/components/settings/tabs/GenerationTab";
+import { McpTab } from "@/components/settings/tabs/McpTab";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +32,9 @@ export function SettingsDialog() {
     const showData = !embed || embedSidebar;
     const showConfig = !embed;
     const active =
-        (tab === "data" && !showData) || (tab === "config" && !showConfig) ? "general" : tab;
+        (tab === "data" && !showData) || ((tab === "config" || tab === "mcp") && !showConfig)
+            ? "general"
+            : tab;
     const hasOverride = useStore(modelsStore, (state) => state.hasOverride);
     const appliedTick = useStore(modelsStore, (state) => state.appliedTick);
     const health = useStore(modelsStore, selectConfigHealth);
@@ -51,7 +54,7 @@ export function SettingsDialog() {
                         )}
                     >
                         <DialogTitle className="leading-5">{t("title")}</DialogTitle>
-                        {hasOverride && active === "config" && (
+                        {hasOverride && (active === "config" || active === "mcp") && (
                             <OverrideBadge tick={appliedTick} health={health} />
                         )}
                     </div>
@@ -88,6 +91,7 @@ export function SettingsDialog() {
                         <TabsTrigger value="generation">{t("tabs.generation")}</TabsTrigger>
                         {showData && <TabsTrigger value="data">{t("tabs.data")}</TabsTrigger>}
                         {showConfig && <TabsTrigger value="config">{t("tabs.config")}</TabsTrigger>}
+                        {showConfig && <TabsTrigger value="mcp">{t("tabs.mcp")}</TabsTrigger>}
                     </TabsList>
                     <div className="-mx-1 min-h-0 overflow-x-hidden overflow-y-auto pt-2 pr-3 pl-1 max-md:flex-1 md:max-h-[60vh]">
                         <TabsContent value="general">
@@ -104,6 +108,11 @@ export function SettingsDialog() {
                         {showConfig && (
                             <TabsContent value="config">
                                 <ConfigTab />
+                            </TabsContent>
+                        )}
+                        {showConfig && (
+                            <TabsContent value="mcp">
+                                <McpTab />
                             </TabsContent>
                         )}
                     </div>

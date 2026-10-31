@@ -62,8 +62,34 @@
             "baseUrl": "/llm",
             "type": "llama.cpp",
             "sendContext": true
+        },
+        {
+            "id": "llamacpp-research",
+            "name": "Local llama.cpp (with web search)",
+            "baseUrl": "http://127.0.0.1:8080",
+            "type": "llama.cpp",
+            "streaming": true,
+            "mcp": {
+                "servers": ["websearch"],
+                "maxTurns": 12,
+                "toolChoice": "auto"
+            }
         }
     ],
+    "mcp": {
+        "servers": [
+            {
+                "id": "websearch",
+                "url": "/mcp/search",
+                "headers": { "Authorization": "Bearer xxxxxxxx" },
+                "disabled": false
+            }
+        ],
+        "maxTurns": 8,
+        "toolChoice": "auto",
+        "resultMaxChars": 8000,
+        "systemNote": true
+    },
     "thinking": {
         "on": { "chat_template_kwargs": { "enable_thinking": true } },
         "off": { "chat_template_kwargs": { "enable_thinking": false } }

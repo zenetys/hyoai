@@ -102,6 +102,10 @@ export function OverrideBadge({ tick, health }: { tick: number; health: ConfigHe
                 return t("config.itemLevel", { name: item.label });
             case "integration":
                 return t("config.itemIntegration", { name: item.label });
+            case "mcpServer":
+                return t("config.itemMcpServer", { name: item.label });
+            case "mcpSettings":
+                return t("config.itemMcpSettings");
             case "removed":
                 return t("config.itemRemoved", { name: item.label });
         }

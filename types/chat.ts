@@ -91,6 +91,28 @@ export interface MessageQuote {
 }
 
 /**
+ * One executed MCP tool call, stored for transparency only: the injected
+ * arguments and the model-visible result, each truncated to keep localStorage
+ * light (the agent loop works with the full texts). "error" marks a failed
+ * call or an unreachable server; the model saw the failure text and could
+ * retry or reformulate.
+ */
+export interface ToolCallTrace {
+    name: string;
+    args: string;
+    result: string;
+    ms: number;
+    error?: boolean;
+}
+
+/**
+ * Tool-trace attached to an assistant message: one entry per executed call in
+ * call order, plus one entry per MCP server that failed to wire for the run
+ * (name "mcp:<serverId>", no result).
+ */
+export type ToolTrace = ToolCallTrace[];
+
+/**
  * One node of the conversation tree. Messages form a tree through
  * parent/children links so edits and regenerations create sibling branches
  * instead of overwriting history (same model as the llama.cpp webui).
@@ -104,6 +126,7 @@ export interface MessageNode {
     reasoningContent?: string;
     quote?: MessageQuote;
     rag?: RagData;
+    tools?: ToolTrace;
     attachments?: Attachment[];
     model?: string;
     thinking?: boolean;

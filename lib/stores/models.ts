@@ -47,6 +47,9 @@ export const modelsStore = createStore<ModelsState>({
     appliedTick: 0,
 });
 
+// Tab title as shipped in the static shell, restored when no appName is configured.
+const shellTitle = typeof document === "undefined" ? "HYOAI - Host Your Own AI" : document.title;
+
 function persistSelection(): void {
     scheduleJson(STORAGE_KEYS.models, () => {
         const state = modelsStore.getState();
@@ -127,6 +130,8 @@ export async function initModels(): Promise<void> {
     };
     const keep = <T>(record: Record<string, T>) =>
         Object.fromEntries(Object.entries(record).filter(([id]) => unchanged(id)));
+
+    if (typeof document !== "undefined") document.title = appName || shellTitle;
 
     modelsStore.setState({
         entries: models,

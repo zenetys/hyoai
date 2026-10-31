@@ -181,6 +181,10 @@ export function ConfigTab() {
                     modalities: "",
                     supportsThinking: "auto",
                     runtimeProps: "auto",
+                    mcpServers: "",
+                    mcpMaxTurns: "",
+                    mcpToolChoice: "",
+                    mcpExtra: "",
                 },
                 ...draft.models,
             ],
@@ -276,6 +280,9 @@ export function ConfigTab() {
                         onMoveDown={() => moveModel(index, 1)}
                         canMoveUp={index > 0}
                         canMoveDown={index < draft.models.length - 1}
+                        mcpCatalog={draft.mcpServers
+                            .map((server) => server.id.trim())
+                            .filter(Boolean)}
                     />
                 ))}
             </ListSection>

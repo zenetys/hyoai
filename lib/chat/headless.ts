@@ -1,7 +1,13 @@
-import { streamChatCompletion } from "@/lib/api/chat";
+import {
+    appendToolRound,
+    applyToolSystemNote,
+    DEFAULT_MCP_MAX_TURNS,
+    runToolPass,
+} from "@/lib/chat/toolloop";
+import { type McpRegistry, type McpToolResult, openMcpRegistry } from "@/lib/mcp/registry";
 import { getActiveEntry, getUpstreamModel, modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
-import type { ApiMessage, ChatRequestParams } from "@/types/api";
+import type { ApiMessage, ApiToolSpec, ChatRequestParams } from "@/types/api";
 import type { ModelConfig } from "@/types/server";
 
 // Longest a run waits for the URL-forced model's upstream id to resolve.
@@ -121,20 +127,64 @@ export async function runHeadless(
     };
 
     try {
-        for await (const event of streamChatCompletion(entry, params, signal)) {
-            if (signal.aborted) return;
-            if (event.type === "content") {
-                text += event.text;
-                cb.onChunk(event.text);
-            } else if (event.type === "finish") {
-                done();
-                return;
-            } else if (event.type === "error") {
-                fail(event.error.message);
-                return;
+        let registry: McpRegistry | null = null;
+        let toolSpecs: ApiToolSpec[] = [];
+        let maxTurns = DEFAULT_MCP_MAX_TURNS;
+        const mcpConfig = entry.type === "rag-sse" ? undefined : entry.mcp;
+        if (mcpConfig) {
+            registry = await openMcpRegistry(mcpConfig, signal);
+            if (registry.tools.length > 0) {
+                toolSpecs = registry.tools.map((tool) => tool.spec);
+                maxTurns = mcpConfig.maxTurns ?? DEFAULT_MCP_MAX_TURNS;
+                if (mcpConfig.systemNote !== false) applyToolSystemNote(messages, toolSpecs);
+            } else {
+                registry = null;
             }
         }
-        done();
+
+        let turn = 0;
+        for (;;) {
+            const activeRegistry = turn < maxTurns ? registry : null;
+            params.tools = activeRegistry ? toolSpecs : undefined;
+            params.toolChoice = activeRegistry ? mcpConfig?.toolChoice : undefined;
+            const pass = await runToolPass(entry, params, signal, (event) => {
+                if (event.type === "content") {
+                    text += event.text;
+                    cb.onChunk(event.text);
+                }
+            });
+            if (activeRegistry && pass.finishReason === "tool_calls" && pass.toolCalls.length > 0) {
+                const results: McpToolResult[] = [];
+                for (const call of pass.toolCalls) {
+                    let result: McpToolResult;
+                    try {
+                        result = await activeRegistry.execute(
+                            call.function.name,
+                            call.function.arguments,
+                            signal,
+                        );
+                    } catch (error) {
+                        if (signal.aborted) return;
+                        result = {
+                            content: `Tool call failed: ${
+                                error instanceof Error ? error.message : String(error)
+                            }`,
+                            error: true,
+                        };
+                    }
+                    results.push(result);
+                }
+                appendToolRound(messages, "", pass.toolCalls, results);
+                turn += 1;
+                continue;
+            }
+            if (pass.error) {
+                fail(pass.error.message);
+                return;
+            }
+            done();
+            return;
+        }
     } catch (error) {
         if (signal.aborted) return;
         fail(error instanceof Error ? error.message : String(error));

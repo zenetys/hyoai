@@ -25,7 +25,13 @@ interface ResetDialogProps {
 }
 
 // Display order of the override categories in the list.
-const CATEGORIES: OverrideItem["category"][] = ["general", "models", "effort", "integrations"];
+const CATEGORIES: OverrideItem["category"][] = [
+    "general",
+    "models",
+    "effort",
+    "integrations",
+    "mcp",
+];
 
 // Badge variant per entry mode.
 const MODE_VARIANT = {
@@ -80,6 +86,10 @@ export function ResetDialog({ open, onOpenChange, items, onConfirm }: ResetDialo
                 return t("config.itemLevel", { name: item.label });
             case "integration":
                 return t("config.itemIntegration", { name: item.label });
+            case "mcpServer":
+                return t("config.itemMcpServer", { name: item.label });
+            case "mcpSettings":
+                return t("config.itemMcpSettings");
             case "removed":
                 return t("config.itemRemoved", { name: item.label });
         }

@@ -14,6 +14,7 @@ import { ReasoningBlock } from "@/components/chat/message/ReasoningBlock";
 import { SearchProgress } from "@/components/chat/message/SearchProgress";
 import { Sources } from "@/components/chat/message/Sources";
 import { SummaryMessage } from "@/components/chat/message/SummaryMessage";
+import { ToolTraceBlock } from "@/components/chat/message/ToolTrace";
 import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { useMessageNode, useStreamingFor } from "@/hooks/useActiveChat";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -124,6 +125,7 @@ function AssistantMessage({
     const content = streaming ? streaming.content : node.content;
     const reasoning = streaming ? streaming.reasoning : (node.reasoningContent ?? "");
     const rag = streaming ? streaming.rag : node.rag;
+    const tools = streaming ? streaming.tools : node.tools;
     const isThinking = Boolean(streaming && reasoning && !content);
     const isWaiting = Boolean(streaming && !content && !reasoning);
 
@@ -160,6 +162,7 @@ function AssistantMessage({
                 </div>
             )}
             <Sources rag={rag} content={content} />
+            <ToolTraceBlock trace={tools} />
             {node.error && !streaming && (
                 <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {errorText(t, node)}

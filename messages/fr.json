@@ -81,6 +81,8 @@
         "rerankedDocs": "Reclassement ({count})",
         "sources": "{count, plural, one {# source} other {# sources}}",
         "relevanceScore": "Score de pertinence",
+        "toolCalls": "{count, plural, one {# appel d'outil} other {# appels d'outil}}",
+        "toolCallFailed": "échec",
         "copyMessage": "Copier le message",
         "messageActions": "Actions",
         "reply": "Répondre",
@@ -226,7 +228,8 @@
             "general": "Général",
             "generation": "Génération",
             "data": "Données",
-            "config": "Config"
+            "config": "Config",
+            "mcp": "MCP"
         },
         "general": {
             "appearanceTitle": "Apparence",
@@ -443,7 +446,8 @@
                 "general": "Général",
                 "models": "Modèles",
                 "effort": "Effort",
-                "integrations": "Intégrations"
+                "integrations": "Intégrations",
+                "mcp": "MCP"
             },
             "itemAppName": "Nom de l'application",
             "itemDefaultModel": "Modèle par défaut",
@@ -458,7 +462,41 @@
                 "added": "ajouté",
                 "modified": "modifié",
                 "removed": "supprimé"
-            }
+            },
+            "modelMcpServers": "Serveurs MCP",
+            "modelMcpServersHint": "Ids séparés par des virgules depuis l'onglet MCP ; vide = pas d'outils pour ce modèle.",
+            "modelMcpServersKnown": "Ids séparés par des virgules ; définis : {ids}",
+            "modelMcpMaxTurns": "Tours d'outils max.",
+            "modelMcpMaxTurnsHint": "Vide : hérite du défaut global.",
+            "modelMcpToolChoice": "Choix d'outil",
+            "modelMcpToolChoiceHint": "« Jamais » désactive les outils pour ce modèle.",
+            "mcpToolChoiceInherit": "Par défaut",
+            "mcpToolChoiceAuto": "Auto",
+            "mcpToolChoiceNone": "Jamais",
+            "mcpToolChoiceRequired": "Toujours",
+            "itemMcpServer": "Serveur MCP {name}",
+            "itemMcpSettings": "Valeurs MCP par défaut"
+        },
+        "mcp": {
+            "description": "Définissez ici les serveurs MCP disponibles ; chaque modèle choisit ceux à utiliser dans l'onglet Config.",
+            "servers": "Serveurs MCP",
+            "addServer": "Ajouter un serveur",
+            "serverUntitled": "Serveur sans nom",
+            "removeServer": "Retirer le serveur",
+            "serverId": "Id",
+            "serverIdHint": "Préfixe les outils du serveur ; lettres, chiffres, tirets et tirets bas.",
+            "serverIdPlaceholder": "recherche-web",
+            "serverUrl": "URL",
+            "serverUrlHint": "Point d'entrée streamable-HTTP ; un chemin comme /mcp/search reste same-origin.",
+            "serverUrlPlaceholder": "https://hote/mcp",
+            "serverHeaders": "En-têtes (JSON)",
+            "defaults": "Valeurs par défaut",
+            "defaultsHint": "Valeurs par défaut des modèles qui référencent des serveurs ; un modèle peut les remplacer (onglet Config).",
+            "maxTurns": "Tours d'outils max.",
+            "resultMaxChars": "Caractères max par résultat",
+            "toolChoice": "Choix d'outil",
+            "systemNote": "Note système sur les outils",
+            "serverEnabled": "Activé"
         }
     },
     "errors": {

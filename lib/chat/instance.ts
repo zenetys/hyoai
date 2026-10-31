@@ -1,10 +1,19 @@
 import { toast } from "sonner";
 
-import { streamChatCompletion } from "@/lib/api/chat";
 import { measureCharsPerToken } from "@/lib/api/tokenize";
 import * as lifecycle from "@/lib/chat/lifecycle";
 import * as modelOps from "@/lib/chat/model";
 import type { ChatModelSelection } from "@/lib/chat/model";
+import {
+    appendToolRound,
+    applyToolSystemNote,
+    DEFAULT_MCP_MAX_TURNS,
+    elideToolResults,
+    runToolPass,
+    TRACE_ARGS_MAX,
+    TRACE_RESULT_MAX,
+    truncateTraceField,
+} from "@/lib/chat/toolloop";
 import {
     buildChapterMessages,
     buildSynthesisMessages,
@@ -28,6 +37,7 @@ import {
 } from "@/lib/conversation";
 import { resolveEffortLevel } from "@/lib/effort";
 import { getTranslator } from "@/lib/i18n";
+import { type McpRegistry, type McpToolResult, openMcpRegistry } from "@/lib/mcp/registry";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
 import { type ChatState, createChatStore, IDLE_STREAMING } from "@/lib/stores/chat";
@@ -47,7 +57,13 @@ import {
     updateNode,
 } from "@/lib/tree";
 import { setChatIdInUrl } from "@/lib/url";
-import { ApiError, type ApiMessage, type ChatRequestParams } from "@/types/api";
+import {
+    ApiError,
+    type ApiMessage,
+    type ApiToolSpec,
+    type ChatRequestParams,
+    type StreamEvent,
+} from "@/types/api";
 import type {
     Attachment,
     CompactionState,
@@ -57,6 +73,7 @@ import type {
     MessageQuote,
     MessageStats,
     RagData,
+    ToolCallTrace,
 } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 import type { ChunkingStrategy } from "@/types/settings";
@@ -396,6 +413,7 @@ export class ChatInstance {
                     content,
                     reasoning,
                     rag: hasRag(rag) ? { ...rag } : undefined,
+                    tools: toolTrace.length > 0 ? [...toolTrace] : undefined,
                     firstTokenAt,
                     usage: {
                         promptTokens: stats.promptTokens,
@@ -417,66 +435,157 @@ export class ChatInstance {
             }
         };
 
+        const toolTrace: ToolCallTrace[] = [];
+        let toolElided = false;
+
+        const handleEvent = (event: StreamEvent): void => {
+            switch (event.type) {
+                case "content":
+                    if (firstTokenAt === null) firstTokenAt = Date.now();
+                    content += event.text;
+                    queueFlush();
+                    break;
+                case "reasoning":
+                    if (firstTokenAt === null) firstTokenAt = Date.now();
+                    reasoning += event.text;
+                    queueFlush();
+                    break;
+                case "subQueries":
+                    rag.subQueries = event.queries;
+                    queueFlush();
+                    break;
+                case "retrieval":
+                    rag[event.stage] = event.docs;
+                    queueFlush();
+                    break;
+                case "pipeline":
+                    stats.pipeline = event.pipeline;
+                    queueFlush();
+                    break;
+                case "usage":
+                    stats.promptTokens = (stats.promptTokens ?? 0) + event.usage.promptTokens;
+                    stats.completionTokens =
+                        (stats.completionTokens ?? 0) + event.usage.completionTokens;
+                    queueFlush();
+                    break;
+                case "timings":
+                    if (event.timings.tokensPerSecond !== undefined) {
+                        stats.tokensPerSecond = event.timings.tokensPerSecond;
+                    }
+                    if (event.timings.promptPerSecond !== undefined) {
+                        stats.promptPerSecond = event.timings.promptPerSecond;
+                    }
+                    if (event.timings.promptMs !== undefined) {
+                        stats.promptMs = event.timings.promptMs;
+                    }
+                    if (event.timings.predictedMs !== undefined) {
+                        stats.predictedMs = event.timings.predictedMs;
+                    }
+                    if (event.timings.promptTokens !== undefined) {
+                        stats.promptTokens = event.timings.promptTokens;
+                    }
+                    if (event.timings.completionTokens !== undefined) {
+                        stats.completionTokens = event.timings.completionTokens;
+                    }
+                    queueFlush();
+                    break;
+                default:
+                    break;
+            }
+        };
+
         try {
-            for await (const event of streamChatCompletion(entry, params, controller.signal)) {
-                switch (event.type) {
-                    case "content":
-                        if (firstTokenAt === null) firstTokenAt = Date.now();
-                        content += event.text;
-                        queueFlush();
-                        break;
-                    case "reasoning":
-                        if (firstTokenAt === null) firstTokenAt = Date.now();
-                        reasoning += event.text;
-                        queueFlush();
-                        break;
-                    case "subQueries":
-                        rag.subQueries = event.queries;
-                        queueFlush();
-                        break;
-                    case "retrieval":
-                        rag[event.stage] = event.docs;
-                        queueFlush();
-                        break;
-                    case "pipeline":
-                        stats.pipeline = event.pipeline;
-                        queueFlush();
-                        break;
-                    case "usage":
-                        stats.promptTokens = event.usage.promptTokens;
-                        stats.completionTokens = event.usage.completionTokens;
-                        queueFlush();
-                        break;
-                    case "timings":
-                        if (event.timings.tokensPerSecond !== undefined) {
-                            stats.tokensPerSecond = event.timings.tokensPerSecond;
-                        }
-                        if (event.timings.promptPerSecond !== undefined) {
-                            stats.promptPerSecond = event.timings.promptPerSecond;
-                        }
-                        if (event.timings.promptMs !== undefined) {
-                            stats.promptMs = event.timings.promptMs;
-                        }
-                        if (event.timings.predictedMs !== undefined) {
-                            stats.predictedMs = event.timings.predictedMs;
-                        }
-                        if (event.timings.promptTokens !== undefined) {
-                            stats.promptTokens = event.timings.promptTokens;
-                        }
-                        if (event.timings.completionTokens !== undefined) {
-                            stats.completionTokens = event.timings.completionTokens;
-                        }
-                        queueFlush();
-                        break;
-                    case "finish":
-                        finishReason = event.reason;
-                        break;
-                    case "error":
-                        nodeError = event.error.message;
-                        errorKind = event.error.kind;
-                        finishReason = "error";
-                        break;
+            let registry: McpRegistry | null = null;
+            let toolSpecs: ApiToolSpec[] = [];
+            let maxTurns = DEFAULT_MCP_MAX_TURNS;
+            const mcpConfig = entry.type === "rag-sse" ? undefined : entry.mcp;
+            if (mcpConfig) {
+                registry = await openMcpRegistry(mcpConfig, controller.signal);
+                for (const serverError of registry.errors) {
+                    toolTrace.push({
+                        name: `mcp:${serverError.serverId}`,
+                        args: "",
+                        result: serverError.error,
+                        ms: 0,
+                        error: true,
+                    });
                 }
+                if (registry.tools.length === 0) {
+                    registry = null;
+                } else {
+                    toolSpecs = registry.tools.map((tool) => tool.spec);
+                    maxTurns = mcpConfig.maxTurns ?? DEFAULT_MCP_MAX_TURNS;
+                    if (mcpConfig.systemNote !== false) {
+                        applyToolSystemNote(params.messages, toolSpecs);
+                    }
+                }
+            }
+
+            let turn = 0;
+            for (;;) {
+                const activeRegistry = turn < maxTurns ? registry : null;
+                params.tools = activeRegistry ? toolSpecs : undefined;
+                params.toolChoice = activeRegistry ? mcpConfig?.toolChoice : undefined;
+                const contentBefore = content.length;
+                const pass = await runToolPass(entry, params, controller.signal, handleEvent);
+                finishReason = pass.finishReason;
+                if (pass.error) {
+                    nodeError = pass.error.message;
+                    errorKind = pass.error.kind;
+                    if (finishReason === undefined) finishReason = "error";
+                }
+                if (
+                    finishReason === "error" &&
+                    nodeError !== undefined &&
+                    !toolElided &&
+                    parseContextOverflow(nodeError) &&
+                    elideToolResults(params.messages)
+                ) {
+                    toolElided = true;
+                    nodeError = undefined;
+                    errorKind = undefined;
+                    finishReason = undefined;
+                    continue;
+                }
+                if (
+                    !activeRegistry ||
+                    finishReason !== "tool_calls" ||
+                    pass.toolCalls.length === 0
+                ) {
+                    break;
+                }
+                const roundContent = content.slice(contentBefore);
+                const results: McpToolResult[] = [];
+                for (const call of pass.toolCalls) {
+                    const callStartedAt = Date.now();
+                    let result: McpToolResult;
+                    try {
+                        result = await activeRegistry.execute(
+                            call.function.name,
+                            call.function.arguments,
+                            controller.signal,
+                        );
+                    } catch (error) {
+                        if (error instanceof ApiError && error.kind === "aborted") throw error;
+                        result = {
+                            content: `Tool call failed: ${
+                                error instanceof Error ? error.message : String(error)
+                            }`,
+                            error: true,
+                        };
+                    }
+                    results.push(result);
+                    toolTrace.push({
+                        name: call.function.name,
+                        args: truncateTraceField(call.function.arguments, TRACE_ARGS_MAX),
+                        result: truncateTraceField(result.content, TRACE_RESULT_MAX),
+                        ms: Date.now() - callStartedAt,
+                        error: result.error || undefined,
+                    });
+                    queueFlush();
+                }
+                appendToolRound(params.messages, roundContent, pass.toolCalls, results);
+                turn += 1;
             }
         } catch (error) {
             if (error instanceof ApiError && error.kind === "aborted") {
@@ -537,6 +646,7 @@ export class ChatInstance {
                 content,
                 reasoningContent: reasoning || undefined,
                 rag: hasRag(rag) ? rag : undefined,
+                tools: toolTrace.length > 0 ? toolTrace : undefined,
                 stats,
                 finishReason: finishReason ?? "stop",
                 error: nodeError,

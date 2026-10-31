@@ -81,6 +81,8 @@
         "rerankedDocs": "Reranked ({count})",
         "sources": "{count, plural, one {# source} other {# sources}}",
         "relevanceScore": "Relevance score",
+        "toolCalls": "{count, plural, one {# tool call} other {# tool calls}}",
+        "toolCallFailed": "failed",
         "copyMessage": "Copy message",
         "messageActions": "Actions",
         "reply": "Reply",
@@ -226,7 +228,8 @@
             "general": "General",
             "generation": "Generation",
             "data": "Data",
-            "config": "Config"
+            "config": "Config",
+            "mcp": "MCP"
         },
         "general": {
             "appearanceTitle": "Appearance",
@@ -443,7 +446,8 @@
                 "general": "General",
                 "models": "Models",
                 "effort": "Effort",
-                "integrations": "Integrations"
+                "integrations": "Integrations",
+                "mcp": "MCP"
             },
             "itemAppName": "App name",
             "itemDefaultModel": "Default model",
@@ -458,7 +462,41 @@
                 "added": "added",
                 "modified": "modified",
                 "removed": "removed"
-            }
+            },
+            "modelMcpServers": "MCP servers",
+            "modelMcpServersHint": "Comma-separated ids from the MCP tab; empty leaves the model without tools.",
+            "modelMcpServersKnown": "Comma-separated ids; defined: {ids}",
+            "modelMcpMaxTurns": "Max tool rounds",
+            "modelMcpMaxTurnsHint": "Empty inherits the global default.",
+            "modelMcpToolChoice": "Tool choice",
+            "modelMcpToolChoiceHint": "Never is a kill switch for this model.",
+            "mcpToolChoiceInherit": "Inherit",
+            "mcpToolChoiceAuto": "Auto",
+            "mcpToolChoiceNone": "Never",
+            "mcpToolChoiceRequired": "Always",
+            "itemMcpServer": "MCP server {name}",
+            "itemMcpSettings": "MCP defaults"
+        },
+        "mcp": {
+            "description": "Define MCP servers once here; each model picks which of them to use in the Config tab.",
+            "servers": "MCP servers",
+            "addServer": "Add server",
+            "serverUntitled": "Unnamed server",
+            "removeServer": "Remove server",
+            "serverId": "Id",
+            "serverIdHint": "Namespaces the server's tools; letters, digits, dashes and underscores.",
+            "serverIdPlaceholder": "websearch",
+            "serverUrl": "URL",
+            "serverUrlHint": "Streamable-HTTP endpoint; a bare path like /mcp/search stays same-origin.",
+            "serverUrlPlaceholder": "https://host/mcp",
+            "serverHeaders": "Headers (JSON)",
+            "defaults": "Defaults",
+            "defaultsHint": "Defaults for every model that references servers; a model may override them in the Config tab.",
+            "maxTurns": "Max tool rounds",
+            "resultMaxChars": "Result max chars",
+            "toolChoice": "Tool choice",
+            "systemNote": "Tools system note",
+            "serverEnabled": "Enabled"
         }
     },
     "errors": {

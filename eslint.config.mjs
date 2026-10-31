@@ -6,7 +6,7 @@ import checkFile from "eslint-plugin-check-file";
 import importPlugin from "eslint-plugin-import";
 
 export default defineConfig([
-    globalIgnores([".next", "out", "components/ui", "next-env.d.ts"]),
+    globalIgnores([".next", "out", "out-old", "components/ui", "next-env.d.ts"]),
     ...nextVitals,
     ...nextTs,
     {

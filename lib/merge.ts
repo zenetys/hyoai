@@ -6,6 +6,7 @@ interface RemovedIds {
     models?: string[];
     levels?: string[];
     integrations?: string[];
+    servers?: string[];
 }
 
 /**
@@ -21,6 +22,13 @@ export interface ConfigOverride {
     effort?: { default?: string; levels?: unknown[] };
     models?: unknown[];
     integrations?: unknown[];
+    mcp?: {
+        maxTurns?: unknown;
+        toolChoice?: unknown;
+        resultMaxChars?: unknown;
+        systemNote?: unknown;
+        servers?: unknown[];
+    };
     removed?: RemovedIds;
     order?: string[];
 }
@@ -201,6 +209,22 @@ export function mergeConfig(base: unknown, override: unknown): RawConfig {
         }
         result.effort = effort;
     }
+    if (ov.mcp || removed.servers) {
+        const baseMcp = isObj(b.mcp) ? b.mcp : {};
+        const overMcp = ov.mcp ?? {};
+        const mcp: RawConfig = { ...baseMcp };
+        for (const key of ["maxTurns", "toolChoice", "resultMaxChars", "systemNote"] as const) {
+            if (key in overMcp) mcp[key] = overMcp[key];
+        }
+        if (overMcp.servers || removed.servers) {
+            mcp.servers = mergeList(
+                asArr(baseMcp.servers),
+                asArr(overMcp.servers),
+                removed.servers ?? [],
+            );
+        }
+        result.mcp = mcp;
+    }
     return result;
 }
 
@@ -253,6 +277,19 @@ export function diffConfig(base: unknown, built: unknown): ConfigOverride {
     if (levels.removed.length) removed.levels = levels.removed;
     if (Object.keys(effort).length) ov.effort = effort;
 
+    const baseMcp = isObj(b.mcp) ? b.mcp : {};
+    const builtMcp = isObj(built2.mcp) ? built2.mcp : {};
+    const mcp: NonNullable<ConfigOverride["mcp"]> = {};
+    for (const key of ["maxTurns", "toolChoice", "resultMaxChars", "systemNote"] as const) {
+        if (builtMcp[key] !== undefined && !deepEqual(builtMcp[key], baseMcp[key])) {
+            mcp[key] = builtMcp[key];
+        }
+    }
+    const servers = diffList(asArr(baseMcp.servers), asArr(builtMcp.servers));
+    if (servers.changed.length) mcp.servers = servers.changed;
+    if (servers.removed.length) removed.servers = servers.removed;
+    if (Object.keys(mcp).length) ov.mcp = mcp;
+
     if (Object.keys(removed).length) ov.removed = removed;
     return ov;
 }
@@ -264,7 +301,7 @@ export function diffConfig(base: unknown, built: unknown): ConfigOverride {
  */
 export interface OverrideItem {
     key: string;
-    category: "general" | "models" | "effort" | "integrations";
+    category: "general" | "models" | "effort" | "integrations" | "mcp";
     type:
         | "appName"
         | "defaultModel"
@@ -274,9 +311,11 @@ export interface OverrideItem {
         | "model"
         | "level"
         | "integration"
+        | "mcpServer"
+        | "mcpSettings"
         | "removed";
     id?: string;
-    section?: "models" | "levels" | "integrations";
+    section?: "models" | "levels" | "integrations" | "servers";
     mode?: "added" | "modified" | "removed";
     label: string;
 }
@@ -379,11 +418,33 @@ export function describeOverride(override: unknown, base: unknown): OverrideItem
         });
     }
 
+    const ovMcp = isObj(ov.mcp) ? ov.mcp : undefined;
+    const baseServerIds = idSet(isObj(b.mcp) ? b.mcp.servers : undefined);
+    for (const entry of asArr(ovMcp?.servers)) {
+        const id = idOf(entry);
+        if (!id) continue;
+        items.push({
+            key: `mcpServer:${id}`,
+            category: "mcp",
+            type: "mcpServer",
+            id,
+            mode: baseServerIds.has(id) ? "modified" : "added",
+            label: id,
+        });
+    }
+    if (
+        ovMcp &&
+        ["maxTurns", "toolChoice", "resultMaxChars", "systemNote"].some((key) => key in ovMcp)
+    ) {
+        items.push({ key: "mcpSettings", category: "mcp", type: "mcpSettings", label: "" });
+    }
+
     const removed = isObj(ov.removed) ? (ov.removed as RemovedIds) : {};
     const sections: [keyof RemovedIds, OverrideItem["category"]][] = [
         ["models", "models"],
         ["levels", "effort"],
         ["integrations", "integrations"],
+        ["servers", "mcp"],
     ];
     for (const [section, category] of sections) {
         for (const id of removed[section] ?? []) {
@@ -439,9 +500,24 @@ export function pruneOverride(override: unknown, keys: Set<string>): ConfigOverr
         if (effort.default === undefined && !effort.levels) delete result.effort;
         else result.effort = effort;
     }
+    if (result.mcp) {
+        const mcp = { ...result.mcp };
+        if (keys.has("mcpSettings")) {
+            delete mcp.maxTurns;
+            delete mcp.toolChoice;
+            delete mcp.resultMaxChars;
+            delete mcp.systemNote;
+        }
+        if (mcp.servers) {
+            mcp.servers = mcp.servers.filter((entry) => !keys.has(`mcpServer:${idOf(entry)}`));
+            if (!mcp.servers.length) delete mcp.servers;
+        }
+        if (!Object.keys(mcp).length) delete result.mcp;
+        else result.mcp = mcp;
+    }
     if (result.removed) {
         const removed: RemovedIds = { ...result.removed };
-        for (const section of ["models", "levels", "integrations"] as const) {
+        for (const section of ["models", "levels", "integrations", "servers"] as const) {
             const ids = removed[section];
             if (!ids) continue;
             const kept = ids.filter((id) => !keys.has(`removed:${section}:${id}`));

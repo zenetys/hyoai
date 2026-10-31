@@ -8,14 +8,40 @@ export type ApiContentPart =
     | { type: "input_audio"; input_audio: { data: string; format: string } };
 
 /**
- * Message shape sent to /v1/chat/completions.
+ * One tool call requested by the model (OpenAI wire shape). "function" is the
+ * only type in the current protocol.
+ */
+export interface ApiToolCall {
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+}
+
+/**
+ * OpenAI function tool spec sent in the "tools" request field. The parameters
+ * carry the MCP tool's JSON Schema verbatim.
+ */
+export interface ApiToolSpec {
+    type: "function";
+    function: { name: string; description?: string; parameters: Record<string, unknown> };
+}
+
+/**
+ * Message shape sent to /v1/chat/completions. Assistant messages may carry
+ * tool calls; "tool"-role messages return one tool result, keyed by the call
+ * id they answer. Tool messages are ephemeral: they exist only inside the
+ * agent loop and are never stored on the conversation tree.
  *
  * @param role - Author role of the message
  * @param content - Plain text, or a multimodal content parts array
+ * @param tool_calls - Tool calls requested by an assistant message
+ * @param tool_call_id - Call a "tool"-role message answers
  */
 export interface ApiMessage {
-    role: "system" | "user" | "assistant";
+    role: "system" | "user" | "assistant" | "tool";
     content: string | ApiContentPart[];
+    tool_calls?: ApiToolCall[];
+    tool_call_id?: string;
 }
 
 /**
@@ -27,6 +53,8 @@ export interface ApiMessage {
  * @param penalties - Repetition penalty parameters
  * @param thinking - Whether reasoning/thinking mode is requested
  * @param effort - Reasoning effort level to request
+ * @param tools - Function tool specs offered to the model (agent loop)
+ * @param toolChoice - OpenAI tool_choice value; only sent together with tools
  */
 export interface ChatRequestParams {
     model: string;
@@ -35,6 +63,8 @@ export interface ChatRequestParams {
     penalties: PenaltySettings;
     thinking?: boolean;
     effort?: string;
+    tools?: ApiToolSpec[];
+    toolChoice?: "auto" | "none" | "required";
 }
 
 /**
@@ -88,6 +118,7 @@ export type StreamEvent =
     | { type: "usage"; usage: ApiUsage }
     | { type: "timings"; timings: ApiTimings }
     | { type: "pipeline"; pipeline: PipelineTimings }
+    | { type: "toolCall"; call: ApiToolCall }
     | { type: "finish"; reason: string }
     | { type: "error"; error: ApiError };
 
@@ -111,6 +142,12 @@ export interface ApiStreamChunk {
             content?: string | null;
             reasoning?: string | null;
             reasoning_content?: string | null;
+            tool_calls?: {
+                index?: number;
+                id?: string;
+                type?: "function";
+                function?: { name?: string; arguments?: string };
+            }[];
         };
         finish_reason?: string | null;
     }[];

@@ -185,8 +185,9 @@ example covers the two on-ramps above plus the different `type`s, a minimal
 entry (booleans have defaults), a disabled entry, an API key, and a relative URL
 behind a reverse proxy.
 
-An optional root `appName` key sets the deployment name shown on the empty chat
-screen (`Chat with <appName> models`); when omitted it falls back to a generic
+An optional root `appName` key sets the browser tab title and the deployment
+name shown on the empty chat screen (`Chat with <appName> models`); when
+omitted the tab keeps the built-in title and the screen falls back to a generic
 localized word (`AI` / `IA`).
 
 Keys of a `models` entry:
@@ -293,6 +294,89 @@ messageId, content }`. An unknown or malformed entry is dropped rather than
 failing the whole config. As with `apiKey`, any token in `headers` ships to the
 browser, so keep these endpoints internal or front them with a proxy.
 
+## MCP tools
+
+It os possible to expose **MCP tools** to the model: the browser connects to the 
+declared Streamable-HTTP MCP servers directly, offers their tools through the 
+OpenAI function-calling API, and runs the agent loop client-side — the model 
+calls tools, the page executes them via MCP and feeds the results back, 
+until the model answers (or the turn cap is reached; the last round then 
+runs without tools so the model must answer). Tool messages never enter the 
+conversation tree; the assistant node keeps a display-only trace of every call 
+(shown as a collapsible card under the answer, like the sources block). 
+Works with the `vllm`, `llama.cpp` and `openai` types on any server that 
+streams `tool_calls`; the headless embed run and compare panes use the same loop.
+
+```json
+{
+    "mcp": {
+        "servers": [{ "id": "websearch", "url": "/mcps/websearch/mcp" }],
+        "maxTurns": 8
+    },
+    "models": [
+        { "id": "local" },
+        {
+            "id": "local-research",
+            "baseUrl": "http://127.0.0.1:8080",
+            "mcp": { "servers": ["websearch"], "maxTurns": 12 }
+        }
+    ]
+}
+```
+
+MCP servers are declared **once** in the root `mcp` block — the catalog — and
+each model opts in by referencing server ids; a model without an `mcp` block
+gets no tools. Unset scalar keys in a model block inherit the catalog
+defaults.
+
+| Key                    | Type                      | Description                                                                            |
+| ---------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
+| `mcp`                  | object                    | Server catalog + loop defaults; models reference servers by id                         |
+| `models[].mcp.servers` | array of strings          | Ids from the catalog to wire into this model; unknown ids are dropped                  |
+| `servers[].id`         | string (required)         | Namespacing prefix for tool names (`id__tool`, `[a-zA-Z0-9_-]`, ≤30)                   |
+| `servers[].url`        | string (required)         | Streamable-HTTP endpoint; relative to the site, or absolute                            |
+| `servers[].headers`    | object                    | Extra request headers (browser-visible, as with `apiKey`)                              |
+| `servers[].disabled`   | boolean                   | Keep the entry in the file but unwired (default: `false`)                              |
+| `maxTurns`             | number (default: 8)       | Agent-loop bound; on reaching it the final round runs without tools                    |
+| `toolChoice`           | `auto`/`none`/`required`  | Sent as OpenAI `tool_choice` (`none` = wire-level kill switch)                         |
+| `resultMaxChars`       | number (default: 8000)    | Per-call truncation of tool results before re-injection                                |
+| `systemNote`           | boolean (default: `true`) | Append a tool-availability note to the system prompt (helps weak models use the tools) |
+
+A relative server `url` keeps the request same-origin — the zero-CORS path, the
+same trick as a relative `baseUrl`: run an stdio-only MCP server behind the
+reverse proxy that serves the site (or bridge it with `supergateway`). An
+absolute URL needs CORS enabled on the MCP server, and a legacy SSE-only
+(`EventSource`) MCP endpoint needs it too even same-site; stay with
+Streamable-HTTP. Servers that fail to connect are reported in the tool trace
+and skipped; a failed call (or garbled arguments) is fed back to the model as
+an error result it can retry, rather than aborting the answer. As with
+`integrations`, a malformed server entry is dropped, not fatal.
+
+In plain English: If you cannot connect to your MCP, CORS is the most likely
+issue. INspect your borwser console (F12) to see of connection issues are
+due to denied cross origin connection attempts. You can host the streamable 
+MCP on the same domain from which you serve HYOAI to avoid this issue.
+
+Alternatively, you can use a reverse proxy on the host from which you
+serve HYOAI that proxies/forwards tool calls from your browser to the
+external MCP. 
+
+For example, with Caddy running on http://yourdomain.com for a MCP 
+at http://external.com/mcp, use the following Caddyfile and configure 
+the MCP as "http://yourdomain.com/mcps/somemcp/mcp":
+
+```
+:80 {
+
+      handle /mcps/somemcp/* {
+                uri strip_prefix /mcp/somemcp
+                reverse_proxy http://external.com {
+                        flush_interval -1
+                }
+        }
+}
+```
+
 ## Embed
 
 The same static build doubles as an embeddable widget: loaded in an iframe with
@@ -373,7 +457,8 @@ components/     chat/ (view, message, composer, dialogs), settings/ (tabs, field
                 editors, dialogs), layout/ (shells, header, sidebar), compare/,
                 markdown/, common/ (cross-domain), ui/ (shadcn)
 hooks/          useStore (useSyncExternalStore + selectors), useActiveChat, useConversations
-lib/            api/ (SSE, params mapping), storage/ (compressed localStorage, quota),
+lib/            api/ (SSE, params mapping), mcp/ (streamable-HTTP client registry),
+                storage/ (compressed localStorage, quota),
                 stores/ (settings, models, conversations, chat), messageTree, chatActions
 messages/       next-intl catalogs fr.json / en.json
 docs/           embed.md (widget parameters, postMessage bridge)

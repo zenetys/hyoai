@@ -29,6 +29,10 @@ export interface DraftModel {
     modalities: string;
     supportsThinking: Capability;
     runtimeProps: Capability;
+    mcpServers: string;
+    mcpMaxTurns: string;
+    mcpToolChoice: string;
+    mcpExtra: string;
 }
 
 /**
@@ -64,6 +68,21 @@ export interface DraftIntegration {
 }
 
 /**
+ * One MCP server as edited in the form.
+ *
+ * @param id - Short name used to namespace the server's tools
+ * @param url - Streamable-HTTP endpoint of the server
+ * @param headers - Request headers as JSON text
+ * @param disabled - Whether the server is skipped at load
+ */
+export interface DraftMcpServer {
+    id: string;
+    url: string;
+    headers: string;
+    disabled: boolean;
+}
+
+/**
  * Whole config as edited in the form, flattened for direct field binding.
  *
  * @param appName - Application name shown in the UI
@@ -74,6 +93,11 @@ export interface DraftIntegration {
  * @param effortDefault - Id of the default effort level
  * @param effortLevels - Effort levels as edited in the form
  * @param integrations - Side-channel integrations as edited in the form
+ * @param mcpServers - Global MCP server catalog as edited in the form
+ * @param mcpMaxTurns - Default tool-loop round budget as text (empty = unset)
+ * @param mcpToolChoice - Default tool choice ("", "auto", "none" or "required")
+ * @param mcpResultMaxChars - Default tool-result truncation budget as text
+ * @param mcpSystemNote - Tri-state for appending the tools system note
  */
 export interface Draft {
     appName: string;
@@ -84,6 +108,11 @@ export interface Draft {
     effortDefault: string;
     effortLevels: DraftLevel[];
     integrations: DraftIntegration[];
+    mcpServers: DraftMcpServer[];
+    mcpMaxTurns: string;
+    mcpToolChoice: string;
+    mcpResultMaxChars: string;
+    mcpSystemNote: Capability;
 }
 
 // Coerce an unknown value to a plain string, empty when absent.
@@ -104,6 +133,28 @@ const asJson = (value: unknown): string =>
 const asCapability = (value: unknown): Capability =>
     typeof value === "boolean" ? (value ? "on" : "off") : "auto";
 
+// Read an optional number as field text, empty when absent.
+const asNumberText = (value: unknown): string =>
+    typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+
+// Ids of an MCP server reference list as a comma-separated field value;
+// accepts id strings and legacy {id, url} entries alike.
+const asServerIds = (servers: unknown): string =>
+    (Array.isArray(servers) ? servers : [])
+        .map((entry) => (typeof entry === "string" ? entry : asString(asRecord(entry)?.id)))
+        .filter(Boolean)
+        .join(", ");
+
+// Drop the keys the form edits as dedicated fields, keeping the rest verbatim.
+const omitKeys = (
+    value: Record<string, unknown>,
+    keys: string[],
+): Record<string, unknown> | undefined => {
+    const rest = { ...value };
+    for (const key of keys) delete rest[key];
+    return Object.keys(rest).length ? rest : undefined;
+};
+
 // Emit a tri-state as a boolean, or undefined when left on "auto".
 const fromCapability = (value: Capability): boolean | undefined =>
     value === "auto" ? undefined : value === "on";
@@ -121,12 +172,15 @@ export function rawToDraft(raw: unknown): Draft {
     const levels = Array.isArray(effort?.levels) ? effort.levels : [];
     const integrations = Array.isArray(root.integrations) ? root.integrations : [];
     const thinking = asRecord(root.thinking);
+    const mcp = asRecord(root.mcp);
+    const mcpList = Array.isArray(mcp?.servers) ? mcp.servers : [];
 
     return {
         appName: asString(root.appName),
         defaultModel: asString(root.defaultModel),
         models: models.map((entry) => {
             const model = asRecord(entry) ?? {};
+            const modelMcp = asRecord(model.mcp) ?? {};
             return {
                 id: asString(model.id),
                 name: asString(model.name),
@@ -146,6 +200,10 @@ export function rawToDraft(raw: unknown): Draft {
                 modalities: asJson(model.modalities),
                 supportsThinking: asCapability(model.supportsThinking),
                 runtimeProps: asCapability(model.runtimeProps),
+                mcpServers: asServerIds(modelMcp.servers),
+                mcpMaxTurns: asNumberText(modelMcp.maxTurns),
+                mcpToolChoice: asString(modelMcp.toolChoice),
+                mcpExtra: asJson(omitKeys(modelMcp, ["servers", "maxTurns", "toolChoice"])),
             };
         }),
         thinkingOn: asJson(thinking?.on),
@@ -172,6 +230,19 @@ export function rawToDraft(raw: unknown): Draft {
                     : "",
             };
         }),
+        mcpServers: mcpList.map((entry) => {
+            const server = asRecord(entry) ?? {};
+            return {
+                id: asString(server.id),
+                url: asString(server.url),
+                headers: asJson(server.headers),
+                disabled: server.disabled === true,
+            };
+        }),
+        mcpMaxTurns: asNumberText(mcp?.maxTurns),
+        mcpToolChoice: asString(mcp?.toolChoice),
+        mcpResultMaxChars: asNumberText(mcp?.resultMaxChars),
+        mcpSystemNote: asCapability(mcp?.systemNote),
     };
 }
 
@@ -200,6 +271,18 @@ export function buildConfig(
         }
     };
 
+    // Parse a positive-integer field; record the locator of the first failure.
+    const parseNum = (value: string, field: string): number | undefined => {
+        const trimmed = value.trim();
+        if (!trimmed) return undefined;
+        const num = Number(trimmed);
+        if (!Number.isInteger(num) || num <= 0) {
+            if (!badField) badField = field;
+            return undefined;
+        }
+        return num;
+    };
+
     // Append a property only when it carries a value.
     const put = (target: Record<string, unknown>, key: string, value: unknown): void => {
         if (value !== undefined) target[key] = value;
@@ -208,6 +291,17 @@ export function buildConfig(
     const config: Record<string, unknown> = {};
     put(config, "appName", draft.appName.trim() || undefined);
     put(config, "defaultModel", draft.defaultModel.trim() || undefined);
+
+    const builtServers: Record<string, unknown>[] = [];
+    draft.mcpServers.forEach((server, index) => {
+        const id = server.id.trim();
+        const url = server.url.trim();
+        if (!id && !url) return;
+        const out: Record<string, unknown> = { id, url };
+        put(out, "headers", parse(server.headers, `mcp.servers[${index}].headers`));
+        put(out, "disabled", server.disabled || undefined);
+        builtServers.push(out);
+    });
 
     config.models = draft.models.map((model, index) => {
         const entry: Record<string, unknown> = {
@@ -228,6 +322,22 @@ export function buildConfig(
         put(entry, "modalities", parse(model.modalities, `models[${index}].modalities`));
         put(entry, "supportsThinking", fromCapability(model.supportsThinking));
         put(entry, "runtimeProps", fromCapability(model.runtimeProps));
+
+        const ids = [
+            ...new Set(
+                model.mcpServers
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean),
+            ),
+        ];
+        const mcpBlock: Record<string, unknown> = {
+            ...(asRecord(parse(model.mcpExtra, `models[${index}].mcp`)) ?? {}),
+        };
+        if (ids.length) mcpBlock.servers = ids;
+        put(mcpBlock, "maxTurns", parseNum(model.mcpMaxTurns, `models[${index}].mcp.maxTurns`));
+        put(mcpBlock, "toolChoice", model.mcpToolChoice.trim() || undefined);
+        if (Object.keys(mcpBlock).length) entry.mcp = mcpBlock;
         return entry;
     });
 
@@ -272,6 +382,14 @@ export function buildConfig(
             return out;
         });
     }
+
+    const mcpOut: Record<string, unknown> = {};
+    if (builtServers.length) mcpOut.servers = builtServers;
+    put(mcpOut, "maxTurns", parseNum(draft.mcpMaxTurns, "mcp.maxTurns"));
+    put(mcpOut, "toolChoice", draft.mcpToolChoice.trim() || undefined);
+    put(mcpOut, "resultMaxChars", parseNum(draft.mcpResultMaxChars, "mcp.resultMaxChars"));
+    put(mcpOut, "systemNote", fromCapability(draft.mcpSystemNote));
+    if (Object.keys(mcpOut).length) config.mcp = mcpOut;
 
     if (badField) return { ok: false, field: badField };
     return { ok: true, config };

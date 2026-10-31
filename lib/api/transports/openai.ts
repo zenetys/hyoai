@@ -5,6 +5,7 @@ import { resolveEffortLevel } from "@/lib/effort";
 import {
     ApiError,
     type ApiStreamChunk,
+    type ApiToolCall,
     type ChatRequestParams,
     type StreamEvent,
 } from "@/types/api";
@@ -56,7 +57,40 @@ function buildChatBody(endpoint: ModelConfig, params: ChatRequestParams): Record
         body.reasoning_effort = effortLevel.id;
     }
 
+    if (params.tools?.length) {
+        body.tools = params.tools;
+        body.tool_choice = params.toolChoice ?? "auto";
+    }
+
     return stripUndefined(body);
+}
+
+/**
+ * Accumulate streamed tool_call fragments (one per choice index) into complete
+ * calls. Servers split id/name across the first chunk and stream the JSON
+ * arguments piecewise, so calls are merged by index and only the complete
+ * shapes are surfaced, at end of stream.
+ *
+ * @param acc - Calls accumulated so far, indexed by choice index
+ * @param deltas - tool_calls delta array of one chunk
+ */
+function mergeToolCallDeltas(
+    acc: Map<number, ApiToolCall>,
+    deltas: NonNullable<NonNullable<ApiStreamChunk["choices"]>[number]["delta"]>["tool_calls"],
+): void {
+    if (!deltas) return;
+    for (const delta of deltas) {
+        const index = delta.index ?? 0;
+        const current = acc.get(index) ?? {
+            id: "",
+            type: "function" as const,
+            function: { name: "", arguments: "" },
+        };
+        if (delta.id) current.id = delta.id;
+        if (delta.function?.name) current.function.name += delta.function.name;
+        if (delta.function?.arguments) current.function.arguments += delta.function.arguments;
+        acc.set(index, current);
+    }
 }
 
 /**
@@ -72,6 +106,7 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
                 content?: string | null;
                 reasoning?: string | null;
                 reasoning_content?: string | null;
+                tool_calls?: ApiToolCall[] | null;
             };
             finish_reason?: string | null;
         }[];
@@ -101,6 +136,9 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
     }
     if (choice?.message?.content) {
         yield { type: "content", text: choice.message.content };
+    }
+    for (const call of choice?.message?.tool_calls ?? []) {
+        yield { type: "toolCall", call };
     }
     if (body.usage) {
         yield {
@@ -153,6 +191,7 @@ export async function* streamOpenAiCompatChat(
     }
 
     const payloads = parseSseStream(response);
+    const toolCalls = new Map<number, ApiToolCall>();
     for (;;) {
         let result: IteratorResult<string>;
         try {
@@ -218,7 +257,14 @@ export async function* streamOpenAiCompatChat(
         if (choice.delta?.content) {
             yield { type: "content", text: choice.delta.content };
         }
+        mergeToolCallDeltas(toolCalls, choice.delta?.tool_calls);
         if (choice.finish_reason != null) {
+            for (const call of [...toolCalls.entries()]
+                .sort(([a], [b]) => a - b)
+                .map(([, call]) => call)) {
+                if (!call.function.name) continue;
+                yield { type: "toolCall", call };
+            }
             yield { type: "finish", reason: choice.finish_reason };
         }
     }

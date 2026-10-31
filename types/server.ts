@@ -37,6 +37,35 @@ export interface EffortConfig {
 }
 
 /**
+ * One Streamable-HTTP MCP server exposed to a model as tools. "url" is the
+ * Streamable-HTTP endpoint (relative to the site, or absolute); "headers"
+ * carries auth for endpoints that need it. Like apiKey, any header value
+ * ships to the browser.
+ */
+export interface McpServerConfig {
+    id: string;
+    url: string;
+    headers?: Record<string, string>;
+    disabled?: boolean;
+}
+
+/**
+ * MCP tool use in effect for a model: the servers whose tools are offered, the
+ * agent-loop bound, the tool_choice policy, the per-call result truncation and
+ * whether a tool-availability note is appended to the system prompt. Servers
+ * are declared once in the root mcp catalog and models reference them by id;
+ * at load time the references are resolved here into full server entries,
+ * with unset scalar fields inherited from the catalog defaults.
+ */
+export interface McpConfig {
+    servers: McpServerConfig[];
+    maxTurns?: number;
+    toolChoice?: "auto" | "none" | "required";
+    resultMaxChars?: number;
+    systemNote?: boolean;
+}
+
+/**
  * Per-attachment-kind capability flags declared in config. Keyed by the app's
  * own attachment kinds (image, audio), independent of any backend's wire
  * vocabulary. A false value blocks that attachment kind; true or omitted leaves
@@ -71,6 +100,7 @@ export interface ModelConfig {
     modalities?: ModalityFlags;
     supportsThinking?: boolean;
     runtimeProps?: boolean;
+    mcp?: McpConfig;
 }
 
 /**
@@ -106,6 +136,7 @@ export interface AppConfig {
     integrations?: IntegrationConfig[];
     thinking?: ThinkingConfig;
     effort?: EffortConfig;
+    mcp?: McpConfig;
 }
 
 // Lifecycle of the config.json fetch.

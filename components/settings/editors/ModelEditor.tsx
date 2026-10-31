@@ -3,6 +3,7 @@
 import { ChevronDown, Power, PowerOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { CapabilityField } from "@/components/settings/fields/CapabilityField";
 import { EditableCard } from "@/components/settings/fields/EditableCard";
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
 import { JsonField } from "@/components/settings/fields/JsonField";
@@ -18,7 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { Capability, DraftModel } from "@/lib/draft";
+import type { DraftModel } from "@/lib/draft";
 import { SERVER_TYPES } from "@/types/server";
 import type { ServerType } from "@/types/server";
 
@@ -46,6 +47,7 @@ export function modelAnchorId(index: number): string {
  * @param onMoveDown - Move the entry one position down
  * @param canMoveUp - Whether an up move is possible (not already first)
  * @param canMoveDown - Whether a down move is possible (not already last)
+ * @param mcpCatalog - Ids of the globally defined MCP servers, for the hint
  */
 export function ModelEditor({
     index,
@@ -56,6 +58,7 @@ export function ModelEditor({
     onMoveDown,
     canMoveUp,
     canMoveDown,
+    mcpCatalog = [],
 }: {
     index: number;
     model: DraftModel;
@@ -65,6 +68,7 @@ export function ModelEditor({
     onMoveDown: () => void;
     canMoveUp: boolean;
     canMoveDown: boolean;
+    mcpCatalog?: string[];
 }) {
     const t = useTranslations("settings");
     const title = model.id || t("config.modelUntitled");
@@ -188,6 +192,56 @@ export function ModelEditor({
                 </Label>
             </div>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                    <TextField
+                        label={t("config.modelMcpServers")}
+                        description={
+                            mcpCatalog.length > 0
+                                ? t("config.modelMcpServersKnown", {
+                                      ids: mcpCatalog.join(", "),
+                                  })
+                                : t("config.modelMcpServersHint")
+                        }
+                        value={model.mcpServers}
+                        onChange={(value) => onChange({ mcpServers: value })}
+                    />
+                </div>
+                <TextField
+                    label={t("config.modelMcpMaxTurns")}
+                    description={t("config.modelMcpMaxTurnsHint")}
+                    placeholder="8"
+                    value={model.mcpMaxTurns}
+                    onChange={(value) => onChange({ mcpMaxTurns: value })}
+                />
+                <div className="space-y-1.5">
+                    <Label>{t("config.modelMcpToolChoice")}</Label>
+                    <p className="text-xs text-muted-foreground">
+                        {t("config.modelMcpToolChoiceHint")}
+                    </p>
+                    <Select
+                        value={model.mcpToolChoice || "__inherit__"}
+                        onValueChange={(value) =>
+                            onChange({ mcpToolChoice: value === "__inherit__" ? "" : value })
+                        }
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="__inherit__">
+                                {t("config.mcpToolChoiceInherit")}
+                            </SelectItem>
+                            <SelectItem value="auto">{t("config.mcpToolChoiceAuto")}</SelectItem>
+                            <SelectItem value="none">{t("config.mcpToolChoiceNone")}</SelectItem>
+                            <SelectItem value="required">
+                                {t("config.mcpToolChoiceRequired")}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
             <Collapsible>
                 <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                     <ChevronDown aria-hidden="true" className="size-3.5" />
@@ -229,42 +283,5 @@ export function ModelEditor({
                 </CollapsibleContent>
             </Collapsible>
         </EditableCard>
-    );
-}
-
-/**
- * Tri-state select for an optional boolean capability: "auto" leaves the field
- * omitted (derived from the backend type), "on"/"off" force it.
- *
- * @param label - Field label
- * @param value - Current tri-state value
- * @param onChange - Called with the next tri-state value
- */
-function CapabilityField({
-    label,
-    value,
-    onChange,
-}: {
-    label: string;
-    value: Capability;
-    onChange: (value: Capability) => void;
-}) {
-    const t = useTranslations("settings");
-
-    return (
-        <div className="space-y-1.5">
-            <Label>{label}</Label>
-
-            <Select value={value} onValueChange={(next) => onChange(next as Capability)}>
-                <SelectTrigger className="w-full">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="auto">{t("config.capabilityAuto")}</SelectItem>
-                    <SelectItem value="on">{t("config.capabilityOn")}</SelectItem>
-                    <SelectItem value="off">{t("config.capabilityOff")}</SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
     );
 }

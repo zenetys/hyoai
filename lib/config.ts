@@ -6,11 +6,19 @@ import { SERVER_TYPES } from "@/types/server";
 import type {
     AppConfig,
     IntegrationConfig,
+    McpConfig,
+    McpServerConfig,
     ModalityFlags,
     ServerType,
     ThinkingConfig,
 } from "@/types/server";
 import { STORAGE_KEYS } from "@/types/storage";
+
+// Read a nested object, or undefined when the value is not an object.
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+    value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : undefined;
 
 const thinkingSchema = z.object({
     on: z.record(z.string(), z.unknown()).optional(),
@@ -35,6 +43,102 @@ const modalitiesSchema = z.object({
     audio: z.boolean().optional(),
 });
 
+const mcpServerSchema = z.object({
+    id: z.string().regex(/^[a-zA-Z0-9_-]{1,30}$/),
+    url: z.string().min(1),
+    headers: z.record(z.string(), z.string()).optional(),
+    disabled: z.boolean().catch(false),
+});
+
+const mcpSchema = z.object({
+    servers: z.array(z.unknown()).default([]),
+    maxTurns: z.number().int().min(1).max(32).catch(8),
+    toolChoice: z.enum(["auto", "none", "required"]).catch("auto"),
+    resultMaxChars: z.number().int().min(200).catch(8000),
+    systemNote: z.boolean().catch(true),
+});
+
+// Model-level mcp block: server id references plus optional scalar overrides.
+// Scalars stay unset (not defaulted) so they can inherit from the root block.
+const modelMcpSchema = z.object({
+    servers: z.array(z.unknown()).default([]),
+    maxTurns: z.number().int().min(1).max(32).optional().catch(undefined),
+    toolChoice: z.enum(["auto", "none", "required"]).optional().catch(undefined),
+    resultMaxChars: z.number().int().min(200).optional().catch(undefined),
+    systemNote: z.boolean().optional().catch(undefined),
+});
+
+/**
+ * Validate the root mcp block into the server catalog: invalid servers are
+ * dropped per entry rather than failing the block, disabled ones are removed,
+ * and scalar fields fall back to their defaults. A block with no usable server
+ * is dropped entirely (returns undefined).
+ *
+ * @param raw - Raw root mcp object from config, if any
+ * @returns Normalized catalog McpConfig, or undefined when nothing usable remains
+ */
+function normalizeMcpBlock(raw: unknown): McpConfig | undefined {
+    if (raw === undefined) return undefined;
+    const parsed = mcpSchema.safeParse(raw);
+    if (!parsed.success) return undefined;
+    const servers: McpServerConfig[] = parsed.data.servers
+        .map((server) => mcpServerSchema.safeParse(server))
+        .filter((result) => result.success)
+        .map((result) => result.data)
+        .filter((server) => !server.disabled);
+    if (servers.length === 0) return undefined;
+    return {
+        servers,
+        maxTurns: parsed.data.maxTurns,
+        toolChoice: parsed.data.toolChoice,
+        resultMaxChars: parsed.data.resultMaxChars,
+        systemNote: parsed.data.systemNote,
+    };
+}
+
+/**
+ * Resolve a model-level mcp block against the root catalog: the model lists
+ * servers by id (the catalog is the single source of truth for endpoints),
+ * unknown ids are dropped, and a legacy inline {id, url} entry is honored only
+ * when the catalog does not define that id. A model without a block, or whose
+ * references all fail to resolve, gets no tools at all — servers are never
+ * silently applied to every model. Unset scalar fields inherit the catalog
+ * values.
+ *
+ * @param raw - Raw model-level mcp object from config, if any
+ * @param catalog - Normalized root catalog, if any
+ * @returns Effective McpConfig for the model, or undefined when it gets no tools
+ */
+function resolveModelMcp(raw: unknown, catalog: McpConfig | undefined): McpConfig | undefined {
+    if (raw === undefined) return undefined;
+    const parsed = modelMcpSchema.safeParse(raw);
+    if (!parsed.success) return undefined;
+
+    const servers: McpServerConfig[] = [];
+    for (const ref of parsed.data.servers) {
+        const id = typeof ref === "string" ? ref : String(asRecord(ref)?.id ?? "");
+        if (!id) continue;
+        const fromCatalog = catalog?.servers.find((server) => server.id === id);
+        if (fromCatalog) {
+            if (!servers.some((server) => server.id === id)) servers.push(fromCatalog);
+            continue;
+        }
+        const legacy = mcpServerSchema.safeParse(ref);
+        if (legacy.success && !legacy.data.disabled && !servers.some((s) => s.id === id)) {
+            servers.push(legacy.data);
+        }
+    }
+    if (servers.length === 0) return undefined;
+
+    return {
+        servers,
+        maxTurns: parsed.data.maxTurns ?? catalog?.maxTurns ?? 8,
+        toolChoice: parsed.data.toolChoice ?? catalog?.toolChoice ?? "auto",
+        resultMaxChars: parsed.data.resultMaxChars ?? catalog?.resultMaxChars ?? 8000,
+        systemNote: parsed.data.systemNote ?? catalog?.systemNote ?? true,
+    };
+}
+
 const modelSchema = z.object({
     id: z.string().min(1),
     name: z.string().min(1).optional(),
@@ -52,6 +156,7 @@ const modelSchema = z.object({
     modalities: modalitiesSchema.optional(),
     supportsThinking: z.boolean().optional(),
     runtimeProps: z.boolean().optional(),
+    mcp: z.unknown().optional(),
 });
 
 const integrationSchema = z.object({
@@ -71,6 +176,7 @@ const configSchema = z.object({
     integrations: z.array(z.unknown()).optional(),
     thinking: thinkingSchema.optional(),
     effort: effortSchema.optional(),
+    mcp: z.unknown().optional(),
 });
 
 // Outcome of the config fetch, consumed by the models store.
@@ -155,6 +261,8 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         .filter((result) => result.success)
         .map((result) => result.data);
 
+    const rootMcp = normalizeMcpBlock(parsed.data.mcp);
+
     const config: AppConfig = {
         models: parsed.data.models.map((entry) => {
             const thinking = entry.thinking ?? parsed.data.thinking;
@@ -163,6 +271,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
                 name: entry.name ?? entry.id,
                 thinking,
                 effort: entry.effort ?? parsed.data.effort,
+                mcp: resolveModelMcp(entry.mcp, rootMcp),
                 ...resolveCapabilities(entry.type, thinking, entry),
             };
         }),
@@ -172,6 +281,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         integrations,
         thinking: parsed.data.thinking,
         effort: parsed.data.effort,
+        mcp: rootMcp,
     };
     return { status: "ready", config };
 }
