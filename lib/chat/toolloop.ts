@@ -16,7 +16,8 @@ export const DEFAULT_MCP_MAX_TURNS = 8;
  * Outcome of one streamed pass of the agent loop: the last finish reason, the
  * complete tool calls the model requested, and an error converted from a
  * yielded error event or a thrown (non-abort) failure. Aborts are re-thrown so
- * the caller's existing abort handling stays in one place.
+ * the caller's existing abort handling stays in one place. A stream that closed
+ * without a server finish reason surfaces as the synthetic "truncated" reason.
  */
 export interface ToolPass {
     finishReason: string | undefined;

@@ -87,6 +87,12 @@ import type { ChunkingStrategy } from "@/types/settings";
 const MAX_RECHUNK_ATTEMPTS = 3;
 const MAX_SYNTH_DEPTH = 6;
 
+// Retries for one generation pass whose stream died before the server sent a
+// finish reason (reported by the transport as the synthetic "truncated"). The
+// partial output of a truncated pass is rolled back, so a retry re-answers the
+// same request from the same message state.
+const MAX_TRUNCATION_RETRIES = 2;
+
 /**
  * Whether a RAG trace carries at least one populated stage, so an empty trace
  * (non-RAG backend) is stored as undefined rather than an empty object.
@@ -437,6 +443,7 @@ export class ChatInstance {
 
         const toolTrace: ToolCallTrace[] = [];
         let toolElided = false;
+        let truncationRetries = 0;
 
         const handleEvent = (event: StreamEvent): void => {
             switch (event.type) {
@@ -527,6 +534,7 @@ export class ChatInstance {
                 params.tools = activeRegistry ? toolSpecs : undefined;
                 params.toolChoice = activeRegistry ? mcpConfig?.toolChoice : undefined;
                 const contentBefore = content.length;
+                const reasoningBefore = reasoning.length;
                 const pass = await runToolPass(entry, params, controller.signal, handleEvent);
                 finishReason = pass.finishReason;
                 if (pass.error) {
@@ -545,6 +553,23 @@ export class ChatInstance {
                     nodeError = undefined;
                     errorKind = undefined;
                     finishReason = undefined;
+                    continue;
+                }
+                // A pass whose stream died before the server sent a finish reason
+                // cut the turn short without an answer; retry it from the same
+                // message state after rolling back its partial output.
+                if (
+                    !pass.error &&
+                    finishReason === "truncated" &&
+                    pass.toolCalls.length === 0 &&
+                    content.length === contentBefore &&
+                    truncationRetries < MAX_TRUNCATION_RETRIES
+                ) {
+                    truncationRetries += 1;
+                    content = content.slice(0, contentBefore);
+                    reasoning = reasoning.slice(0, reasoningBefore);
+                    finishReason = undefined;
+                    queueFlush();
                     continue;
                 }
                 if (
@@ -587,6 +612,11 @@ export class ChatInstance {
                 appendToolRound(params.messages, roundContent, pass.toolCalls, results);
                 turn += 1;
             }
+
+            if (finishReason === "truncated" && nodeError === undefined) {
+                nodeError = "the stream closed before the response finished";
+                errorKind = "stream";
+            }
         } catch (error) {
             if (error instanceof ApiError && error.kind === "aborted") {
                 finishReason = "aborted";
@@ -600,7 +630,10 @@ export class ChatInstance {
             }
         } finally {
             this.abortRef = null;
-            const completed = finishReason !== "aborted" && finishReason !== "error";
+            const completed =
+                finishReason !== "aborted" &&
+                finishReason !== "error" &&
+                finishReason !== "truncated";
             if (completed) setGenerationDone(liveConvId);
             else setLiveStatus(liveConvId, "idle");
         }

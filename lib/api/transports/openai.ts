@@ -155,8 +155,10 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
 /**
  * Stream a chat completion from an OpenAI-compatible server as typed events.
  * Reads SSE chunks until the "[DONE]" sentinel, which matters for vLLM: its
- * usage arrives on an extra empty-choices chunk after finish_reason.
- * Servers configured with streaming:false get a single JSON request whose
+ * usage arrives on an extra empty-choices chunk after finish_reason. A stream
+ * that closes without any finish_reason is reported as a synthetic "truncated"
+ * finish (after flushing any tool calls it did carry). Servers configured with
+ * streaming:false get a single JSON request whose
  * response is converted into the same event sequence.
  *
  * @param endpoint - Model entry with the endpoint to call
@@ -192,6 +194,7 @@ export async function* streamOpenAiCompatChat(
 
     const payloads = parseSseStream(response);
     const toolCalls = new Map<number, ApiToolCall>();
+    let finishSeen = false;
     for (;;) {
         let result: IteratorResult<string>;
         try {
@@ -200,6 +203,20 @@ export async function* streamOpenAiCompatChat(
             throw mapThrownError(err, "stream");
         }
         if (result.done) {
+            // The stream closed without a finish_reason chunk: the server dropped
+            // its final chunk or closed early. Flush the accumulated tool calls
+            // and report a synthetic finish so callers learn about the
+            // truncation instead of seeing a silent empty turn.
+            if (!finishSeen) {
+                const flushed = [...toolCalls.entries()]
+                    .sort(([a], [b]) => a - b)
+                    .map(([, call]) => call)
+                    .filter((call) => call.function.name);
+                for (const call of flushed) {
+                    yield { type: "toolCall", call };
+                }
+                yield { type: "finish", reason: flushed.length > 0 ? "tool_calls" : "truncated" };
+            }
             return;
         }
 
@@ -259,6 +276,7 @@ export async function* streamOpenAiCompatChat(
         }
         mergeToolCallDeltas(toolCalls, choice.delta?.tool_calls);
         if (choice.finish_reason != null) {
+            finishSeen = true;
             for (const call of [...toolCalls.entries()]
                 .sort(([a], [b]) => a - b)
                 .map(([, call]) => call)) {
