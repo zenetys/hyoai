@@ -1,0 +1,110 @@
+"use client";
+
+import { Download } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
+import { useEffect, useId, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+/**
+ * Lazily import the heavy mermaid bundle and render the source to an SVG
+ * string, rejecting (rather than painting) on parse errors.
+ *
+ * @param source - Mermaid diagram source
+ * @param id - Unique id used by mermaid for the render scratch elements
+ * @param dark - Whether the resolved theme is dark
+ * @returns The rendered SVG markup
+ */
+async function renderDiagram(source: string, id: string, dark: boolean): Promise<string> {
+    const { default: mermaid } = await import("mermaid");
+    mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: dark ? "dark" : "neutral",
+        fontFamily: "var(--font-inter)",
+    });
+    const { svg } = await mermaid.render(id, source);
+    return svg;
+}
+
+/**
+ * Rendered mermaid diagram with the same frame as CodeBlock: a header with
+ * the language label and an SVG download button, the diagram body, and a
+ * raw-source fallback when rendering fails.
+ *
+ * @param source - Mermaid diagram source extracted from the code fence
+ */
+export function MermaidBlock({ source }: { source: string }) {
+    const t = useTranslations("common");
+    const { resolvedTheme } = useTheme();
+    const [svg, setSvg] = useState<string | null>(null);
+    const [failed, setFailed] = useState(false);
+    const renderId = `mermaid-${useId().replaceAll(":", "")}`;
+
+    useEffect(() => {
+        let cancelled = false;
+        const show = (nextSvg: string | null, nextFailed: boolean) => {
+            if (!cancelled) {
+                setSvg(nextSvg);
+                setFailed(nextFailed);
+            }
+        };
+        (async () => {
+            try {
+                const rendered = await renderDiagram(source, renderId, resolvedTheme === "dark");
+                show(rendered, false);
+            } catch {
+                show(null, true);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [source, renderId, resolvedTheme]);
+
+    const handleDownload = () => {
+        if (!svg) return;
+        const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "diagram.svg";
+        anchor.click();
+        URL.revokeObjectURL(url);
+    };
+
+    return (
+        <div className="overflow-hidden rounded-lg border border-border bg-muted/50">
+            <div className="flex items-center justify-between border-b border-border px-3 py-1">
+                <span className="font-mono text-xs text-muted-foreground">mermaid</span>
+                {svg && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t("downloadSvg")}
+                                onClick={handleDownload}
+                            >
+                                <Download aria-hidden="true" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t("downloadSvg")}</TooltipContent>
+                    </Tooltip>
+                )}
+            </div>
+            {failed ? (
+                <pre className="overflow-x-auto p-3">{source}</pre>
+            ) : svg ? (
+                <div
+                    className="flex justify-center overflow-x-auto p-3 [&_svg]:max-w-full"
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                />
+            ) : (
+                <div className="p-3 text-xs text-muted-foreground">{t("loading")}</div>
+            )}
+        </div>
+    );
+}

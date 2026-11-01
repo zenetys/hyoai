@@ -10,7 +10,8 @@
         "copyLink": "Copy link",
         "linkCopied": "Link copied",
         "edit": "Edit",
-        "loading": "Loading"
+        "loading": "Loading",
+        "downloadSvg": "Download SVG"
     },
     "sidebar": {
         "newChat": "New conversation",
