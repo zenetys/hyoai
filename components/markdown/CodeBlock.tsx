@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { isValidElement } from "react";
 
 import { CopyButton } from "@/components/common/CopyButton";
+import { MermaidBlock } from "@/components/markdown/MermaidBlock";
 
 /**
  * Recursively extract the plain text of a React node tree, used to feed the
@@ -24,6 +25,7 @@ function extractText(node: React.ReactNode): string {
 /**
  * Fenced code block chrome: header with the language label and a copy
  * button, wrapping the highlighted pre/code emitted by react-markdown.
+ * Mermaid fences are delegated to MermaidBlock instead of being highlighted.
  *
  * @param children - The code element produced by react-markdown
  */
@@ -35,6 +37,10 @@ export function CodeBlock({ children, ...props }: React.ComponentProps<"pre">) {
         const match = /language-([\w-]+)/.exec(children.props.className ?? "");
         if (match) language = match[1];
         text = extractText(children.props.children);
+    }
+
+    if (language === "mermaid") {
+        return <MermaidBlock source={text} />;
     }
 
     return (
