@@ -15,6 +15,22 @@ import {
     setActiveModel,
 } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
+import type { ModelConfig } from "@/types/server";
+
+/**
+ * Trigger pill text: the model definition's name (its shortName when set) with
+ * the raw upstream id in parentheses, so definitions that share one endpoint
+ * model stay distinguishable.
+ *
+ * @param entry - Resolved model entry, if any
+ * @param upstream - Upstream model id sent to the endpoint, if resolved
+ */
+function triggerLabel(entry: ModelConfig | null, upstream: string | null): string | null {
+    const name = entry ? (entry.shortName ?? entry.name) : null;
+    const base = upstream ? parseModelName(upstream).base : null;
+    if (name && base) return `${name} (${base})`;
+    return name ?? base;
+}
 
 /**
  * Composer model selector: the active model's base name shown through the shared
@@ -26,8 +42,7 @@ export function ComposerModelSelector() {
     const upstream = useStore(modelsStore, selectActiveUpstreamModel);
     const effort = useStore(settingsStore, (state) => state.settings.effort);
 
-    const label =
-        active?.shortName ?? (upstream ? parseModelName(upstream).base : (active?.name ?? null));
+    const label = triggerLabel(active, upstream);
 
     return (
         <ModelMenu
@@ -74,8 +89,7 @@ export function PaneModelSelector({ align = "start" }: { align?: "start" | "end"
         usePane && entry
             ? resolveSelectionUpstream({ chosenModels, lists }, entry, selection.upstreamModel)
             : globalUpstream;
-    const label =
-        entry?.shortName ?? (upstream ? parseModelName(upstream).base : (entry?.name ?? null));
+    const label = triggerLabel(entry, upstream);
     const effort = selection.effort ?? globalEffort;
 
     const handleSelect = (entryId: string, model?: string) => {
