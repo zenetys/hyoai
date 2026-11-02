@@ -423,7 +423,7 @@ export class ChatInstance {
                     tools: toolTrace.length > 0 ? [...toolTrace] : undefined,
                     firstTokenAt,
                     usage: {
-                        promptTokens: stats.promptTokens,
+                        promptTokens: stats.lastPromptTokens ?? stats.promptTokens,
                         completionTokens: stats.completionTokens,
                         tokensPerSecond: stats.tokensPerSecond,
                     },
@@ -472,6 +472,7 @@ export class ChatInstance {
                     break;
                 case "usage":
                     stats.promptTokens = (stats.promptTokens ?? 0) + event.usage.promptTokens;
+                    stats.lastPromptTokens = event.usage.promptTokens;
                     stats.completionTokens =
                         (stats.completionTokens ?? 0) + event.usage.completionTokens;
                     queueFlush();
