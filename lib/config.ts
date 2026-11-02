@@ -56,6 +56,7 @@ const mcpSchema = z.object({
     toolChoice: z.enum(["auto", "none", "required"]).catch("auto"),
     resultMaxChars: z.number().int().min(200).catch(8000),
     systemNote: z.boolean().catch(true),
+    guardLeakedMarkup: z.boolean().catch(true),
 });
 
 // Model-level mcp block: server id references plus optional scalar overrides.
@@ -66,6 +67,7 @@ const modelMcpSchema = z.object({
     toolChoice: z.enum(["auto", "none", "required"]).optional().catch(undefined),
     resultMaxChars: z.number().int().min(200).optional().catch(undefined),
     systemNote: z.boolean().optional().catch(undefined),
+    guardLeakedMarkup: z.boolean().optional().catch(undefined),
 });
 
 /**
@@ -93,6 +95,7 @@ function normalizeMcpBlock(raw: unknown): McpConfig | undefined {
         toolChoice: parsed.data.toolChoice,
         resultMaxChars: parsed.data.resultMaxChars,
         systemNote: parsed.data.systemNote,
+        guardLeakedMarkup: parsed.data.guardLeakedMarkup,
     };
 }
 
@@ -136,6 +139,7 @@ function resolveModelMcp(raw: unknown, catalog: McpConfig | undefined): McpConfi
         toolChoice: parsed.data.toolChoice ?? catalog?.toolChoice ?? "auto",
         resultMaxChars: parsed.data.resultMaxChars ?? catalog?.resultMaxChars ?? 8000,
         systemNote: parsed.data.systemNote ?? catalog?.systemNote ?? true,
+        guardLeakedMarkup: parsed.data.guardLeakedMarkup ?? catalog?.guardLeakedMarkup ?? true,
     };
 }
 

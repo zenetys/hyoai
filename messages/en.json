@@ -83,6 +83,7 @@
         "relevanceScore": "Relevance score",
         "toolCalls": "{count, plural, one {# tool call} other {# tool calls}}",
         "toolCallFailed": "failed",
+        "recoveredFromText": "recovered from text",
         "copyMessage": "Copy message",
         "messageActions": "Actions",
         "reply": "Reply",
@@ -496,6 +497,7 @@
             "resultMaxChars": "Result max chars",
             "toolChoice": "Tool choice",
             "systemNote": "Tools system note",
+            "guardLeakedMarkup": "Recover leaked markup from text",
             "serverEnabled": "Enabled"
         }
     },

@@ -83,6 +83,7 @@
         "relevanceScore": "Score de pertinence",
         "toolCalls": "{count, plural, one {# appel d'outil} other {# appels d'outil}}",
         "toolCallFailed": "échec",
+        "recoveredFromText": "récupéré depuis le texte",
         "copyMessage": "Copier le message",
         "messageActions": "Actions",
         "reply": "Répondre",
@@ -496,6 +497,7 @@
             "resultMaxChars": "Caractères max par résultat",
             "toolChoice": "Choix d'outil",
             "systemNote": "Note système sur les outils",
+            "guardLeakedMarkup": "Récupération du balisage fui dans le texte",
             "serverEnabled": "Activé"
         }
     },

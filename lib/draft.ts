@@ -98,6 +98,7 @@ export interface DraftMcpServer {
  * @param mcpToolChoice - Default tool choice ("", "auto", "none" or "required")
  * @param mcpResultMaxChars - Default tool-result truncation budget as text
  * @param mcpSystemNote - Tri-state for appending the tools system note
+ * @param mcpGuardLeakedMarkup - Tri-state for the leaked-markup recovery guard
  */
 export interface Draft {
     appName: string;
@@ -113,6 +114,7 @@ export interface Draft {
     mcpToolChoice: string;
     mcpResultMaxChars: string;
     mcpSystemNote: Capability;
+    mcpGuardLeakedMarkup: Capability;
 }
 
 // Coerce an unknown value to a plain string, empty when absent.
@@ -243,6 +245,7 @@ export function rawToDraft(raw: unknown): Draft {
         mcpToolChoice: asString(mcp?.toolChoice),
         mcpResultMaxChars: asNumberText(mcp?.resultMaxChars),
         mcpSystemNote: asCapability(mcp?.systemNote),
+        mcpGuardLeakedMarkup: asCapability(mcp?.guardLeakedMarkup),
     };
 }
 
@@ -389,6 +392,7 @@ export function buildConfig(
     put(mcpOut, "toolChoice", draft.mcpToolChoice.trim() || undefined);
     put(mcpOut, "resultMaxChars", parseNum(draft.mcpResultMaxChars, "mcp.resultMaxChars"));
     put(mcpOut, "systemNote", fromCapability(draft.mcpSystemNote));
+    put(mcpOut, "guardLeakedMarkup", fromCapability(draft.mcpGuardLeakedMarkup));
     if (Object.keys(mcpOut).length) config.mcp = mcpOut;
 
     if (badField) return { ok: false, field: badField };

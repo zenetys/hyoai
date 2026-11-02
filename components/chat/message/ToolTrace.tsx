@@ -48,6 +48,11 @@ export function ToolTraceBlock({ trace }: { trace: ToolTrace | undefined }) {
                                         {t("toolCallFailed")}
                                     </span>
                                 )}
+                                {call.recovered && (
+                                    <span className="shrink-0 text-xs text-amber-500">
+                                        {t("recoveredFromText")}
+                                    </span>
+                                )}
                                 <span className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground/60">
                                     {Math.round(call.ms)} ms
                                 </span>

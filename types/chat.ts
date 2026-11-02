@@ -95,7 +95,8 @@ export interface MessageQuote {
  * arguments and the model-visible result, each truncated to keep localStorage
  * light (the agent loop works with the full texts). "error" marks a failed
  * call or an unreachable server; the model saw the failure text and could
- * retry or reformulate.
+ * retry or reformulate. "recovered" marks a call whose markup block had
+ * leaked into the plain text channel and was rebuilt by the recovery guard.
  */
 export interface ToolCallTrace {
     name: string;
@@ -103,6 +104,7 @@ export interface ToolCallTrace {
     result: string;
     ms: number;
     error?: boolean;
+    recovered?: boolean;
 }
 
 /**

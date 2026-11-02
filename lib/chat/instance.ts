@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import { measureCharsPerToken } from "@/lib/api/tokenize";
+import { detectLeakedMarkupBlock } from "@/lib/chat/leakedtoolcall";
 import * as lifecycle from "@/lib/chat/lifecycle";
 import * as modelOps from "@/lib/chat/model";
 import type { ChatModelSelection } from "@/lib/chat/model";
@@ -571,6 +572,38 @@ export class ChatInstance {
                     finishReason = undefined;
                     queueFlush();
                     continue;
+                }
+                // A chat parser that failed to intercept a markup encoded
+                // invocation block (stranded stop) leaks it into the plain
+                // text channel. When the pass carries no structured
+                // invocations at all, recover a validated trailing block and
+                // let the round run through the normal execution path.
+                if (
+                    activeRegistry &&
+                    !pass.error &&
+                    pass.toolCalls.length === 0 &&
+                    mcpConfig?.guardLeakedMarkup !== false
+                ) {
+                    const leaked = detectLeakedMarkupBlock(
+                        content.slice(contentBefore),
+                        toolSpecs.map((spec) => spec.function.name),
+                    );
+                    if (leaked) {
+                        content = content.slice(0, contentBefore + leaked.prefix.length);
+                        queueFlush();
+                        toolTrace.push({
+                            name:
+                                "recovered:" +
+                                leaked.calls.map((call) => call.function.name).join(", "),
+                            args: truncateTraceField(leaked.raw, TRACE_RESULT_MAX),
+                            result: "recovered from the text channel",
+                            ms: 0,
+                            recovered: true,
+                        });
+                        pass.finishReason = "tool_calls";
+                        finishReason = "tool_calls";
+                        pass.toolCalls.push(...leaked.calls);
+                    }
                 }
                 if (
                     !activeRegistry ||

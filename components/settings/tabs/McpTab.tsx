@@ -169,6 +169,11 @@ export function McpTab() {
                         value={draft.mcpSystemNote}
                         onChange={(value) => patch({ mcpSystemNote: value })}
                     />
+                    <CapabilityField
+                        label={t("mcp.guardLeakedMarkup")}
+                        value={draft.mcpGuardLeakedMarkup}
+                        onChange={(value) => patch({ mcpGuardLeakedMarkup: value })}
+                    />
                 </div>
             </section>
 

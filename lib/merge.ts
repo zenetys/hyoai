@@ -27,6 +27,7 @@ export interface ConfigOverride {
         toolChoice?: unknown;
         resultMaxChars?: unknown;
         systemNote?: unknown;
+        guardLeakedMarkup?: unknown;
         servers?: unknown[];
     };
     removed?: RemovedIds;
@@ -213,7 +214,13 @@ export function mergeConfig(base: unknown, override: unknown): RawConfig {
         const baseMcp = isObj(b.mcp) ? b.mcp : {};
         const overMcp = ov.mcp ?? {};
         const mcp: RawConfig = { ...baseMcp };
-        for (const key of ["maxTurns", "toolChoice", "resultMaxChars", "systemNote"] as const) {
+        for (const key of [
+            "maxTurns",
+            "toolChoice",
+            "resultMaxChars",
+            "systemNote",
+            "guardLeakedMarkup",
+        ] as const) {
             if (key in overMcp) mcp[key] = overMcp[key];
         }
         if (overMcp.servers || removed.servers) {
@@ -280,7 +287,13 @@ export function diffConfig(base: unknown, built: unknown): ConfigOverride {
     const baseMcp = isObj(b.mcp) ? b.mcp : {};
     const builtMcp = isObj(built2.mcp) ? built2.mcp : {};
     const mcp: NonNullable<ConfigOverride["mcp"]> = {};
-    for (const key of ["maxTurns", "toolChoice", "resultMaxChars", "systemNote"] as const) {
+    for (const key of [
+        "maxTurns",
+        "toolChoice",
+        "resultMaxChars",
+        "systemNote",
+        "guardLeakedMarkup",
+    ] as const) {
         if (builtMcp[key] !== undefined && !deepEqual(builtMcp[key], baseMcp[key])) {
             mcp[key] = builtMcp[key];
         }
@@ -434,7 +447,9 @@ export function describeOverride(override: unknown, base: unknown): OverrideItem
     }
     if (
         ovMcp &&
-        ["maxTurns", "toolChoice", "resultMaxChars", "systemNote"].some((key) => key in ovMcp)
+        ["maxTurns", "toolChoice", "resultMaxChars", "systemNote", "guardLeakedMarkup"].some(
+            (key) => key in ovMcp,
+        )
     ) {
         items.push({ key: "mcpSettings", category: "mcp", type: "mcpSettings", label: "" });
     }
@@ -507,6 +522,7 @@ export function pruneOverride(override: unknown, keys: Set<string>): ConfigOverr
             delete mcp.toolChoice;
             delete mcp.resultMaxChars;
             delete mcp.systemNote;
+            delete mcp.guardLeakedMarkup;
         }
         if (mcp.servers) {
             mcp.servers = mcp.servers.filter((entry) => !keys.has(`mcpServer:${idOf(entry)}`));
