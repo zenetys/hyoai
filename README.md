@@ -341,6 +341,7 @@ defaults.
 | `toolChoice`           | `auto`/`none`/`required`  | Sent as OpenAI `tool_choice` (`none` = wire-level kill switch)                         |
 | `resultMaxChars`       | number (default: 8000)    | Per-call truncation of tool results before re-injection                                |
 | `systemNote`           | boolean (default: `true`) | Append a tool-availability note to the system prompt (helps weak models use the tools) |
+| `guardLeakedMarkup`    | boolean (default: `true`) | Recover tool-call markup leaked into the plain text channel by a broken chat parser    |
 
 A relative server `url` keeps the request same-origin — the zero-CORS path, the
 same trick as a relative `baseUrl`: run an stdio-only MCP server behind the
@@ -349,7 +350,11 @@ absolute URL needs CORS enabled on the MCP server, and a legacy SSE-only
 (`EventSource`) MCP endpoint needs it too even same-site; stay with
 Streamable-HTTP. Servers that fail to connect are reported in the tool trace
 and skipped; a failed call (or garbled arguments) is fed back to the model as
-an error result it can retry, rather than aborting the answer. As with
+an error result it can retry, rather than aborting the answer. If the upstream
+engine's chat parser fails to intercept a tool-call block and emits it as
+ordinary answer text, a complete trailing block whose function names resolve
+against the wired servers is recovered and executed instead (flagged in the
+tool trace); set `guardLeakedMarkup` to `false` to disable this. As with
 `integrations`, a malformed server entry is dropped, not fatal.
 
 In plain English: If you cannot connect to your MCP, CORS is the most likely
