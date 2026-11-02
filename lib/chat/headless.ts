@@ -148,6 +148,7 @@ export async function runHeadless(
             const activeRegistry = turn < maxTurns ? registry : null;
             params.tools = activeRegistry ? toolSpecs : undefined;
             params.toolChoice = activeRegistry ? mcpConfig?.toolChoice : undefined;
+            const textBefore = text.length;
             const pass = await runToolPass(entry, params, signal, (event) => {
                 if (event.type === "content") {
                     text += event.text;
@@ -197,6 +198,18 @@ export async function runHeadless(
             }
             if (pass.error) {
                 fail(pass.error.message);
+                return;
+            }
+            if (pass.finishReason === "truncated") {
+                fail("the stream closed before the response finished");
+                return;
+            }
+            if (pass.finishReason === "tool_calls" && pass.toolCalls.length === 0) {
+                fail("the tool call request was not delivered in the response");
+                return;
+            }
+            if (pass.finishReason !== "tool_calls" && text.length === textBefore) {
+                fail("the model ended the response without generating any content");
                 return;
             }
             done();

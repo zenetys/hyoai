@@ -530,6 +530,11 @@ export class ChatInstance {
             }
 
             let turn = 0;
+            // Did the final pass deliver anything at all (content, reasoning or
+            // structured calls)? A run that ends with stop and an empty final
+            // pass must surface as a failure, not as a completed answer.
+            let lastPassProduced = true;
+            let lastPassToolCalls = 0;
             for (;;) {
                 const activeRegistry = turn < maxTurns ? registry : null;
                 params.tools = activeRegistry ? toolSpecs : undefined;
@@ -605,6 +610,11 @@ export class ChatInstance {
                         pass.toolCalls.push(...leaked.calls);
                     }
                 }
+                lastPassProduced =
+                    content.length > contentBefore ||
+                    reasoning.length > reasoningBefore ||
+                    pass.toolCalls.length > 0;
+                lastPassToolCalls = pass.toolCalls.length;
                 if (
                     !activeRegistry ||
                     finishReason !== "tool_calls" ||
@@ -646,9 +656,21 @@ export class ChatInstance {
                 turn += 1;
             }
 
-            if (finishReason === "truncated" && nodeError === undefined) {
-                nodeError = "the stream closed before the response finished";
-                errorKind = "stream";
+            // A run that ends without the final pass producing anything, or with
+            // a tool-call request that never arrived on the structured channel
+            // (and could not be recovered from the text channel), is a failure:
+            // report it instead of closing the turn as completed.
+            if (nodeError === undefined) {
+                if (finishReason === "truncated") {
+                    nodeError = "the stream closed before the response finished";
+                    errorKind = "stream";
+                } else if (finishReason === "tool_calls" && lastPassToolCalls === 0) {
+                    nodeError = "the tool call request was not delivered in the response";
+                    errorKind = "stream";
+                } else if (!lastPassProduced) {
+                    nodeError = "the model ended the response without generating any content";
+                    errorKind = "stream";
+                }
             }
         } catch (error) {
             if (error instanceof ApiError && error.kind === "aborted") {
@@ -664,6 +686,7 @@ export class ChatInstance {
         } finally {
             this.abortRef = null;
             const completed =
+                nodeError === undefined &&
                 finishReason !== "aborted" &&
                 finishReason !== "error" &&
                 finishReason !== "truncated";
