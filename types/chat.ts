@@ -42,6 +42,8 @@ export interface PipelineTimings {
  */
 export interface MessageStats {
     promptTokens?: number;
+    /** Prompt size of the most recent request in a multi-pass run. */
+    lastPromptTokens?: number;
     promptMs?: number;
     promptPerSecond?: number;
     completionTokens?: number;
