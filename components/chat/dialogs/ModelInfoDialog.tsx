@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { useEffect } from "react";
 
 import { CopyButton } from "@/components/common/CopyButton";
 import {
@@ -14,6 +15,7 @@ import { useStore } from "@/hooks/useStore";
 import { formatBytes } from "@/lib/format";
 import {
     modelsStore,
+    refreshProps,
     selectActiveModelMeta,
     selectActiveProps,
     selectActiveUpstreamModel,
@@ -81,6 +83,13 @@ export function ModelInfoDialog() {
     const upstream = target ? target.model : activeUpstream;
     const entryId = target?.entryId ?? activeEntryId;
     const entry = entries.find((item) => item.id === entryId) ?? null;
+
+    // Entries other than the active one (a footer-pinned target, or the other
+    // pane of a compare view) may never have been probed: fetch on open so the
+    // runtime section shows the same information the model selector offers.
+    useEffect(() => {
+        if (open && entry) void refreshProps(entry);
+    }, [open, entry]);
 
     const tokens = (count: number) =>
         `${new Intl.NumberFormat(locale).format(count)} ${t("tokensUnit")}`;
@@ -157,7 +166,11 @@ export function ModelInfoDialog() {
                                 {entry.runtimeProps !== undefined && (
                                     <InfoRow
                                         label={t("runtimeProps")}
-                                        value={yesNo(entry.runtimeProps)}
+                                        // A probed context window counts as runtime
+                                        // information even without the /props contract.
+                                        value={yesNo(
+                                            entry.runtimeProps || props?.nCtx !== undefined,
+                                        )}
                                     />
                                 )}
                             </div>
