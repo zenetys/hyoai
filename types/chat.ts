@@ -109,6 +109,13 @@ export interface ToolCallTrace {
     recovered?: boolean;
     /** Content character offset at which this call was issued, for inline placement. */
     offset?: number;
+    /**
+     * Generation event sequence: rounds sharing a content offset but split by
+     * reasoning bursts stay in issue order and render as separate panes.
+     */
+    seq?: number;
+    /** Live-only: the call was issued and its result has not arrived yet. */
+    pending?: boolean;
 }
 
 /**
@@ -123,6 +130,20 @@ export type ToolTrace = ToolCallTrace[];
  * parent/children links so edits and regenerations create sibling branches
  * instead of overwriting history (same model as the llama.cpp webui).
  */
+/**
+ * One reasoning burst of an assistant message with its position in the answer:
+ * the content length at which the model started thinking again. Reasoning
+ * recorded at a tool round's offset renders below that round's trace.
+ */
+export interface ReasoningSegment {
+    text: string;
+    at: number;
+    /** Generation event sequence, ordering bursts against calls at the same offset. */
+    seq?: number;
+    /** Live-only: the burst is still streaming, not yet closed by content or a round. */
+    pending?: boolean;
+}
+
 export interface MessageNode {
     id: string;
     parent: string | null;
@@ -130,6 +151,7 @@ export interface MessageNode {
     role: MessageRole;
     content: string;
     reasoningContent?: string;
+    reasoningSegments?: ReasoningSegment[];
     quote?: MessageQuote;
     rag?: RagData;
     tools?: ToolTrace;

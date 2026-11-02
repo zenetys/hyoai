@@ -129,7 +129,13 @@ function AssistantMessage({
     const tools = streaming ? streaming.tools : node.tools;
     const { entry } = useResolvedModel();
     const inlineTrace = (entry?.mcp?.toolTracePlacement ?? "inline") !== "end";
-    const isThinking = Boolean(streaming && reasoning && !content);
+    const reasoningSegs = streaming ? streaming.reasoningSegments : node.reasoningSegments;
+    const inlineActive = inlineTrace && Boolean(tools && tools.length > 0);
+    const inlineReasoning = inlineActive && Boolean(reasoningSegs && reasoningSegs.length > 0);
+    const segments =
+        inlineActive && tools ? splitContentWithTraces(content, tools, reasoningSegs) : null;
+    const liveThinking = Boolean(streaming?.reasoningSegments?.at(-1)?.pending);
+    const isThinking = Boolean(streaming && reasoning && (!content || liveThinking));
     const isWaiting = Boolean(streaming && !content && !reasoning);
 
     if (editing) {
@@ -150,7 +156,7 @@ function AssistantMessage({
 
     return (
         <div className="group/message select-none" {...longPress.handlers}>
-            <ReasoningBlock reasoning={reasoning} isThinking={isThinking} />
+            {!inlineReasoning && <ReasoningBlock reasoning={reasoning} isThinking={isThinking} />}
             <SearchProgress rag={rag} isStreaming={Boolean(streaming)} />
             {isWaiting && (
                 <div className="flex items-center gap-1.5 py-2" aria-hidden="true">
@@ -160,14 +166,24 @@ function AssistantMessage({
                 </div>
             )}
             {content || tools ? (
-                inlineTrace && tools ? (
+                segments ? (
                     <div className="select-text" data-assistant-content data-message-id={node.id}>
-                        {splitContentWithTraces(content, tools).map((segment, index) => (
+                        {segments.map((segment, index) => (
                             <Fragment key={index}>
                                 {segment.text && <MarkdownRenderer content={segment.text} />}
-                                {segment.calls.length > 0 && (
-                                    <ToolTraceBlock trace={segment.calls} />
-                                )}
+                                {segment.groups.map((group, groupIndex) => (
+                                    <Fragment key={groupIndex}>
+                                        {group.calls.length > 0 && (
+                                            <ToolTraceBlock trace={group.calls} />
+                                        )}
+                                        {group.reasoning && (
+                                            <ReasoningBlock
+                                                reasoning={group.reasoning}
+                                                isThinking={Boolean(group.reasoningThinking)}
+                                            />
+                                        )}
+                                    </Fragment>
+                                ))}
                             </Fragment>
                         ))}
                     </div>

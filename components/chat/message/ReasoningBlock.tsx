@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 interface ReasoningBlockProps {
     reasoning: string;
-    isThinking: boolean;
+    isThinking?: boolean;
 }
 
 /**
@@ -21,7 +21,7 @@ interface ReasoningBlockProps {
  * @param reasoning - Reasoning text accumulated so far
  * @param isThinking - Whether reasoning tokens are still streaming
  */
-export function ReasoningBlock({ reasoning, isThinking }: ReasoningBlockProps) {
+export function ReasoningBlock({ reasoning, isThinking = false }: ReasoningBlockProps) {
     const t = useTranslations("chat");
     const expandDefault = useStore(
         settingsStore,
@@ -47,7 +47,7 @@ export function ReasoningBlock({ reasoning, isThinking }: ReasoningBlockProps) {
                     aria-hidden="true"
                 />
                 <span className={cn(isThinking && "animate-pulse")}>
-                    {isThinking ? t("thinking") : t("reasoning")}
+                    {isThinking ? `${t("reasoning")} \u2026` : t("reasoning")}
                 </span>
                 <ChevronDown
                     className={cn("size-3.5 transition-transform", open && "rotate-180")}

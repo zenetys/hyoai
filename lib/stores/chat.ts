@@ -1,5 +1,12 @@
 import { createStore, type Store } from "@/lib/store";
-import type { CompactionState, MessageNode, MessageQuote, RagData, ToolTrace } from "@/types/chat";
+import type {
+    CompactionState,
+    MessageNode,
+    MessageQuote,
+    RagData,
+    ReasoningSegment,
+    ToolTrace,
+} from "@/types/chat";
 import type { ChunkingStrategy } from "@/types/settings";
 
 // Generation lifecycle of the active conversation.
@@ -27,6 +34,7 @@ export interface StreamingState {
     status: StreamingStatus;
     content: string;
     reasoning: string;
+    reasoningSegments?: ReasoningSegment[];
     rag?: RagData;
     tools?: ToolTrace;
     startedAt: number | null;

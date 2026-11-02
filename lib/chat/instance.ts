@@ -74,6 +74,7 @@ import type {
     MessageQuote,
     MessageStats,
     RagData,
+    ReasoningSegment,
     ToolCallTrace,
 } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
@@ -394,6 +395,9 @@ export class ChatInstance {
 
         let content = "";
         let reasoning = "";
+        const reasoningSegments: ReasoningSegment[] = [];
+        let passContentBefore = 0;
+        let passReasoningBefore = 0;
 
         const rag: RagData = {};
         let firstTokenAt: number | null = null;
@@ -419,6 +423,7 @@ export class ChatInstance {
                     status: "streaming",
                     content,
                     reasoning,
+                    reasoningSegments: liveReasoningSegments(),
                     rag: hasRag(rag) ? { ...rag } : undefined,
                     tools: toolTrace.length > 0 ? [...toolTrace] : undefined,
                     firstTokenAt,
@@ -443,6 +448,21 @@ export class ChatInstance {
         };
 
         const toolTrace: ToolCallTrace[] = [];
+        // Shared event sequence of tool calls and reasoning bursts; entries with
+        // the same content offset keep their real-world order through this.
+        let eventSeq = 0;
+        const liveReasoningSegments = (): ReasoningSegment[] | undefined => {
+            const committed = reasoningSegments.length > 0 ? [...reasoningSegments] : [];
+            const tail = reasoning.slice(passReasoningBefore);
+            if (tail)
+                committed.push({
+                    text: tail,
+                    at: passContentBefore,
+                    seq: eventSeq,
+                    pending: content.length === passContentBefore,
+                });
+            return committed.length > 0 ? committed : undefined;
+        };
         let toolElided = false;
         let truncationRetries = 0;
 
@@ -518,6 +538,7 @@ export class ChatInstance {
                         ms: 0,
                         error: true,
                         offset: content.length,
+                        seq: eventSeq++,
                     });
                 }
                 if (registry.tools.length === 0) {
@@ -543,7 +564,17 @@ export class ChatInstance {
                 params.toolChoice = activeRegistry ? mcpConfig?.toolChoice : undefined;
                 const contentBefore = content.length;
                 const reasoningBefore = reasoning.length;
+                passContentBefore = contentBefore;
+                passReasoningBefore = reasoningBefore;
                 const pass = await runToolPass(entry, params, controller.signal, handleEvent);
+                const passReasoning = reasoning.slice(reasoningBefore);
+                if (passReasoning) {
+                    reasoningSegments.push({
+                        text: passReasoning,
+                        at: contentBefore,
+                        seq: eventSeq++,
+                    });
+                }
                 finishReason = pass.finishReason;
                 if (pass.error) {
                     nodeError = pass.error.message;
@@ -607,6 +638,7 @@ export class ChatInstance {
                             ms: 0,
                             recovered: true,
                             offset: content.length,
+                            seq: eventSeq++,
                         });
                         pass.finishReason = "tool_calls";
                         finishReason = "tool_calls";
@@ -629,6 +661,17 @@ export class ChatInstance {
                 const results: McpToolResult[] = [];
                 for (const call of pass.toolCalls) {
                     const callStartedAt = Date.now();
+                    const traceEntry: ToolCallTrace = {
+                        name: call.function.name,
+                        args: truncateTraceField(call.function.arguments, TRACE_ARGS_MAX),
+                        result: "",
+                        ms: 0,
+                        offset: content.length,
+                        seq: eventSeq++,
+                        pending: true,
+                    };
+                    toolTrace.push(traceEntry);
+                    queueFlush();
                     let result: McpToolResult;
                     try {
                         result = await activeRegistry.execute(
@@ -646,14 +689,10 @@ export class ChatInstance {
                         };
                     }
                     results.push(result);
-                    toolTrace.push({
-                        name: call.function.name,
-                        args: truncateTraceField(call.function.arguments, TRACE_ARGS_MAX),
-                        result: truncateTraceField(result.content, TRACE_RESULT_MAX),
-                        ms: Date.now() - callStartedAt,
-                        error: result.error || undefined,
-                        offset: content.length,
-                    });
+                    traceEntry.result = truncateTraceField(result.content, TRACE_RESULT_MAX);
+                    traceEntry.ms = Date.now() - callStartedAt;
+                    traceEntry.error = result.error || undefined;
+                    traceEntry.pending = undefined;
                     queueFlush();
                 }
                 appendToolRound(params.messages, roundContent, pass.toolCalls, results);
@@ -738,8 +777,14 @@ export class ChatInstance {
             nodes: updateNode(current.nodes, nodeId, {
                 content,
                 reasoningContent: reasoning || undefined,
+                reasoningSegments: reasoningSegments.length > 0 ? reasoningSegments : undefined,
                 rag: hasRag(rag) ? rag : undefined,
-                tools: toolTrace.length > 0 ? toolTrace : undefined,
+                tools:
+                    toolTrace.length > 0
+                        ? toolTrace.map((entry) =>
+                              entry.pending ? { ...entry, pending: undefined } : entry,
+                          )
+                        : undefined,
                 stats,
                 finishReason: finishReason ?? "stop",
                 error: nodeError,
