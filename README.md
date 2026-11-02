@@ -296,15 +296,15 @@ browser, so keep these endpoints internal or front them with a proxy.
 
 ## MCP tools
 
-It os possible to expose **MCP tools** to the model: the browser connects to the 
-declared Streamable-HTTP MCP servers directly, offers their tools through the 
-OpenAI function-calling API, and runs the agent loop client-side — the model 
-calls tools, the page executes them via MCP and feeds the results back, 
-until the model answers (or the turn cap is reached; the last round then 
-runs without tools so the model must answer). Tool messages never enter the 
-conversation tree; the assistant node keeps a display-only trace of every call 
-(shown as a collapsible card under the answer, like the sources block). 
-Works with the `vllm`, `llama.cpp` and `openai` types on any server that 
+It is possible to expose **MCP tools** to the model: the browser connects to the
+declared Streamable-HTTP MCP servers directly, offers their tools through the
+OpenAI function-calling API, and runs the agent loop client-side — the model
+calls tools, the page executes them via MCP and feeds the results back,
+until the model answers (or the turn cap is reached; the last round then
+runs without tools so the model must answer). Tool messages never enter the
+conversation tree; the assistant node keeps a display-only trace of every call
+(shown as a collapsible card under the answer, like the sources block).
+Works with the `vllm`, `llama.cpp` and `openai` types on any server that
 streams `tool_calls`; the headless embed run and compare panes use the same loop.
 
 ```json
@@ -353,16 +353,16 @@ an error result it can retry, rather than aborting the answer. As with
 `integrations`, a malformed server entry is dropped, not fatal.
 
 In plain English: If you cannot connect to your MCP, CORS is the most likely
-issue. INspect your borwser console (F12) to see of connection issues are
-due to denied cross origin connection attempts. You can host the streamable 
+issue. Inspect your browser console (F12) to see if connection issues are
+due to denied cross origin connection attempts. You can host the streamable
 MCP on the same domain from which you serve HYOAI to avoid this issue.
 
 Alternatively, you can use a reverse proxy on the host from which you
 serve HYOAI that proxies/forwards tool calls from your browser to the
-external MCP. 
+external MCP.
 
-For example, with Caddy running on http://yourdomain.com for a MCP 
-at http://external.com/mcp, use the following Caddyfile and configure 
+For example, with Caddy running on http://yourdomain.com for a MCP
+at http://external.com/mcp, use the following Caddyfile and configure
 the MCP as "http://yourdomain.com/mcps/somemcp/mcp":
 
 ```
