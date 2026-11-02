@@ -107,6 +107,8 @@ export interface ToolCallTrace {
     ms: number;
     error?: boolean;
     recovered?: boolean;
+    /** Content character offset at which this call was issued, for inline placement. */
+    offset?: number;
 }
 
 /**

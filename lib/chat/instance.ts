@@ -517,6 +517,7 @@ export class ChatInstance {
                         result: serverError.error,
                         ms: 0,
                         error: true,
+                        offset: content.length,
                     });
                 }
                 if (registry.tools.length === 0) {
@@ -605,6 +606,7 @@ export class ChatInstance {
                             result: "recovered from the text channel",
                             ms: 0,
                             recovered: true,
+                            offset: content.length,
                         });
                         pass.finishReason = "tool_calls";
                         finishReason = "tool_calls";
@@ -650,6 +652,7 @@ export class ChatInstance {
                         result: truncateTraceField(result.content, TRACE_RESULT_MAX),
                         ms: Date.now() - callStartedAt,
                         error: result.error || undefined,
+                        offset: content.length,
                     });
                     queueFlush();
                 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { memo, useState } from "react";
+import { Fragment, memo, useState } from "react";
 
 import { AttachmentThumb } from "@/components/chat/composer/ComposerAttachments";
 import { ChapterMessage } from "@/components/chat/message/ChapterMessage";
@@ -22,6 +22,7 @@ import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useChatInstance } from "@/lib/chat/context";
 import { errorText } from "@/lib/chat/errors";
 import { resolveModalityGate } from "@/lib/chat/modalities";
+import { splitContentWithTraces } from "@/lib/chat/tracePlacement";
 import type { StreamingState } from "@/lib/stores/chat";
 import type { MessageNode } from "@/types/chat";
 
@@ -126,6 +127,8 @@ function AssistantMessage({
     const reasoning = streaming ? streaming.reasoning : (node.reasoningContent ?? "");
     const rag = streaming ? streaming.rag : node.rag;
     const tools = streaming ? streaming.tools : node.tools;
+    const { entry } = useResolvedModel();
+    const inlineTrace = (entry?.mcp?.toolTracePlacement ?? "inline") !== "end";
     const isThinking = Boolean(streaming && reasoning && !content);
     const isWaiting = Boolean(streaming && !content && !reasoning);
 
@@ -156,13 +159,34 @@ function AssistantMessage({
                     <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:300ms]" />
                 </div>
             )}
-            {content && (
-                <div className="select-text" data-assistant-content data-message-id={node.id}>
-                    <MarkdownRenderer content={content} />
-                </div>
-            )}
+            {content || tools ? (
+                inlineTrace && tools ? (
+                    <div className="select-text" data-assistant-content data-message-id={node.id}>
+                        {splitContentWithTraces(content, tools).map((segment, index) => (
+                            <Fragment key={index}>
+                                {segment.text && <MarkdownRenderer content={segment.text} />}
+                                {segment.calls.length > 0 && (
+                                    <ToolTraceBlock trace={segment.calls} />
+                                )}
+                            </Fragment>
+                        ))}
+                    </div>
+                ) : (
+                    <>
+                        {content && (
+                            <div
+                                className="select-text"
+                                data-assistant-content
+                                data-message-id={node.id}
+                            >
+                                <MarkdownRenderer content={content} />
+                            </div>
+                        )}
+                        <ToolTraceBlock trace={tools} />
+                    </>
+                )
+            ) : null}
             <Sources rag={rag} content={content} />
-            <ToolTraceBlock trace={tools} />
             {node.error && !streaming && (
                 <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {errorText(t, node)}
