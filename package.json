@@ -8,6 +8,7 @@
         "start": "npx serve out -p 4118",
         "dev": "next dev -H 127.0.0.1 -p 4117",
         "check": "tsc --noEmit && eslint . && prettier --check .",
+        "test": "vitest run",
         "format": "prettier --write . && eslint --fix ."
     },
     "dependencies": {
@@ -48,6 +49,7 @@
         "eslint-plugin-import": "^2.32.0",
         "prettier": "^3.8.4",
         "tailwindcss": "^4",
-        "typescript": "^5"
+        "typescript": "^5",
+        "vitest": "^4.1.12"
     }
 }
