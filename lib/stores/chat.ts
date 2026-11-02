@@ -1,4 +1,5 @@
 import { createStore, type Store } from "@/lib/store";
+import { getPath } from "@/lib/tree";
 import type { CompactionState, MessageNode, MessageQuote, RagData } from "@/types/chat";
 import type { ChunkingStrategy } from "@/types/settings";
 
@@ -22,6 +23,34 @@ export interface StreamingUsage {
  * Live buffers of the in-flight generation, separate from the node so the
  * rest of the tree keeps reference identity while tokens arrive.
  */
+/**
+ * Usage of the last assistant message on the active branch, used when the
+ * composer is focused between generations.
+ *
+ * @param state - Chat store state
+ * @returns Prompt and completion tokens of the most recent generation
+ */
+export function selectLastUsage(state: {
+    currNode: string | null;
+    nodes: Parameters<typeof getPath>[0];
+}): StreamingUsage | null {
+    if (!state.currNode) return null;
+    const path = getPath(state.nodes, state.currNode);
+    for (let index = path.length - 1; index >= 0; index -= 1) {
+        const node = path[index];
+        if (node.role === "assistant" && node.stats) {
+            return {
+                // In tool-call runs promptTokens accumulates over all passes;
+                // the last pass alone measures the real request size.
+                promptTokens: node.stats.lastPromptTokens ?? node.stats.promptTokens,
+                completionTokens: node.stats.completionTokens,
+                tokensPerSecond: node.stats.tokensPerSecond,
+            };
+        }
+    }
+    return null;
+}
+
 export interface StreamingState {
     nodeId: string | null;
     status: StreamingStatus;

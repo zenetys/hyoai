@@ -11,36 +11,10 @@ import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
 import { formatRate } from "@/lib/format";
-import type { StreamingUsage } from "@/lib/stores/chat";
+import { selectLastUsage } from "@/lib/stores/chat";
 import { settingsStore } from "@/lib/stores/settings";
 import { uiStore } from "@/lib/stores/ui";
-import { getPath } from "@/lib/tree";
 import { cn } from "@/lib/utils";
-
-/**
- * Usage of the last assistant message on the active branch, used when the
- * composer is focused between generations.
- *
- * @param state - Chat store state
- */
-function selectLastUsage(state: {
-    currNode: string | null;
-    nodes: Parameters<typeof getPath>[0];
-}): StreamingUsage | null {
-    if (!state.currNode) return null;
-    const path = getPath(state.nodes, state.currNode);
-    for (let index = path.length - 1; index >= 0; index -= 1) {
-        const node = path[index];
-        if (node.role === "assistant" && node.stats) {
-            return {
-                promptTokens: node.stats.promptTokens,
-                completionTokens: node.stats.completionTokens,
-                tokensPerSecond: node.stats.tokensPerSecond,
-            };
-        }
-    }
-    return null;
-}
 
 /**
  * Discreet usage line above the composer, like the llama.cpp webui: context

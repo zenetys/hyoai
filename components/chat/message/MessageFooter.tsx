@@ -9,16 +9,15 @@ import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
-import { estimateMessagesTokens } from "@/lib/chunking";
-import { buildCompactedMessages } from "@/lib/compaction";
 import { formatBytes, formatRate, formatSeconds, parseModelName } from "@/lib/format";
+import { selectLastUsage } from "@/lib/stores/chat";
 import { modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
 import { storageStore } from "@/lib/stores/storage";
 import { openModelInfo } from "@/lib/stores/ui";
-import { getPath } from "@/lib/tree";
 import { cn } from "@/lib/utils";
 import type { MessageNode, MessageStats } from "@/types/chat";
 
@@ -151,21 +150,15 @@ export function MessageFooter({ node }: { node: MessageNode }) {
     const showStats = useStore(settingsStore, (state) => state.settings.display.showStats);
     const entries = useStore(modelsStore, (state) => state.entries);
     const lists = useStore(modelsStore, (state) => state.lists);
-    const propsMap = useStore(modelsStore, (state) => state.props);
-    const fallbackContextTokens = useStore(
-        settingsStore,
-        (state) => state.settings.chunking.fallbackContextTokens,
-    );
+    const { props } = useResolvedModel();
     const thresholdFraction = useStore(
         settingsStore,
         (state) => state.settings.compaction.thresholdFraction,
     );
     const usage = useStore(storageStore, (state) => state.usage);
     const conversationId = useStore(store, (state) => state.conversationId);
-    const compaction = useStore(store, (state) => state.compaction);
-    const nodes = useStore(store, (state) => state.nodes);
-    const currNode = useStore(store, (state) => state.currNode);
-    const systemPrompt = useStore(settingsStore, (state) => state.settings.systemPrompt);
+    const streaming = useStore(store, (state) => state.streaming);
+    const lastUsage = useStore(store, selectLastUsage);
     const [phase, setPhase] = useState<Phase>("generation");
 
     const parsed = node.model ? parseModelName(node.model) : null;
@@ -187,11 +180,14 @@ export function MessageFooter({ node }: { node: MessageNode }) {
             `${formatBytes(usage.usedBytes, locale)} / ${formatBytes(usage.quotaBytes, locale)}`,
         );
     }
-    const measuredContext = stats?.lastPromptTokens ?? stats?.promptTokens;
-    const contextWindow = modelEntry
-        ? (propsMap[modelEntry.id]?.props?.nCtx ?? fallbackContextTokens)
-        : undefined;
-    const hasContext = !!stats && contextWindow !== undefined && measuredContext !== undefined;
+    // Single source of truth with the context bar: the window of the model the
+    // chat resolves to and the token count of its most recent generation.
+    const liveUsage = streaming.status !== "idle" ? streaming.usage : lastUsage;
+    const usedTokens = liveUsage
+        ? (liveUsage.promptTokens ?? 0) + (liveUsage.completionTokens ?? 0)
+        : 0;
+    const contextWindow = props?.nCtx ?? null;
+    const hasContext = usedTokens > 0 && contextWindow !== null;
     const partsByPhase: Record<Exclude<Phase, "context">, string[]> = {
         reading: stats ? timingParts(stats, "reading", t, locale) : [],
         generation: stats ? timingParts(stats, "generation", t, locale) : [],
@@ -205,29 +201,13 @@ export function MessageFooter({ node }: { node: MessageNode }) {
     const activePhase: Phase = phases.includes(phase) ? phase : (phases[0] ?? "generation");
     let parts: string[] = activePhase === "context" ? [] : partsByPhase[activePhase];
     let contextPercent: number | undefined;
-    if (activePhase === "context" && hasContext && contextWindow) {
-        // Once the compactor rolled the branch up, the last measured prompt size
-        // is stale: re-estimate from the compacted working set instead.
-        const stale = !!compaction && compaction.createdAt > node.createdAt;
-        let tokens = stale ? undefined : measuredContext;
-        if (tokens === undefined) {
-            const estimated = estimateMessagesTokens(
-                buildCompactedMessages(
-                    getPath(nodes, currNode ?? node.id),
-                    systemPrompt,
-                    compaction,
-                ),
-            );
-            tokens = stale ? estimated || measuredContext : measuredContext || estimated;
-        }
-        if (tokens) {
-            contextPercent = Math.round((tokens / contextWindow) * 100);
-            parts = [
-                t("contextUsed", { count: tokens }),
-                t("contextWindow", { count: contextWindow }),
-                t("contextFull", { percent: contextPercent }),
-            ];
-        }
+    if (activePhase === "context" && hasContext && contextWindow !== null) {
+        contextPercent = Math.min(100, Math.round((usedTokens / contextWindow) * 100));
+        parts = [
+            t("contextUsed", { count: usedTokens }),
+            t("contextWindow", { count: contextWindow }),
+            t("contextFull", { percent: contextPercent }),
+        ];
     }
     const hasReading = partsByPhase.reading.length > 0;
     const hasGeneration = partsByPhase.generation.length > 0;
