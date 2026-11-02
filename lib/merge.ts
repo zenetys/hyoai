@@ -28,6 +28,7 @@ export interface ConfigOverride {
         resultMaxChars?: unknown;
         systemNote?: unknown;
         guardLeakedMarkup?: unknown;
+        toolTracePlacement?: unknown;
         servers?: unknown[];
     };
     removed?: RemovedIds;
@@ -220,6 +221,7 @@ export function mergeConfig(base: unknown, override: unknown): RawConfig {
             "resultMaxChars",
             "systemNote",
             "guardLeakedMarkup",
+            "toolTracePlacement",
         ] as const) {
             if (key in overMcp) mcp[key] = overMcp[key];
         }
@@ -293,6 +295,7 @@ export function diffConfig(base: unknown, built: unknown): ConfigOverride {
         "resultMaxChars",
         "systemNote",
         "guardLeakedMarkup",
+        "toolTracePlacement",
     ] as const) {
         if (builtMcp[key] !== undefined && !deepEqual(builtMcp[key], baseMcp[key])) {
             mcp[key] = builtMcp[key];
@@ -447,9 +450,14 @@ export function describeOverride(override: unknown, base: unknown): OverrideItem
     }
     if (
         ovMcp &&
-        ["maxTurns", "toolChoice", "resultMaxChars", "systemNote", "guardLeakedMarkup"].some(
-            (key) => key in ovMcp,
-        )
+        [
+            "maxTurns",
+            "toolChoice",
+            "resultMaxChars",
+            "systemNote",
+            "guardLeakedMarkup",
+            "toolTracePlacement",
+        ].some((key) => key in ovMcp)
     ) {
         items.push({ key: "mcpSettings", category: "mcp", type: "mcpSettings", label: "" });
     }

@@ -472,6 +472,9 @@
             "modelMcpToolChoice": "Tool choice",
             "modelMcpToolChoiceHint": "Never is a kill switch for this model.",
             "mcpToolChoiceInherit": "Inherit",
+            "mcpToolTracePlacementInherit": "Inherit (inline)",
+            "mcpToolTracePlacementInline": "Inline with the text",
+            "mcpToolTracePlacementEnd": "Below the answer",
             "mcpToolChoiceAuto": "Auto",
             "mcpToolChoiceNone": "Never",
             "mcpToolChoiceRequired": "Always",
@@ -498,6 +501,7 @@
             "toolChoice": "Tool choice",
             "systemNote": "Tools system note",
             "guardLeakedMarkup": "Recover leaked markup from text",
+            "toolTracePlacement": "Tool call placement",
             "serverEnabled": "Enabled"
         }
     },

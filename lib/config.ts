@@ -57,6 +57,7 @@ const mcpSchema = z.object({
     resultMaxChars: z.number().int().min(200).catch(8000),
     systemNote: z.boolean().catch(true),
     guardLeakedMarkup: z.boolean().catch(true),
+    toolTracePlacement: z.enum(["end", "inline"]).catch("inline"),
 });
 
 // Model-level mcp block: server id references plus optional scalar overrides.
@@ -68,6 +69,7 @@ const modelMcpSchema = z.object({
     resultMaxChars: z.number().int().min(200).optional().catch(undefined),
     systemNote: z.boolean().optional().catch(undefined),
     guardLeakedMarkup: z.boolean().optional().catch(undefined),
+    toolTracePlacement: z.enum(["end", "inline"]).optional().catch(undefined),
 });
 
 /**
@@ -96,6 +98,7 @@ function normalizeMcpBlock(raw: unknown): McpConfig | undefined {
         resultMaxChars: parsed.data.resultMaxChars,
         systemNote: parsed.data.systemNote,
         guardLeakedMarkup: parsed.data.guardLeakedMarkup,
+        toolTracePlacement: parsed.data.toolTracePlacement,
     };
 }
 
@@ -140,6 +143,8 @@ function resolveModelMcp(raw: unknown, catalog: McpConfig | undefined): McpConfi
         resultMaxChars: parsed.data.resultMaxChars ?? catalog?.resultMaxChars ?? 8000,
         systemNote: parsed.data.systemNote ?? catalog?.systemNote ?? true,
         guardLeakedMarkup: parsed.data.guardLeakedMarkup ?? catalog?.guardLeakedMarkup ?? true,
+        toolTracePlacement:
+            parsed.data.toolTracePlacement ?? catalog?.toolTracePlacement ?? "inline",
     };
 }
 

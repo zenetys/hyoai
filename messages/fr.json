@@ -472,6 +472,9 @@
             "modelMcpToolChoice": "Choix d'outil",
             "modelMcpToolChoiceHint": "« Jamais » désactive les outils pour ce modèle.",
             "mcpToolChoiceInherit": "Par défaut",
+            "mcpToolTracePlacementInherit": "Par défaut (inline)",
+            "mcpToolTracePlacementInline": "Dans le texte",
+            "mcpToolTracePlacementEnd": "Sous la réponse",
             "mcpToolChoiceAuto": "Auto",
             "mcpToolChoiceNone": "Jamais",
             "mcpToolChoiceRequired": "Toujours",
@@ -498,6 +501,7 @@
             "toolChoice": "Choix d'outil",
             "systemNote": "Note système sur les outils",
             "guardLeakedMarkup": "Récupération du balisage fui dans le texte",
+            "toolTracePlacement": "Placement des appels d’outils",
             "serverEnabled": "Activé"
         }
     },

@@ -174,6 +174,34 @@ export function McpTab() {
                         value={draft.mcpGuardLeakedMarkup}
                         onChange={(value) => patch({ mcpGuardLeakedMarkup: value })}
                     />
+                    <div className="space-y-1.5">
+                        <Label htmlFor="mcp-tool-trace-placement">
+                            {t("mcp.toolTracePlacement")}
+                        </Label>
+                        <Select
+                            value={draft.mcpToolTracePlacement || "__inherit__"}
+                            onValueChange={(value) =>
+                                patch({
+                                    mcpToolTracePlacement: value === "__inherit__" ? "" : value,
+                                })
+                            }
+                        >
+                            <SelectTrigger id="mcp-tool-trace-placement" className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__inherit__">
+                                    {t("config.mcpToolTracePlacementInherit")}
+                                </SelectItem>
+                                <SelectItem value="inline">
+                                    {t("config.mcpToolTracePlacementInline")}
+                                </SelectItem>
+                                <SelectItem value="end">
+                                    {t("config.mcpToolTracePlacementEnd")}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </section>
 

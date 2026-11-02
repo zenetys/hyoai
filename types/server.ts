@@ -66,6 +66,7 @@ export interface McpConfig {
     resultMaxChars?: number;
     systemNote?: boolean;
     guardLeakedMarkup?: boolean;
+    toolTracePlacement?: "end" | "inline";
 }
 
 /**
