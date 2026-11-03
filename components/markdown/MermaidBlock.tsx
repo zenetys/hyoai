@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useEffect, useId, useState } from "react";
 
+import { CopyButton } from "@/components/common/CopyButton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -78,22 +79,25 @@ export function MermaidBlock({ source }: { source: string }) {
         <div className="overflow-hidden rounded-lg border border-border bg-muted/50">
             <div className="flex items-center justify-between border-b border-border px-3 py-1">
                 <span className="font-mono text-xs text-muted-foreground">mermaid</span>
-                {svg && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={t("downloadSvg")}
-                                onClick={handleDownload}
-                            >
-                                <Download aria-hidden="true" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t("downloadSvg")}</TooltipContent>
-                    </Tooltip>
-                )}
+                <div className="flex items-center gap-1">
+                    {svg && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    aria-label={t("downloadSvg")}
+                                    onClick={handleDownload}
+                                >
+                                    <Download aria-hidden="true" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("downloadSvg")}</TooltipContent>
+                        </Tooltip>
+                    )}
+                    <CopyButton text={source} label={t("copy")} copiedLabel={t("copied")} />
+                </div>
             </div>
             {failed ? (
                 <pre className="overflow-x-auto p-3">{source}</pre>
