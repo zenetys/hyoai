@@ -214,7 +214,10 @@ Only the active choice (entry and picked model) is remembered in localStorage;
 the file remains the source of truth for the list. Discovered lists refresh at
 startup and whenever the model selector opens, and `runtimeProps` endpoints are
 also probed through `GET /props` for their context size, modalities (image and
-audio attachments are gated on them) and the model information dialog.
+audio attachments are gated on them) and the model information dialog. Other
+entries, such as vLLM or SGLang servers, are probed for their context size
+through `GET /get_model_info`, `GET /get_server_info` and `GET /props`, each
+request being cut off after five seconds.
 
 ## Reasoning: `thinking` and `effort`
 
@@ -257,6 +260,22 @@ until the user picks another:
 Typical knobs: `chat_template_kwargs` with `enable_thinking` (Qwen3),
 `reasoning_effort` (gpt-oss), or `reasoning_budget` (`0` disables thinking on
 some llama.cpp Qwen3 builds).
+
+The reasoning of earlier turns is never sent back by default. To send it back as
+`reasoning_content` to a model whose chat template supports it, opt in with
+`chat_template_kwargs.preserve_thinking` set to the boolean `true`, in the `on`
+fragment or in the `body` of an effort level. The saved reasoning then counts
+toward the context estimate:
+
+```json
+{
+    "thinking": {
+        "on": {
+            "chat_template_kwargs": { "enable_thinking": true, "preserve_thinking": true }
+        }
+    }
+}
+```
 
 ## Integrations
 
@@ -363,6 +382,7 @@ Other good projects, grouped by architecture:
 - next-themes (light/dark/system) + two switchable skins (`soft`, `flat`)
 - next-intl (FR/EN, no routing)
 - react-markdown + remark-gfm + rehype-highlight (Markdown and code rendering)
+- remark-math + rehype-katex (math) and mermaid (diagrams)
 - lz-string (conversation compression in localStorage)
 
 ## Structure
@@ -410,6 +430,9 @@ types/          shared types (chat, server, settings, api, storage)
 
 - Markdown & sources: tables, code highlighting and blockquotes render inline;
   answers can carry retrieved source citations alongside the per-message stats
+- Math & diagrams: KaTeX renders `$...$`, `$$...$$`, `\(...\)` and `\[...\]`
+  formulas, and `mermaid` code blocks render as diagrams with a copy button for
+  the source and an SVG download
 
     ![A Markdown answer with a sources block and per-message stats](public/images/sources.png)
 
