@@ -14,8 +14,10 @@ import { getPath } from "@/lib/tree";
  * Conversation compaction actions, surfaced inside the context bar hover card.
  * Before any summary exists it offers to compact the active branch; once a
  * rolling summary is in place that slot turns into an "active summary" status
- * and a button to free storage by pruning the summarized messages. Renders
- * nothing when neither applies. Bound to the current chat instance through context.
+ * and a button to free storage by pruning the summarized messages, unless
+ * enough newer material has accumulated to compact again, in which case the
+ * compact button stays available to roll the summary forward. Renders nothing
+ * when neither applies. Bound to the current chat instance through context.
  */
 export function CompactionControl() {
     const t = useTranslations("compaction");
@@ -40,16 +42,7 @@ export function CompactionControl() {
 
     return (
         <div className="mt-0.5 flex items-center justify-center gap-1.5 border-t border-border/60 pt-2">
-            {hasSummary ? (
-                <span className="inline-flex h-7 items-center gap-2 px-2.5 text-[0.8rem] text-primary">
-                    {compacting ? (
-                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                    ) : (
-                        <Layers className="size-3.5" aria-hidden="true" />
-                    )}
-                    {t("compacted")}
-                </span>
-            ) : (
+            {canCompact ? (
                 <Button
                     type="button"
                     variant="ghost"
@@ -65,6 +58,17 @@ export function CompactionControl() {
                     )}
                     {t("compact")}
                 </Button>
+            ) : (
+                hasSummary && (
+                    <span className="inline-flex h-7 items-center gap-2 px-2.5 text-[0.8rem] text-primary">
+                        {compacting ? (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                        ) : (
+                            <Layers className="size-3.5" aria-hidden="true" />
+                        )}
+                        {t("compacted")}
+                    </span>
+                )
             )}
             {hasSummary && (
                 <Button
