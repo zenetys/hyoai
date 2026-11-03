@@ -26,6 +26,8 @@ function extractText(node: React.ReactNode): string {
  * Fenced code block chrome: header with the language label and a copy
  * button, wrapping the highlighted pre/code emitted by react-markdown.
  * Mermaid fences are delegated to MermaidBlock instead of being highlighted.
+ * An empty fence renders nothing: models that nest code blocks leave a stray
+ * closing fence that would otherwise open an empty box at the end of the reply.
  *
  * @param children - The code element produced by react-markdown
  */
@@ -42,6 +44,8 @@ export function CodeBlock({ children, ...props }: React.ComponentProps<"pre">) {
     if (language === "mermaid") {
         return <MermaidBlock source={text} />;
     }
+
+    if (text.trim() === "") return null;
 
     return (
         <div className="overflow-hidden rounded-lg border border-border bg-muted/50">
