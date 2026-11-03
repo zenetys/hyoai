@@ -138,3 +138,74 @@ export async function fetchProps(
                 : undefined,
     };
 }
+
+// Info endpoints carrying the context window, tried in order per backend family
+const CONTEXT_WINDOW_ENDPOINTS = ["/get_model_info", "/get_server_info", "/props"];
+
+/**
+ * Extract the effective context length from a backend info response. Covers
+ * vLLM's /get_model_info (max_model_len), SGLang's /get_server_info
+ * (context_length, sometimes nested in server_args) and llama.cpp's /props
+ * (default_generation_settings.n_ctx).
+ *
+ * @param body - Parsed JSON body of an info endpoint
+ * @returns The context window size, or undefined when the body holds none
+ */
+export function parseContextLength(body: unknown): number | undefined {
+    if (body === null || typeof body !== "object") return undefined;
+
+    const source = body as Record<string, unknown>;
+    const serverArgs =
+        source.server_args !== null && typeof source.server_args === "object"
+            ? (source.server_args as Record<string, unknown>)
+            : undefined;
+    const generation = source.default_generation_settings as { n_ctx?: unknown } | undefined;
+    const candidates: unknown[] = [
+        source.max_model_len,
+        source.context_length,
+        source.context_len,
+        serverArgs?.context_length,
+        serverArgs?.context_len,
+        generation?.n_ctx,
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "number" && Number.isFinite(candidate) && candidate > 0) {
+            return candidate;
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Discover the context window from the well-known info endpoints, probing
+ * each until one yields a usable value. For backends without the llama.cpp
+ * /props contract; probes that error or 404 are skipped silently.
+ *
+ * @param endpoint - Config entry whose endpoint to probe
+ * @param signal - Optional abort signal to cancel the request
+ * @returns The context window size, or undefined when no endpoint answered with one
+ */
+export async function fetchContextWindow(
+    endpoint: ModelConfig,
+    signal?: AbortSignal,
+): Promise<number | undefined> {
+    for (const path of CONTEXT_WINDOW_ENDPOINTS) {
+        try {
+            const response = await fetch(buildUrl(endpoint, path), {
+                method: "GET",
+                headers: buildHeaders(endpoint),
+                signal,
+            });
+            if (!response.ok) continue;
+            const body: unknown = await response.json();
+            const nCtx = parseContextLength(body);
+            if (nCtx !== undefined) return nCtx;
+        } catch (error) {
+            if (error instanceof ApiError && error.kind === "aborted") throw error;
+        }
+    }
+
+    return undefined;
+}

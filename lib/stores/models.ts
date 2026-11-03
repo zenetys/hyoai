@@ -1,4 +1,4 @@
-import { fetchProps, listModels } from "@/lib/api/models";
+import { fetchContextWindow, fetchProps, listModels } from "@/lib/api/models";
 import { loadAppConfig, loadBaseRaw, normalizeConfig } from "@/lib/config";
 import { buildConfig, rawToDraft } from "@/lib/draft";
 import { type ConfigOverride, diffConfig } from "@/lib/merge";
@@ -485,15 +485,20 @@ export async function refreshAllModelLists(force = false): Promise<void> {
 }
 
 /**
- * Fetch the /props of an entry that advertises runtimeProps; other entries do
- * not expose the endpoint. Skipped while a fetch runs or when already resolved,
+ * Fetch the /props of an entry that advertises runtimeProps; entries without
+ * the flag are probed for their context window through well-known info
+ * endpoints instead. Skipped while a fetch runs or when already resolved,
  * unless forced (a model switch may change the loaded model behind a proxy).
  *
  * @param entry - Config entry from config.json
  * @param force - Re-fetch even when already resolved
  */
 export async function refreshProps(entry: ModelConfig, force = false): Promise<void> {
-    if (entry.disabled || !entry.runtimeProps) return;
+    if (entry.disabled) return;
+    if (!entry.runtimeProps) {
+        await refreshContextProbe(entry, force);
+        return;
+    }
 
     const current = modelsStore.getState().props[entry.id];
     if (current?.status === "loading") return;
@@ -514,5 +519,43 @@ export async function refreshProps(entry: ModelConfig, force = false): Promise<v
             props: current?.props,
             error: error instanceof Error ? error.message : String(error),
         });
+    }
+}
+
+/**
+ * Probe the context window of an entry without the llama.cpp /props contract
+ * (vLLM, SGLang, generic OpenAI-compatible servers) and store it as the
+ * entry's nCtx, so the context bar can measure against the real window
+ * instead of reporting it unknown. A resolved probe counts as ready and is
+ * skipped until forced again; a failed one is retried on the next call.
+ *
+ * @param entry - Config entry from config.json
+ * @param force - Re-probe even when already resolved
+ */
+async function refreshContextProbe(entry: ModelConfig, force = false): Promise<void> {
+    const current = modelsStore.getState().props[entry.id];
+    if (current?.status === "loading") return;
+    if (!force && current?.status === "ready") return;
+
+    const setProps = (value: PropsState) => {
+        modelsStore.setState((state) =>
+            isLive(state.entries, entry) ? { props: { ...state.props, [entry.id]: value } } : {},
+        );
+    };
+
+    setProps({ status: "loading", props: current?.props });
+
+    try {
+        const nCtx = await fetchContextWindow(entry);
+
+        if (nCtx === undefined) {
+            setProps({ status: "error", props: current?.props });
+
+            return;
+        }
+
+        setProps({ status: "ready", props: { ...current?.props, nCtx } });
+    } catch {
+        setProps({ status: "error", props: current?.props });
     }
 }
