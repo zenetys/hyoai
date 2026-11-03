@@ -148,7 +148,7 @@ export function MermaidBlock({ source }: { source: string }) {
                 <pre className="overflow-x-auto p-3">{source}</pre>
             ) : svg ? (
                 <div
-                    className="flex justify-center overflow-x-auto p-3 [&_svg]:max-w-full"
+                    className="flex justify-center overflow-x-auto bg-background p-3 [&_.edgeLabel]:!bg-background [&_.edgeLabel_p]:!bg-background [&_.edgeLabel_rect]:!fill-background [&_.labelBkg]:!bg-background [&_svg]:max-w-full"
                     dangerouslySetInnerHTML={{ __html: svg }}
                 />
             ) : (
