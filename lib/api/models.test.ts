@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseContextLength } from "./models";
+import type { ModelConfig } from "@/types/server";
+
+import { fetchContextWindow, parseContextLength } from "./models";
 
 describe("parseContextLength", () => {
     it("reads the vLLM /get_model_info shape", () => {
@@ -43,5 +45,49 @@ describe("parseContextLength", () => {
         expect(parseContextLength(null)).toBeUndefined();
         expect(parseContextLength("262144")).toBeUndefined();
         expect(parseContextLength(undefined)).toBeUndefined();
+    });
+});
+
+describe("fetchContextWindow", () => {
+    const endpoint = { baseUrl: "http://example.test" } as ModelConfig;
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("skips endpoints that fail and returns the first context window found", async () => {
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce({ ok: false })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ context_length: 4096 }) });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        expect(await fetchContextWindow(endpoint)).toBe(4096);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("gives every request a signal so a silent server cannot hang the probe", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({ ok: false });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        expect(await fetchContextWindow(endpoint)).toBeUndefined();
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+
+        for (const [, init] of fetchMock.mock.calls) {
+            expect(init.signal).toBeInstanceOf(AbortSignal);
+        }
+    });
+
+    it("stops probing when the caller aborts", async () => {
+        const controller = new AbortController();
+        const fetchMock = vi.fn().mockImplementation(async () => {
+            controller.abort();
+            throw new DOMException("aborted", "AbortError");
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(fetchContextWindow(endpoint, controller.signal)).rejects.toThrow();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 });

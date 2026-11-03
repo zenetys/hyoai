@@ -142,6 +142,9 @@ export async function fetchProps(
 // Info endpoints carrying the context window, tried in order per backend family
 const CONTEXT_WINDOW_ENDPOINTS = ["/get_model_info", "/get_server_info", "/props"];
 
+// Per-request limit of the context window probes, so a silent server cannot hang them
+const CONTEXT_PROBE_TIMEOUT_MS = 5000;
+
 /**
  * Extract the effective context length from a backend info response. Covers
  * vLLM's /get_model_info (max_model_len), SGLang's /get_server_info
@@ -181,7 +184,8 @@ export function parseContextLength(body: unknown): number | undefined {
 /**
  * Discover the context window from the well-known info endpoints, probing
  * each until one yields a usable value. For backends without the llama.cpp
- * /props contract; probes that error or 404 are skipped silently.
+ * /props contract; probes that error or 404 are skipped silently, and each
+ * probe is capped by CONTEXT_PROBE_TIMEOUT_MS.
  *
  * @param endpoint - Config entry whose endpoint to probe
  * @param signal - Optional abort signal to cancel the request
@@ -192,18 +196,26 @@ export async function fetchContextWindow(
     signal?: AbortSignal,
 ): Promise<number | undefined> {
     for (const path of CONTEXT_WINDOW_ENDPOINTS) {
+        const timeout = AbortSignal.timeout(CONTEXT_PROBE_TIMEOUT_MS);
+
         try {
             const response = await fetch(buildUrl(endpoint, path), {
                 method: "GET",
                 headers: buildHeaders(endpoint),
-                signal,
+                signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
             });
+
             if (!response.ok) continue;
+
             const body: unknown = await response.json();
             const nCtx = parseContextLength(body);
+
             if (nCtx !== undefined) return nCtx;
         } catch (error) {
-            if (error instanceof ApiError && error.kind === "aborted") throw error;
+            // A timeout is skipped like any failed probe; only an abort from the caller stops the loop
+            if (signal?.aborted || (error instanceof ApiError && error.kind === "aborted")) {
+                throw error;
+            }
         }
     }
 
