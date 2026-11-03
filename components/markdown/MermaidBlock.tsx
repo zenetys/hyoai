@@ -3,11 +3,17 @@
 import { Download } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { CopyButton } from "@/components/common/CopyButton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Quiet time before rendering, so a diagram that is still streaming is not redrawn per token
+const RENDER_DEBOUNCE_MS = 250;
+
+// How long the last good diagram stays visible once the source stops rendering
+const STALE_DIAGRAM_MS = 1500;
 
 // Canvas colors of the exported SVG, which has no page behind it to show through
 const EXPORT_BACKGROUND = { light: "#ffffff", dark: "#1f2020" };
@@ -74,46 +80,67 @@ async function renderDiagram(source: string, id: string, dark: boolean): Promise
 
 /**
  * Rendered mermaid diagram with the same frame as CodeBlock: a header with
- * the language label and an SVG download button, the diagram body, and a
- * raw-source fallback when rendering fails.
+ * the language label, the copy and SVG download buttons, the diagram body, and
+ * a raw-source fallback when rendering fails.
+ *
+ * Streaming feeds half-written sources, so rendering is debounced and the last good
+ * diagram stays visible for a moment before the raw source takes over.
  *
  * @param source - Mermaid diagram source extracted from the code fence
  */
 export function MermaidBlock({ source }: { source: string }) {
     const t = useTranslations("common");
     const { resolvedTheme } = useTheme();
-    const [svg, setSvg] = useState<string | null>(null);
     const dark = resolvedTheme === "dark";
+    const [svg, setSvg] = useState<string | null>(null);
     const [failed, setFailed] = useState(false);
+    const shown = useRef(false);
     const renderId = `mermaid-${useId().replaceAll(":", "")}`;
 
     useEffect(() => {
         let cancelled = false;
-        const show = (nextSvg: string | null, nextFailed: boolean) => {
-            if (!cancelled) {
-                setSvg(nextSvg);
-                setFailed(nextFailed);
-            }
-        };
-        (async () => {
+        let staleTimer: ReturnType<typeof setTimeout> | undefined;
+
+        const timer = setTimeout(async () => {
             try {
                 const rendered = await renderDiagram(source, renderId, dark);
-                show(rendered, false);
+
+                if (cancelled) return;
+
+                shown.current = true;
+                setSvg(rendered);
+                setFailed(false);
             } catch {
-                show(null, true);
+                if (cancelled) return;
+
+                if (!shown.current) {
+                    setFailed(true);
+                    return;
+                }
+
+                staleTimer = setTimeout(() => {
+                    shown.current = false;
+                    setSvg(null);
+                    setFailed(true);
+                }, STALE_DIAGRAM_MS);
             }
-        })();
+        }, RENDER_DEBOUNCE_MS);
+
         return () => {
             cancelled = true;
+            clearTimeout(timer);
+            clearTimeout(staleTimer);
         };
     }, [source, renderId, dark]);
 
     const handleDownload = () => {
         if (!svg) return;
+
         const url = URL.createObjectURL(
             new Blob([toStandaloneSvg(svg, dark)], { type: "image/svg+xml" }),
         );
         const anchor = document.createElement("a");
+
         anchor.href = url;
         anchor.download = "diagram.svg";
         anchor.click();
