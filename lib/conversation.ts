@@ -220,14 +220,19 @@ function partialChapterAnalyses(path: MessageNode[], sourceIndex: number): strin
  * Nodes with attachments use the OpenAI multimodal content-part format
  * (file texts first, then the message text, then images and audio); nodes
  * with neither content nor attachments (streaming placeholders) are skipped,
- * and assistant reasoningContent is never sent back to the server. A chunk-source
+ * and assistant reasoningContent is only sent when explicitly enabled. A chunk-source
  * turn is replaced by a compact placeholder so its document is not re-sent.
  *
  * @param path - Root-first branch nodes, as returned by getPath
  * @param systemPrompt - System prompt prepended when non-blank
+ * @param preserveThinking - Include saved assistant reasoning when explicitly enabled
  * @returns Messages ready for a /v1/chat/completions request
  */
-export function buildApiMessages(path: MessageNode[], systemPrompt: string): ApiMessage[] {
+export function buildApiMessages(
+    path: MessageNode[],
+    systemPrompt: string,
+    preserveThinking = false,
+): ApiMessage[] {
     const messages: ApiMessage[] = [];
     if (systemPrompt.trim().length > 0) {
         messages.push({ role: "system", content: systemPrompt });
@@ -247,8 +252,15 @@ export function buildApiMessages(path: MessageNode[], systemPrompt: string): Api
             );
             continue;
         }
+        const reasoning =
+            preserveThinking && node.role === "assistant" && node.reasoningContent
+                ? { reasoning_content: node.reasoningContent }
+                : {};
         const attachments = node.attachments ?? [];
         if (node.content.length === 0 && attachments.length === 0) {
+            if (reasoning.reasoning_content) {
+                messages.push({ role: "assistant", content: "", ...reasoning });
+            }
             continue;
         }
         const text = node.summary
@@ -262,7 +274,7 @@ export function buildApiMessages(path: MessageNode[], systemPrompt: string): Api
             (part.type === "text" ? fileParts : mediaParts).push(part);
         }
         if (fileParts.length === 0 && mediaParts.length === 0) {
-            messages.push({ role: node.role, content: text });
+            messages.push({ role: node.role, content: text, ...reasoning });
             continue;
         }
         const parts: ApiContentPart[] = [...fileParts];
@@ -270,7 +282,7 @@ export function buildApiMessages(path: MessageNode[], systemPrompt: string): Api
             parts.push({ type: "text", text });
         }
         parts.push(...mediaParts);
-        messages.push({ role: node.role, content: parts });
+        messages.push({ role: node.role, content: parts, ...reasoning });
     }
     return messages;
 }

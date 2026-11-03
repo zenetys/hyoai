@@ -42,6 +42,7 @@ export function estimateMessagesTokens(messages: ApiMessage[]): number {
     let total = 0;
     for (const message of messages) {
         total += 4;
+        if (message.reasoning_content) total += estimateTokens(message.reasoning_content);
         if (typeof message.content === "string") {
             total += estimateTokens(message.content);
             continue;

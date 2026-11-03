@@ -16,6 +16,7 @@ export type ApiContentPart =
 export interface ApiMessage {
     role: "system" | "user" | "assistant";
     content: string | ApiContentPart[];
+    reasoning_content?: string;
 }
 
 /**

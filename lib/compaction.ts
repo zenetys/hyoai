@@ -151,19 +151,21 @@ export async function summarizeNodes(
  * @param path - Root-first branch nodes, as returned by getPath
  * @param systemPrompt - System prompt prepended when non-blank
  * @param compaction - Active rolling summary, or null
+ * @param preserveThinking - Include saved reasoning in the unsummarized tail
  * @returns Messages ready for a /v1/chat/completions request
  */
 export function buildCompactedMessages(
     path: MessageNode[],
     systemPrompt: string,
     compaction: CompactionState | null,
+    preserveThinking = false,
 ): ApiMessage[] {
-    if (!compaction) return buildApiMessages(path, systemPrompt);
+    if (!compaction) return buildApiMessages(path, systemPrompt, preserveThinking);
 
     const anchorPos = path.findIndex((node) => node.id === compaction.anchorId);
-    if (anchorPos < 0) return buildApiMessages(path, systemPrompt);
+    if (anchorPos < 0) return buildApiMessages(path, systemPrompt, preserveThinking);
 
-    const messages = buildApiMessages(path.slice(anchorPos + 1), systemPrompt);
+    const messages = buildApiMessages(path.slice(anchorPos + 1), systemPrompt, preserveThinking);
     const summaryMessage: ApiMessage = {
         role: "user",
         content: getTranslator("prompts")("summaryPrefix") + compaction.summary,
