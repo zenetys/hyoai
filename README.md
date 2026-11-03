@@ -384,8 +384,9 @@ types/          shared types (chat, server, settings, api, storage)
 ## Features
 
 - Local conversations: lightweight index + one localStorage key per
-  conversation, debounced writes while streaming, usage gauge and JSON
-  export/import
+  conversation, debounced writes while streaming, usage gauge, JSON
+  export/import (native or llama.cpp web UI format) and export as Markdown or
+  OpenAI-format JSONL
 
     ![Conversations sidebar with the background-generation indicator](public/images/sidebar.png)
 
