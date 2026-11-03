@@ -41,7 +41,7 @@ export function CompactionControl() {
     if (!canCompact && !hasSummary) return null;
 
     return (
-        <div className="mt-0.5 flex items-center justify-center gap-1.5 border-t border-border/60 pt-2">
+        <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1.5 border-t border-border/60 pt-2">
             {canCompact ? (
                 <Button
                     type="button"
