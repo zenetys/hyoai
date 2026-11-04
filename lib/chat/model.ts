@@ -28,7 +28,10 @@ export interface ChatModelSelection {
 
 /**
  * Resolve the config entry and upstream model an instance should use: its own
- * override when set, otherwise the globally active model.
+ * pinned choice when set, otherwise the globally active model. A pinned choice
+ * the config no longer offers (removed or disabled entry, model dropped from the
+ * server list) resolves to nothing instead of another model: the selection is the
+ * user's intent and is never silently substituted.
  *
  * @param selection - Per-instance model selection store
  * @returns The entry and upstream model id, either possibly null
@@ -41,29 +44,67 @@ export function resolveEntry(selection: Store<ChatModelSelection>): {
     if (sel.entryId) {
         const state = modelsStore.getState();
         const entry = state.entries.find((candidate) => candidate.id === sel.entryId) ?? null;
-        if (entry && !entry.disabled) {
-            return { entry, model: resolveSelectionUpstream(state, entry, sel.upstreamModel) };
-        }
+        if (!entry || entry.disabled) return { entry: null, model: null };
+        return { entry, model: resolveSelectionUpstream(state, entry, sel.upstreamModel) };
     }
     const entry = getActiveEntry();
     return { entry, model: entry ? getUpstreamModel(entry) : null };
 }
 
 /**
- * Re-pin a pinned selection onto what it actually resolves to, so a model
- * removed or changed in the config (or a stale ?compare= link) stops being
- * shown, persisted and shared while another one answers. A no-op for an
- * instance following the global model, or while the target is unresolved.
+ * What the single chat would send right now, as a pinned selection: the globally
+ * active entry and upstream model plus the global thinking and effort.
  *
- * @param selection - Per-instance model selection store
+ * @returns A selection pinned to the current global choice, or an unpinned one when nothing resolves
  */
-export function reconcileSelection(selection: Store<ChatModelSelection>): void {
-    const sel = selection.getState();
-    if (!sel.entryId) return;
-    const { entry, model } = resolveEntry(selection);
-    if (!entry || !model) return;
-    if (entry.id === sel.entryId && model === sel.upstreamModel) return;
-    selection.setState({ entryId: entry.id, upstreamModel: model });
+export function globalSelection(): ChatModelSelection {
+    const entry = getActiveEntry();
+    if (!entry) return { entryId: null, upstreamModel: null, thinking: null, effort: null };
+    const { thinking, effort } = settingsStore.getState().settings;
+    return {
+        entryId: entry.id,
+        upstreamModel: getUpstreamModel(entry),
+        thinking,
+        effort,
+    };
+}
+
+/**
+ * Pick a model for a new compare pane: the first enabled (entry, upstream model)
+ * pair that no other pane uses, so a fresh comparison is not model X against
+ * model X. Falls back to the global selection when every pair is taken.
+ *
+ * @param taken - Selections already used by the other panes (a null entry means the global one)
+ * @returns A pinned selection
+ */
+export function pickFreeSelection(
+    taken: Pick<ChatModelSelection, "entryId" | "upstreamModel">[],
+): ChatModelSelection {
+    const state = modelsStore.getState();
+    const global = globalSelection();
+    const keyOf = (entryId: string | null, upstream: string | null): string =>
+        `${entryId ?? ""}:${upstream ?? ""}`;
+    const used = new Set(
+        taken.map((pane) =>
+            pane.entryId
+                ? keyOf(pane.entryId, pane.upstreamModel)
+                : keyOf(global.entryId, global.upstreamModel),
+        ),
+    );
+    for (const entry of state.entries) {
+        if (entry.disabled) continue;
+        const listed = state.lists[entry.id]?.models.map((model) => model.id) ?? [];
+        const candidates = entry.model
+            ? [entry.model]
+            : listed.length > 0
+              ? listed
+              : [getUpstreamModel(entry)];
+        for (const upstream of candidates) {
+            if (used.has(keyOf(entry.id, upstream))) continue;
+            return { entryId: entry.id, upstreamModel: upstream, thinking: null, effort: null };
+        }
+    }
+    return global;
 }
 
 /**

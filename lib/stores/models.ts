@@ -328,8 +328,9 @@ export function resolveUpstreamModelFor(
 /**
  * Resolve the upstream model a per-instance selection (a compare pane) sends:
  * the pinned one, else the instance's own pick while the discovered list still
- * offers it (or cannot confirm it yet), else the entry's default. A pick dropped
- * from the config, or carried by an old ?compare= link, never reaches requests.
+ * offers it (or cannot confirm it yet), else the entry's default when no pick was
+ * made. A pick the server no longer lists resolves to null instead of another
+ * model, so a pane never answers with a model the user did not choose.
  *
  * @param state - Models store state
  * @param entry - Config entry the instance is pinned to
@@ -342,11 +343,9 @@ export function resolveSelectionUpstream(
 ): string | null {
     if (entry.model) return entry.model;
     if (!upstreamModel) return resolveUpstreamModelFor(state, entry);
-    if (!state.lists[entry.id]?.models.length) return upstreamModel;
-    return resolveUpstreamModelFor(
-        { lists: state.lists, chosenModels: { ...state.chosenModels, [entry.id]: upstreamModel } },
-        entry,
-    );
+    const models = state.lists[entry.id]?.models;
+    if (!models?.length) return upstreamModel;
+    return models.some((model) => model.id === upstreamModel) ? upstreamModel : null;
 }
 
 /**

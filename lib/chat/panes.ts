@@ -5,7 +5,7 @@ import {
     startNewForeground,
 } from "@/lib/chat/foreground";
 import { ChatInstance } from "@/lib/chat/instance";
-import { reconcileSelection } from "@/lib/chat/model";
+import { globalSelection, pickFreeSelection } from "@/lib/chat/model";
 import { parseModelName } from "@/lib/format";
 import {
     addPaneDescriptor,
@@ -19,7 +19,6 @@ import {
     setPanes,
     updatePaneDescriptor,
 } from "@/lib/stores/compare";
-import { modelsStore } from "@/lib/stores/models";
 import { getPath } from "@/lib/tree";
 import { setCompareInUrl } from "@/lib/url";
 import type { Attachment } from "@/types/chat";
@@ -57,7 +56,6 @@ export function getPaneInstance(paneId: string): ChatInstance {
 
     let lastModel = "";
     const unsubModel = instance.model.subscribe(() => {
-        reconcileSelection(instance.model);
         const { entryId, upstreamModel, thinking, effort } = instance.model.getState();
         const key = `${entryId}:${upstreamModel}:${thinking}:${effort}`;
         if (key === lastModel) return;
@@ -65,14 +63,11 @@ export function getPaneInstance(paneId: string): ChatInstance {
         updatePaneDescriptor(paneId, { modelEntryId: entryId, upstreamModel, thinking, effort });
     });
 
-    const unsubConfig = modelsStore.subscribe(() => reconcileSelection(instance.model));
-
     runtimes.set(paneId, {
         instance,
         teardown: () => {
             unsubStore();
             unsubModel();
-            unsubConfig();
             instance.dispose();
         },
     });
@@ -164,13 +159,32 @@ export async function initPane(descriptor: PaneDescriptor): Promise<void> {
 }
 
 /**
+ * Model fields for a pane created without an explicit model: the first model no
+ * other pane uses, so a fresh comparison is not model X against model X. The pane
+ * starts pinned, so a later change of the global model never moves it.
+ *
+ * @param seed - Descriptor fields the caller already chose
+ * @returns The seed completed with a pinned model
+ */
+function withFreeModel(seed: Partial<PaneDescriptor>): Partial<PaneDescriptor> {
+    if (seed.modelEntryId) return seed;
+    const { entryId, upstreamModel } = pickFreeSelection(
+        compareStore.getState().panes.map((pane) => ({
+            entryId: pane.modelEntryId ?? null,
+            upstreamModel: pane.upstreamModel ?? null,
+        })),
+    );
+    return { ...seed, modelEntryId: entryId, upstreamModel };
+}
+
+/**
  * Add an empty pane (or one seeded with a conversation), then focus it.
  *
  * @param seed - Optional descriptor fields to seed the new pane with
  */
 export function addPane(seed: Partial<PaneDescriptor> = {}): void {
     if (compareStore.getState().panes.length >= MAX_PANES) return;
-    const descriptor = createPaneDescriptor(seed);
+    const descriptor = createPaneDescriptor(withFreeModel(seed));
     addPaneDescriptor(descriptor);
     setFocusedPane(descriptor.paneId);
 }
@@ -205,8 +219,16 @@ export function openCompare(): void {
     if (compareStore.getState().panes.length === 0) {
         const currentId = activeInstance().store.getState().conversationId;
         if (currentId) releaseFromDefaultChat(currentId);
-        addPaneDescriptor(createPaneDescriptor({ conversationId: currentId ?? null }));
-        const second = createPaneDescriptor();
+
+        const current = globalSelection();
+        addPaneDescriptor(
+            createPaneDescriptor({
+                conversationId: currentId ?? null,
+                modelEntryId: current.entryId,
+                upstreamModel: current.upstreamModel,
+            }),
+        );
+        const second = createPaneDescriptor(withFreeModel({}));
         addPaneDescriptor(second);
         setFocusedPane(compareStore.getState().panes[0]?.paneId ?? second.paneId);
     }
@@ -247,8 +269,22 @@ export function compareConversation(conversationId: string): void {
     if (!state.enabled || state.panes.length === 0) {
         for (const pane of state.panes) disposePane(pane.paneId);
         releaseFromDefaultChat(conversationId);
-        const second = createPaneDescriptor();
-        setPanes([createPaneDescriptor({ conversationId }), second]);
+        const current = globalSelection();
+        const first = createPaneDescriptor({
+            conversationId,
+            modelEntryId: current.entryId,
+            upstreamModel: current.upstreamModel,
+        });
+
+        // The previous panes are being replaced, so only the first new pane is taken.
+        const free = pickFreeSelection([
+            { entryId: first.modelEntryId, upstreamModel: first.upstreamModel },
+        ]);
+        const second = createPaneDescriptor({
+            modelEntryId: free.entryId,
+            upstreamModel: free.upstreamModel,
+        });
+        setPanes([first, second]);
         setFocusedPane(second.paneId);
     } else {
         const existing = paneHolding(conversationId);
