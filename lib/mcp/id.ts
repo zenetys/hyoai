@@ -8,10 +8,11 @@ const FALLBACK_ID = "server";
 
 /**
  * Derive the tool provider id of a server. Provider ids are camelCase letters
- * and digits, starting with a letter, while a server id can be anything an
- * operator typed: "my-search" gives "mySearch". Two servers can derive the same
- * id, or one a built-in provider already uses; a number is appended until the
- * id is free.
+ * and digits, starting with a letter, while a server id (1 to 30 letters,
+ * digits, "-" and "_") may start with a digit or hold separators: "my-search"
+ * gives "mySearch". Two servers can derive the same id, or one a built-in
+ * provider already uses; a number is appended until the id is free, so the
+ * result depends on the order of the catalog.
  *
  * @param serverId - Id from the server definition
  * @param taken - Tells if an id is already used

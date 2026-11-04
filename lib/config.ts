@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { normalizeMcpServers } from "@/lib/mcp/config";
 import { mergeConfig } from "@/lib/merge";
 import { getServerType } from "@/lib/plugins/registry";
 import { loadJson } from "@/lib/storage/persistence";
@@ -56,6 +57,9 @@ const modelSchema = z.object({
     tools: z.boolean().optional(),
     parallelToolCalls: z.boolean().optional(),
     supportsToolChoice: z.boolean().optional(),
+
+    // A malformed scope offers no server, never all of them.
+    mcpServers: z.array(z.string()).optional().catch([]),
 });
 
 const integrationSchema = z.object({
@@ -73,6 +77,9 @@ const configSchema = z.object({
     defaultModel: z.string().optional(),
     embedOrigins: z.array(z.string().min(1)).default([]),
     integrations: z.array(z.unknown()).optional(),
+
+    // Validated per server by normalizeMcpServers, so a bad entry cannot fail the config.
+    mcp: z.unknown().optional(),
     thinking: thinkingSchema.optional(),
     effort: effortSchema.optional(),
 });
@@ -183,7 +190,7 @@ function normalizeEmbedOrigins(origins: string[]): string[] {
 /**
  * Validate and normalize a raw config object (from the deployed file or the
  * local override) into an AppConfig: defaults model names, drops invalid
- * integrations, folds the global thinking/effort into each model and resolves
+ * integrations and MCP servers, folds the global thinking/effort into each model and resolves
  * each entry's capabilities from its type.
  *
  * @param raw - Parsed JSON config object
@@ -199,6 +206,8 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         .map((entry) => integrationSchema.safeParse(entry))
         .filter((result) => result.success)
         .map((result) => result.data);
+
+    const mcp = normalizeMcpServers(parsed.data.mcp);
 
     const config: AppConfig = {
         models: parsed.data.models.map((entry) => {
@@ -219,6 +228,8 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         defaultModel: parsed.data.defaultModel,
         embedOrigins: normalizeEmbedOrigins(parsed.data.embedOrigins),
         integrations,
+        mcpServers: mcp.servers,
+        mcpIssues: mcp.issues,
         thinking: parsed.data.thinking,
         effort: parsed.data.effort,
     };
@@ -331,7 +342,12 @@ export async function loadAppConfig(): Promise<AppConfigResult> {
         const base = file.status === "ready" ? file.raw : { models: [] };
         result = normalizeConfig(mergeConfig(base, override));
     }
-    if (result.status === "ready") embedOrigins = result.config.embedOrigins;
+    if (result.status === "ready") {
+        embedOrigins = result.config.embedOrigins;
+
+        // Reported here, not in normalizeConfig, which also runs on every edit of the config form.
+        for (const issue of result.config.mcpIssues) console.warn(`hyoai: config: ${issue}`);
+    }
     return result;
 }
 

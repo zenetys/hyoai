@@ -1,3 +1,5 @@
+import type { McpServerConfig } from "@/types/mcp";
+
 /**
  * Value of a model entry's "type": a built-in server type or one declared by an
  * installed plugin. The registry in lib/plugins/registry is the source of truth.
@@ -70,7 +72,10 @@ export interface ModalityFlags {
  * model call several tools in one step. The "supportsToolChoice", "tokenize"
  * and "listModels" flags are resolved from the server type, and the entry can
  * override "supportsToolChoice". The "issue" field is set when the entry cannot
- * be used as authored, the entry then being disabled.
+ * be used as authored, the entry then being disabled. The "mcpServers" field is
+ * authored and lists the ids of the MCP servers the model may use: unset offers
+ * every enabled server, a list only those, an empty list none, and it is ignored
+ * while tools are off.
  */
 export interface ModelConfig {
     id: string;
@@ -91,6 +96,7 @@ export interface ModelConfig {
     runtimeProps?: boolean;
     tools?: boolean;
     parallelToolCalls?: boolean;
+    mcpServers?: string[];
     supportsToolChoice?: boolean;
     tokenize?: boolean;
     listModels?: boolean;
@@ -129,6 +135,8 @@ export interface AppConfig {
     defaultModel?: string;
     embedOrigins: string[];
     integrations?: IntegrationConfig[];
+    mcpServers: McpServerConfig[];
+    mcpIssues: string[];
     thinking?: ThinkingConfig;
     effort?: EffortConfig;
 }

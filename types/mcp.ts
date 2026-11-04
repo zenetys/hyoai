@@ -7,7 +7,7 @@ export type McpWireTransport = "http" | "sse";
 /**
  * One MCP server as the operator declares it.
  *
- * @param id - Stable id, any characters; the tool provider id is derived from it
+ * @param id - 1 to 30 letters, digits, "-" or "_"; the tool provider id is derived from it
  * @param label - Name shown to the user, the id when omitted
  * @param url - Endpoint; a relative value is resolved against the page
  * @param transport - Defaults to "auto"
@@ -19,6 +19,16 @@ export interface McpServerDefinition {
     url: string;
     transport?: McpTransport;
     headers?: Record<string, string>;
+}
+
+/**
+ * One server of the operator catalog in config.json: a definition the operator can
+ * switch off without removing it.
+ *
+ * @param enabled - Whether the server is registered at all, true when omitted
+ */
+export interface McpServerConfig extends McpServerDefinition {
+    enabled: boolean;
 }
 
 /**
