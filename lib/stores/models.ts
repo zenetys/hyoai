@@ -1,6 +1,6 @@
 import { fetchContextWindow, fetchProps, listModels } from "@/lib/api/models";
 import { loadAppConfig, loadBaseRaw, normalizeConfig } from "@/lib/config";
-import { buildConfig, rawToDraft } from "@/lib/draft";
+import { buildConfig, rawToDraft, settleOverride } from "@/lib/draft";
 import { type ConfigOverride, diffConfig } from "@/lib/merge";
 import { loadJson, removeKey, scheduleJson, writeJsonNow } from "@/lib/storage/persistence";
 import { createStore } from "@/lib/store";
@@ -165,6 +165,26 @@ export async function saveConfigOverride(raw: unknown): Promise<string | null> {
 
     await setConfigOverride(override);
     return null;
+}
+
+/**
+ * Drop from the stored override what the deployed config.json now says as well,
+ * so the badge and the reset list agree after the file was edited. Nothing is
+ * written when the override already holds only differences, and nothing is
+ * touched while the file cannot be read.
+ */
+export async function pruneStaleOverride(): Promise<void> {
+    const [override, baseRaw] = await Promise.all([
+        loadJson<unknown>(STORAGE_KEYS.configOverride),
+        loadBaseRaw(),
+    ]);
+    if (override === null || baseRaw === null) return;
+
+    const settled = settleOverride(baseRaw, override);
+    if (settled === null || JSON.stringify(settled) === JSON.stringify(override)) return;
+
+    if (Object.keys(settled).length === 0) await removeKey(STORAGE_KEYS.configOverride);
+    else await writeJsonNow(STORAGE_KEYS.configOverride, settled);
 }
 
 /**

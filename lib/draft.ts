@@ -1,3 +1,4 @@
+import { type ConfigOverride, diffConfig, mergeConfig } from "@/lib/merge";
 import type { ServerType } from "@/types/server";
 
 /**
@@ -272,4 +273,22 @@ export function buildConfig(
 
     if (badField) return { ok: false, field: badField };
     return { ok: true, config };
+}
+
+/**
+ * Reduce a stored override to what still differs from the deployed config.json.
+ * The file can change after an override was saved, for instance an entry edited
+ * to match it or an id removed, which leaves entries that no longer override
+ * anything. They are compared the way a save compares them, against the file as
+ * the form builds it, and what stays is kept as stored.
+ *
+ * @param base - Raw config.json object
+ * @param override - Stored differential override
+ * @returns The reduced override, empty when nothing differs, or null when the file cannot be built
+ */
+export function settleOverride(base: unknown, override: unknown): ConfigOverride | null {
+    const canonical = buildConfig(rawToDraft(base));
+    if (!canonical.ok) return null;
+
+    return diffConfig(canonical.config, mergeConfig(canonical.config, override));
 }

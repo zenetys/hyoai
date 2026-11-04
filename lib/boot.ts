@@ -11,7 +11,7 @@ import {
 } from "@/lib/stores/compare";
 import { hydrateConversations } from "@/lib/stores/conversations";
 import { hydrateLocale, setLocale } from "@/lib/stores/locale";
-import { initModels, modelsStore, setActiveModel } from "@/lib/stores/models";
+import { initModels, modelsStore, pruneStaleOverride, setActiveModel } from "@/lib/stores/models";
 import { hydrateSettings, setSkin, settingsStore, updateSettings } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
 import { setEmbed } from "@/lib/stores/ui";
@@ -31,6 +31,7 @@ export async function bootApp(): Promise<void> {
     if (booted || typeof window === "undefined") return;
     booted = true;
     await runMigrations();
+    await pruneStaleOverride();
     await Promise.all([hydrateSettings(), initModels(), hydrateConversations(), hydrateCompare()]);
     await hydrateLocale();
     registerLifecycleFlush();
