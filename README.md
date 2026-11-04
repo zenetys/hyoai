@@ -191,20 +191,20 @@ localized word (`AI` / `IA`).
 
 Keys of a `models` entry:
 
-| Key                | Type                                           | Description                                                                                                                                                                                                     |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`               | string (required)                              | Stable identifier, referenced by `defaultModel` and local preferences                                                                                                                                           |
-| `name`             | string                                         | Name shown in the selector (default: `id`)                                                                                                                                                                      |
-| `baseUrl`          | string (required)                              | Endpoint base URL, with or without `/v1`; absolute, or relative to the site (`/llm`, `./llm`)                                                                                                                   |
-| `model`            | string                                         | Pins the upstream model sent to the API; when absent, every model listed by the endpoint's `GET /v1/models` becomes selectable (llama.cpp, llama-swap)                                                          |
-| `type`             | `vllm` \| `llama.cpp` \| `openai` \| `rag-sse` | Selects the transport: OpenAI-compatible (`vllm`/`llama.cpp`/`openai`) or the named-event RAG protocol (`rag-sse`, with search steps and sources); also drives the sampling-parameter mapping (default: `vllm`) |
-| `apiKey`           | string                                         | Optional; sent as `Authorization: Bearer` when present                                                                                                                                                          |
-| `streaming`        | boolean                                        | `true`: token-by-token SSE; `false`: single JSON response (default: `true`)                                                                                                                                     |
-| `sendContext`      | boolean                                        | `true`: full branch history; `false`: last message only (default: `true`)                                                                                                                                       |
-| `disabled`         | boolean                                        | `true`: keep the entry in the file but hide it from the model selector (default: `false`)                                                                                                                       |
-| `modalities`       | `{ image?, audio? }`                           | Attachment capabilities; a `false` flag disables that attachment menu entry. Off by default unless the endpoint is probed (`runtimeProps`, e.g. llama.cpp `/props`); overridable                                |
-| `supportsThinking` | boolean                                        | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                         |
-| `runtimeProps`     | boolean                                        | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                           |
+| Key                | Type                                               | Description                                                                                                                                                                                                                                                  |
+| ------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`               | string (required)                                  | Stable identifier, referenced by `defaultModel` and local preferences                                                                                                                                                                                        |
+| `name`             | string                                             | Name shown in the selector (default: `id`)                                                                                                                                                                                                                   |
+| `baseUrl`          | string (required)                                  | Endpoint base URL, with or without `/v1`; absolute, or relative to the site (`/llm`, `./llm`)                                                                                                                                                                |
+| `model`            | string                                             | Pins the upstream model sent to the API; when absent, every model listed by the endpoint's `GET /v1/models` becomes selectable (llama.cpp, llama-swap)                                                                                                       |
+| `type`             | `vllm` \| `llama.cpp` \| `openai` \| a plugin type | Selects the transport: OpenAI-compatible (`vllm`/`llama.cpp`/`openai`) or a type added by an installed [plugin](#plugins); also drives the sampling-parameter mapping (default: `vllm`). An entry whose type no installed plugin serves is kept but disabled |
+| `apiKey`           | string                                             | Optional; sent as `Authorization: Bearer` when present                                                                                                                                                                                                       |
+| `streaming`        | boolean                                            | `true`: token-by-token SSE; `false`: single JSON response (default: `true`)                                                                                                                                                                                  |
+| `sendContext`      | boolean                                            | `true`: full branch history; `false`: last message only (default: `true`)                                                                                                                                                                                    |
+| `disabled`         | boolean                                            | `true`: keep the entry in the file but hide it from the model selector (default: `false`)                                                                                                                                                                    |
+| `modalities`       | `{ image?, audio? }`                               | Attachment capabilities; a `false` flag disables that attachment menu entry. Off by default unless the endpoint is probed (`runtimeProps`, e.g. llama.cpp `/props`); overridable                                                                             |
+| `supportsThinking` | boolean                                            | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                                                                      |
+| `runtimeProps`     | boolean                                            | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                                                                        |
 
 An optional `headers` object adds custom request headers to every call to the
 endpoint (merged after the `apiKey` bearer) — use it for provider opt-ins such
@@ -312,6 +312,15 @@ messageId, content }`. An unknown or malformed entry is dropped rather than
 failing the whole config. As with `apiKey`, any token in `headers` ships to the
 browser, so keep these endpoints internal or front them with a proxy.
 
+## Plugins
+
+A plugin adds a server type for a backend with its own protocol, without touching the core. Plugins
+are found at build time in the git-ignored `plugins/` folder: drop a folder there, restart
+`npm run dev` or run `npm run build`, and `"type": "<id>"` works in `config.json`. Without any plugin
+the app builds and runs as usual. The contract, the events a transport can emit (steps, citations,
+stage timings), the hook that upgrades the messages it stored and a complete example are in [plugins/README.md](plugins/README.md). Plugins are
+trusted code, bundled into the app: only install ones you wrote or audited.
+
 ## Embed
 
 The same static build doubles as an embeddable widget: loaded in an iframe with
@@ -393,9 +402,11 @@ components/     chat/ (view, message, composer, dialogs), settings/ (tabs, field
                 editors, dialogs), layout/ (shells, header, sidebar), compare/,
                 markdown/, common/ (cross-domain), ui/ (shadcn)
 hooks/          useStore (useSyncExternalStore + selectors), useActiveChat, useConversations
-lib/            api/ (SSE, params mapping), storage/ (compressed localStorage, quota),
-                stores/ (settings, models, conversations, chat), messageTree, chatActions
+lib/            api/ (SSE, params mapping), plugins/ (registry, SDK), storage/ (compressed
+                localStorage, quota), stores/ (settings, models, conversations, chat),
+                messageTree, chatActions
 messages/       next-intl catalogs fr.json / en.json
+plugins/        build-time plugins (git-ignored, see plugins/README.md)
 docs/           embed.md (widget parameters, postMessage bridge)
 public/         config.json (models), assets
 types/          shared types (chat, server, settings, api, storage)
@@ -421,15 +432,12 @@ types/          shared types (chat, server, settings, api, storage)
   stats (tokens, tok/s, duration); a thinking toggle and effort level in the
   model menu when declared in `config.json` (see above), per pane in compare mode
 
-    ![The reasoning block expanded under an answer](public/images/thinking.png)
-
 - Compare mode: run the same prompt against two models side by side, each pane
   keeping its own reasoning choice
 
-    ![Compare mode — the same prompt answered by two models side by side](public/images/compare.png)
-
 - Markdown & sources: tables, code highlighting and blockquotes render inline;
-  answers can carry retrieved source citations alongside the per-message stats
+  answers can carry source citations and a trace of the backend's steps
+  alongside the per-message stats
 - Math & diagrams: KaTeX renders `$...$`, `$$...$$`, `\(...\)` and `\[...\]`
   formulas, and `mermaid` code blocks render as diagrams with a copy button for
   the source and an SVG download
