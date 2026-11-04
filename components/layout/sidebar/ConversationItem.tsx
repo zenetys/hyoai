@@ -9,6 +9,7 @@ import {
     Pencil,
     Pin,
     PinOff,
+    ShieldQuestion,
     Square,
     Trash2,
 } from "lucide-react";
@@ -71,7 +72,8 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const tc = useTranslations("common");
     const locale = useLocale();
     const activeId = useActiveConversationId();
-    const generating = useStore(liveStore, (state) => (state.status[meta.id] ?? "idle") !== "idle");
+    const liveState = useStore(liveStore, (state) => state.status[meta.id] ?? "idle");
+    const generating = liveState !== "idle";
     const done = useStore(liveStore, (state) => state.done?.[meta.id]);
     const embed = useStore(uiStore, (state) => state.embed);
     const compare = useStore(compareStore, (state) => ({
@@ -181,6 +183,16 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                     <TooltipContent>{t("stopGeneration")}</TooltipContent>
                 </Tooltip>
             )}
+            {liveState === "approval" && (
+                <span
+                    className="ml-1 flex size-6 shrink-0 items-center justify-center text-amber-500"
+                    role="img"
+                    aria-label={t("awaitingApproval")}
+                    title={t("awaitingApproval")}
+                >
+                    <ShieldQuestion className="size-4" aria-hidden="true" />
+                </span>
+            )}
             {done && (
                 <span
                     className={cn(
@@ -205,7 +217,15 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                         <span className="line-clamp-2 font-medium">
                             {meta.title || t("untitled")}
                         </span>
-                        {generating ? (
+                        {liveState === "approval" ? (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                                {t("awaitingApproval")}
+                            </span>
+                        ) : liveState === "tool" ? (
+                            <span className="text-xs text-muted-foreground">
+                                {t("runningTool")}
+                            </span>
+                        ) : generating ? (
                             <LivePreview id={meta.id} placeholder={t("generating")} />
                         ) : done ? (
                             <span className="text-xs text-success">{t("generationDone")}</span>

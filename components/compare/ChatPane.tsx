@@ -1,10 +1,11 @@
 "use client";
 
-import { PenLine, Square, X } from "lucide-react";
+import { PenLine, ShieldQuestion, Square, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
+import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
 import { MessageList } from "@/components/chat/message/MessageList";
 import { ContextBar } from "@/components/chat/view/ContextBar";
 import { PaneModelSelector } from "@/components/common/model/ModelSelector";
@@ -97,7 +98,8 @@ export function ChatPane({ paneId, className }: { paneId: string; className?: st
     const title = conversationId
         ? (index.find((meta) => meta.id === conversationId)?.title ?? "")
         : "";
-    const generating = Boolean(conversationId && (liveStatus[conversationId] ?? "idle") !== "idle");
+    const paneStatus = conversationId ? (liveStatus[conversationId] ?? "idle") : "idle";
+    const generating = paneStatus !== "idle";
 
     const availability = usePaneAvailability()[paneId];
     const autoDisable = useAutoDisable();
@@ -126,6 +128,7 @@ export function ChatPane({ paneId, className }: { paneId: string; className?: st
                     {runtime ? (
                         <>
                             <PaneModelSelector align="end" />
+                            <ToolsToggle />
                             <ChunkingControl />
                         </>
                     ) : (
@@ -137,6 +140,20 @@ export function ChatPane({ paneId, className }: { paneId: string; className?: st
                             autoDisable={autoDisable}
                             loading={!runtime}
                         />
+                    )}
+                    {paneStatus === "approval" && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span
+                                    role="img"
+                                    aria-label={t("awaitingApproval")}
+                                    className="flex size-6 items-center justify-center text-amber-500"
+                                >
+                                    <ShieldQuestion className="size-3.5" aria-hidden="true" />
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("awaitingApproval")}</TooltipContent>
+                        </Tooltip>
                     )}
                     {generating && (
                         <Tooltip>

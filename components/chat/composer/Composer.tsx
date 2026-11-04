@@ -7,8 +7,9 @@ import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
 import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
 import { SystemMessageChip } from "@/components/chat/composer/SystemMessageChip";
+import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
 import { ComposerModelSelector, PaneModelSelector } from "@/components/common/model/ModelSelector";
-import { usePendingReply, useStreamingStatus, useUserHistory } from "@/hooks/useActiveChat";
+import { useChatBusy, usePendingReply, useUserHistory } from "@/hooks/useActiveChat";
 import { useAutoDisable, useModelAvailability, useReasonText } from "@/hooks/useAvailability";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useStore } from "@/hooks/useStore";
@@ -36,7 +37,7 @@ export function Composer({ home = false }: { home?: boolean }) {
     const th = useTranslations("header");
     const tc = useTranslations("common");
     const chat = useChatInstance();
-    const status = useStreamingStatus();
+    const busy = useChatBusy();
     const history = useUserHistory();
     const pendingReply = usePendingReply();
     const chatWidth = useStore(settingsStore, (state) => state.settings.display.chatWidth);
@@ -57,7 +58,6 @@ export function Composer({ home = false }: { home?: boolean }) {
     const embed = useStore(uiStore, (state) => state.embed);
     const modelLocked = useStore(uiStore, (state) => state.embedModelLock);
 
-    const busy = status !== "idle";
     const hasModel = upstream !== null;
     const disabledReason = !entry
         ? t("disabledNoModel")
@@ -97,6 +97,7 @@ export function Composer({ home = false }: { home?: boolean }) {
                 banner={<>{chat.controlsGlobalModel && <SystemMessageChip />}</>}
                 rightControls={
                     <>
+                        <ToolsToggle />
                         <ChunkingControl />
                         {!modelLocked &&
                             (single ? (
