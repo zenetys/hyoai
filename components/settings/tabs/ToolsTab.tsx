@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ToggleField } from "@/components/settings/fields/ToggleField";
+import { ToolPolicySelect } from "@/components/settings/fields/ToolPolicySelect";
+import { McpServers } from "@/components/settings/mcp/McpServers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useLocalizedText } from "@/hooks/useLocalizedText";
 import { useStore } from "@/hooks/useStore";
+import { mcpStore } from "@/lib/mcp/registry";
 import {
     resetToolPolicies,
     settingsStore,
@@ -26,8 +29,13 @@ import {
     setToolProviderEnabled,
     updateSettings,
 } from "@/lib/stores/settings";
-import { listToolProviders, policyFor, toolPolicyKey } from "@/lib/tools/catalog";
-import type { ToolPolicy, ToolSettings } from "@/types/settings";
+import {
+    listProviderTools,
+    listToolProviders,
+    policyFor,
+    toolPolicyKey,
+} from "@/lib/tools/catalog";
+import type { ToolSettings } from "@/types/settings";
 import type { ToolDefinition } from "@/types/tools";
 
 // Bounds of the number inputs.
@@ -47,15 +55,23 @@ export function ToolsTab() {
     const t = useTranslations("settings.tools");
     const localize = useLocalizedText();
     const tools = useStore(settingsStore, (state) => state.settings.tools);
-    const providers = useMemo(() => listToolProviders(), []);
+    const mcpProviders = useStore(mcpStore, (state) =>
+        state.servers.map((server) => server.providerId).join(","),
+    );
+    const providers = useMemo(
+        () =>
+            listToolProviders().filter(
+                (provider) => !mcpProviders.split(",").includes(provider.id),
+            ),
+        [mcpProviders],
+    );
     const [listed, setListed] = useState<Record<string, ToolDefinition[] | null>>({});
 
     useEffect(() => {
         let cancelled = false;
         const controller = new AbortController();
         for (const provider of providers) {
-            Promise.resolve()
-                .then(() => provider.listTools(controller.signal))
+            listProviderTools(provider, controller.signal)
                 .then(
                     (list) => !cancelled && setListed((prev) => ({ ...prev, [provider.id]: list })),
                 )
@@ -173,31 +189,11 @@ export function ToolsTab() {
                                         <span className="min-w-0 truncate text-sm">
                                             {tool.title ? localize(tool.title) : tool.name}
                                         </span>
-                                        <Select
+                                        <ToolPolicySelect
                                             value={policyFor(tools, key)}
-                                            onValueChange={(value) =>
-                                                setToolPolicy(key, value as ToolPolicy)
-                                            }
-                                        >
-                                            <SelectTrigger
-                                                size="sm"
-                                                className="w-44 shrink-0"
-                                                aria-label={tool.name}
-                                            >
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="ask">
-                                                    {t("policyAsk")}
-                                                </SelectItem>
-                                                <SelectItem value="allow">
-                                                    {t("policyAllow")}
-                                                </SelectItem>
-                                                <SelectItem value="deny">
-                                                    {t("policyDeny")}
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                            onChange={(policy) => setToolPolicy(key, policy)}
+                                            label={tool.name}
+                                        />
                                     </div>
                                 );
                             })}
@@ -205,6 +201,10 @@ export function ToolsTab() {
                     );
                 })}
             </div>
+
+            <Separator />
+
+            <McpServers />
 
             <Button
                 type="button"
