@@ -1,4 +1,4 @@
-import { openConversation, reloadActiveConversation, startNewConversation } from "@/lib/actions";
+import { openConversation, reloadLiveConversation, startNewConversation } from "@/lib/actions";
 import { setPersistenceGate } from "@/lib/storage/local";
 import { runMigrations } from "@/lib/storage/migrations";
 import { registerLifecycleFlush } from "@/lib/storage/persistence";
@@ -71,7 +71,7 @@ function enableCrossTabRefresh(): void {
         if (event.key === STORAGE_KEYS.conversationsIndex) {
             void hydrateConversations();
         } else if (event.key.startsWith(STORAGE_KEYS.conversationPrefix)) {
-            reloadActiveConversation(event.key.slice(STORAGE_KEYS.conversationPrefix.length));
+            reloadLiveConversation(event.key.slice(STORAGE_KEYS.conversationPrefix.length));
         }
     });
 }
