@@ -1,5 +1,6 @@
 import type { ChatRequestParams, StreamEvent } from "@/types/api";
 import type { ModelConfig } from "@/types/server";
+import type { ToolProvider } from "@/types/tools";
 
 /**
  * Version of the plugin contract. A plugin declares the version it was written
@@ -65,7 +66,8 @@ export interface PluginMessages {
  * and restarting the dev server or rebuilding.
  *
  * The id must equal the folder name. The messages are UI strings per locale,
- * mounted under "plugins.<id>" in the app catalog.
+ * mounted under "plugins.<id>" in the app catalog. The toolProviders are
+ * offered to models whose server type can carry tools.
  *
  * The upgradeNode hook lets a plugin rewrite the messages it stored in an older
  * layout. The core calls it with every message node of a conversation it
@@ -80,4 +82,5 @@ export interface HyoaiPlugin {
     serverTypes?: ServerTypeDefinition[];
     messages?: Partial<Record<"en" | "fr", PluginMessages>>;
     upgradeNode?: (node: unknown) => unknown;
+    toolProviders?: ToolProvider[];
 }

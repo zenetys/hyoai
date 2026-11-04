@@ -1,7 +1,7 @@
 import { localStorageAdapter } from "@/lib/storage/local";
 import { loadJson, scheduleJson } from "@/lib/storage/persistence";
 import { createStore } from "@/lib/store";
-import { type AppSettings, DEFAULT_SETTINGS, type SkinId } from "@/types/settings";
+import { type AppSettings, DEFAULT_SETTINGS, type SkinId, type ToolPolicy } from "@/types/settings";
 import { STORAGE_KEYS } from "@/types/storage";
 
 // Settings state plus a hydration flag so the UI can avoid flashing defaults.
@@ -32,6 +32,7 @@ function withDefaults(stored: Partial<AppSettings>): AppSettings {
         chunking: { ...DEFAULT_SETTINGS.chunking, ...stored.chunking },
         compaction: { ...DEFAULT_SETTINGS.compaction, ...stored.compaction },
         availability: { ...DEFAULT_SETTINGS.availability, ...stored.availability },
+        tools: { ...DEFAULT_SETTINGS.tools, ...stored.tools },
     };
 }
 
@@ -95,4 +96,40 @@ export function setSkin(skin: SkinId): void {
         document.documentElement.dataset.skin = skin;
     }
     void localStorageAdapter.set(STORAGE_KEYS.skin, skin);
+}
+
+/**
+ * Set the policy of one tool, or drop its entry so the default policy applies.
+ *
+ * @param key - Policy key, "<providerId>/<toolName>"
+ * @param policy - New policy, or null to fall back to the default
+ */
+export function setToolPolicy(key: string, policy: ToolPolicy | null): void {
+    const { tools } = settingsStore.getState().settings;
+    const policies = { ...tools.policies };
+    if (policy === null) delete policies[key];
+    else policies[key] = policy;
+    updateSettings({ tools: { ...tools, policies } });
+}
+
+/**
+ * Allow or stop offering the tools of a provider.
+ *
+ * @param id - Id of the tool provider, as listed in tools.disabledProviders
+ * @param enabled - Whether its tools are offered
+ */
+export function setToolProviderEnabled(id: string, enabled: boolean): void {
+    const { tools } = settingsStore.getState().settings;
+    const others = tools.disabledProviders.filter((candidate) => candidate !== id);
+    updateSettings({
+        tools: { ...tools, disabledProviders: enabled ? others : [...others, id] },
+    });
+}
+
+/**
+ * Forget every per-tool policy, so each tool asks again.
+ */
+export function resetToolPolicies(): void {
+    const { tools } = settingsStore.getState().settings;
+    updateSettings({ tools: { ...tools, policies: {} } });
 }

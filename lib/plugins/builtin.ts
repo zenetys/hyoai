@@ -1,5 +1,7 @@
 import { streamOpenAiCompatChat } from "@/lib/api/transports/openai";
+import { clockProvider } from "@/lib/tools/clock";
 import type { ServerTypeDefinition } from "@/types/plugin";
+import type { ToolProvider } from "@/types/tools";
 
 /**
  * Server types shipped with the app. llama.cpp, vllm and openai speak the
@@ -36,3 +38,9 @@ export const BUILTIN_SERVER_TYPES: ServerTypeDefinition[] = [
         capabilities: { listModels: true, contextProbe: true, tools: true },
     },
 ];
+
+/**
+ * Tool providers shipped with the app. The clock gives the tool loop something
+ * safe to call without any network or plugin.
+ */
+export const BUILTIN_TOOL_PROVIDERS: ToolProvider[] = [clockProvider];

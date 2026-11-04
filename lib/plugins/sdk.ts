@@ -22,6 +22,8 @@ export type {
     ApiContentPart,
     ApiMessage,
     ApiTimings,
+    ApiToolCall,
+    ApiToolDefinition,
     ApiUsage,
     ChatRequestParams,
     StreamEvent,
@@ -32,6 +34,7 @@ export type {
     Citation,
     LocalizedText,
     StageTiming,
+    ToolCall,
 } from "@/types/chat";
 export type {
     HyoaiPlugin,
@@ -41,3 +44,11 @@ export type {
     Transport,
 } from "@/types/plugin";
 export type { ModelConfig } from "@/types/server";
+export type {
+    ToolAnnotations,
+    ToolCallContext,
+    ToolDefinition,
+    ToolInputSchema,
+    ToolProvider,
+    ToolResult,
+} from "@/types/tools";

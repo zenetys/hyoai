@@ -116,6 +116,28 @@ export interface AvailabilitySettings {
     connectCheckSeconds: number;
 }
 
+// "deny" removes the tool from what the model is offered.
+export type ToolPolicy = "ask" | "allow" | "deny";
+
+/**
+ * Tool calling preferences.
+ *
+ * @param enabledByDefault - New conversations start with tools on
+ * @param maxSteps - Model requests per answer before asking to continue
+ * @param defaultPolicy - Policy of the tools without an entry of their own
+ * @param maxResultChars - Characters of one result sent to the model
+ * @param policies - Policy per tool, keyed by "<providerId>/<toolName>"
+ * @param disabledProviders - Providers whose tools are never offered
+ */
+export interface ToolSettings {
+    enabledByDefault: boolean;
+    maxSteps: number;
+    defaultPolicy: "ask" | "allow";
+    maxResultChars: number;
+    policies: Record<string, ToolPolicy>;
+    disabledProviders: string[];
+}
+
 /**
  * All persisted user settings.
  *
@@ -131,6 +153,7 @@ export interface AvailabilitySettings {
  * @param chunking - Over-context chunking settings
  * @param compaction - Conversation compaction settings
  * @param availability - Reaction to models whose server does not answer
+ * @param tools - Tool calling preferences
  * @param imageMaxDimension - Max pixel dimension images are downscaled to
  * @param pdfAsImage - Whether PDFs are sent as page images instead of extracted text
  */
@@ -147,6 +170,7 @@ export interface AppSettings {
     chunking: ChunkingSettings;
     compaction: CompactionSettings;
     availability: AvailabilitySettings;
+    tools: ToolSettings;
     imageMaxDimension: number;
     pdfAsImage: boolean;
 }
@@ -183,6 +207,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
     availability: {
         autoDisable: true,
         connectCheckSeconds: 20,
+    },
+    tools: {
+        enabledByDefault: false,
+        maxSteps: 10,
+        defaultPolicy: "ask",
+        maxResultChars: 20000,
+        policies: {},
+        disabledProviders: [],
     },
     imageMaxDimension: 1024,
     pdfAsImage: false,

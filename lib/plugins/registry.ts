@@ -1,15 +1,29 @@
-import { BUILTIN_SERVER_TYPES } from "@/lib/plugins/builtin";
+import { BUILTIN_SERVER_TYPES, BUILTIN_TOOL_PROVIDERS } from "@/lib/plugins/builtin";
 import type { StreamEvent } from "@/types/api";
 import type { LocalizedText } from "@/types/chat";
 import { PLUGIN_API_VERSION } from "@/types/plugin";
 import type { HyoaiPlugin, ServerTypeDefinition, Transport } from "@/types/plugin";
+import type { ToolProvider } from "@/types/tools";
 
 // A plugin id is also its folder name and a key of the message catalog.
 const PLUGIN_ID = /^[a-z][a-zA-Z0-9]*$/;
 
+// A tool provider id prefixes the tool names the model sees, so it stays alphanumeric.
+const TOOL_PROVIDER_ID = /^[a-z][a-zA-Z0-9]*$/;
+
+/**
+ * A tool provider and where it comes from.
+ *
+ * @param pluginId - Plugin that ships the provider, null for a built-in or runtime one
+ */
+export interface RegisteredToolProvider extends ToolProvider {
+    pluginId: string | null;
+}
+
 export interface PluginRegistry {
     plugins: HyoaiPlugin[];
     serverTypes: Map<string, ServerTypeDefinition>;
+    toolProviders: RegisteredToolProvider[];
 }
 
 /**
@@ -21,6 +35,27 @@ export interface PluginRegistry {
  */
 export function scopeText(pluginId: string, text: LocalizedText): LocalizedText {
     return { ...text, key: `plugins.${pluginId}.${text.key}` };
+}
+
+/**
+ * Wrap a plugin's tool provider so its labels point into the plugin's catalog.
+ * The plugin's own object is left untouched.
+ *
+ * @param pluginId - Plugin that ships the provider
+ * @param provider - The provider as the plugin declared it
+ * @returns A provider whose label and tool titles carry full catalog keys
+ */
+function scopeProvider(pluginId: string, provider: ToolProvider): RegisteredToolProvider {
+    return {
+        id: provider.id,
+        pluginId,
+        label: scopeText(pluginId, provider.label),
+        listTools: async (signal) =>
+            (await provider.listTools(signal)).map((tool) =>
+                tool.title ? { ...tool, title: scopeText(pluginId, tool.title) } : tool,
+            ),
+        callTool: (name, args, context) => provider.callTool(name, args, context),
+    };
 }
 
 /**
@@ -71,18 +106,27 @@ function scopeTransport(pluginId: string, transport: Transport): Transport {
  * Validate the plugin modules and build the registry. Throws on the first
  * problem so a broken plugin stops the build instead of failing in front of a
  * user: wrong apiVersion, id different from the folder, a server type declared
- * twice or hiding a built-in one, an upgradeNode that is not a function.
+ * twice or hiding a built-in one, a tool provider id already taken, an upgradeNode
+ * that is not a function.
  *
  * @param modules - Default export of each plugin, keyed by the path of its index file
  * @param builtin - Server types shipped with the app
- * @returns The installed plugins and every known server type by id
+ * @param builtinProviders - Tool providers shipped with the app
+ * @returns The installed plugins, every known server type by id and every tool provider
  */
 export function buildRegistry(
     modules: Record<string, unknown>,
     builtin: ServerTypeDefinition[],
+    builtinProviders: ToolProvider[] = [],
 ): PluginRegistry {
     const serverTypes = new Map<string, ServerTypeDefinition>();
     for (const definition of builtin) serverTypes.set(definition.id, definition);
+    const toolProviders: RegisteredToolProvider[] = builtinProviders.map((provider) => ({
+        ...provider,
+        listTools: (signal) => provider.listTools(signal),
+        callTool: (name, args, context) => provider.callTool(name, args, context),
+        pluginId: null,
+    }));
 
     const plugins: HyoaiPlugin[] = [];
     for (const [path, value] of Object.entries(modules).sort(([a], [b]) => a.localeCompare(b))) {
@@ -127,9 +171,31 @@ export function buildRegistry(
                 transport: scopeTransport(plugin.id, definition.transport),
             });
         }
+
+        if (plugin.toolProviders !== undefined && !Array.isArray(plugin.toolProviders)) {
+            fail("toolProviders must be an array");
+        }
+        for (const provider of plugin.toolProviders ?? []) {
+            if (typeof provider.id !== "string" || !TOOL_PROVIDER_ID.test(provider.id)) {
+                fail(`invalid tool provider id ${JSON.stringify(provider.id)}, expected camelCase`);
+            }
+            if (
+                typeof provider.listTools !== "function" ||
+                typeof provider.callTool !== "function"
+            ) {
+                fail(`tool provider "${provider.id}" needs listTools() and callTool()`);
+            }
+            if (!provider.label || typeof provider.label.key !== "string") {
+                fail(`tool provider "${provider.id}" needs a label`);
+            }
+            if (toolProviders.some((taken) => taken.id === provider.id)) {
+                fail(`duplicate tool provider "${provider.id}"`);
+            }
+            toolProviders.push(scopeProvider(plugin.id, provider));
+        }
         plugins.push(plugin);
     }
-    return { plugins, serverTypes };
+    return { plugins, serverTypes, toolProviders };
 }
 
 /**
@@ -149,7 +215,7 @@ function discover(): Record<string, unknown> {
     return Object.fromEntries(Object.entries(modules).map(([path, mod]) => [path, mod.default]));
 }
 
-const registry = buildRegistry(discover(), BUILTIN_SERVER_TYPES);
+const registry = buildRegistry(discover(), BUILTIN_SERVER_TYPES, BUILTIN_TOOL_PROVIDERS);
 
 /**
  * Plugins found in the plugins folder at build time.
@@ -177,4 +243,24 @@ export function getServerType(id: string): ServerTypeDefinition | undefined {
  */
 export function listServerTypes(): ServerTypeDefinition[] {
     return [...registry.serverTypes.values()];
+}
+
+/**
+ * The tool providers known at build time: built-in first, then the plugins' in
+ * folder order.
+ *
+ * @returns The static tool providers
+ */
+export function listStaticToolProviders(): RegisteredToolProvider[] {
+    return registry.toolProviders;
+}
+
+/**
+ * Look up a static tool provider.
+ *
+ * @param id - Provider id
+ * @returns The provider, or undefined when none has that id
+ */
+export function getToolProvider(id: string): RegisteredToolProvider | undefined {
+    return registry.toolProviders.find((provider) => provider.id === id);
 }
