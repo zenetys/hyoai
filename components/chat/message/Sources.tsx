@@ -32,7 +32,10 @@ function dedupeCitations(citations: Citation[]): Citation[] {
     return out;
 }
 
-// External link extracted from a non-RAG answer; the fallback for the sources list.
+/**
+ * An external link extracted from an answer without citations, used as the
+ * fallback for the sources list.
+ */
 interface LinkSource {
     source: string;
     url: string;
