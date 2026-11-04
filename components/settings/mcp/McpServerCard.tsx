@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { type McpServerView } from "@/hooks/useMcpServers";
 import { useMcpTools } from "@/hooks/useMcpTools";
 import { patchMcpServer, removeMcpServer, saveMcpServer } from "@/lib/mcp/edit";
-import { serverKey } from "@/lib/mcp/id";
+import { policyScopeFor, serverKey } from "@/lib/mcp/id";
 import { pillFor } from "@/lib/mcp/status";
 
 /**
@@ -139,6 +139,7 @@ export function McpServerCard({ view, otherIds }: { view: McpServerView; otherId
                         <McpToolList
                             name={name}
                             providerId={providerId}
+                            policyScope={policyScopeFor(config.url)}
                             tools={tools}
                             loading={loading}
                             onRefresh={refresh}

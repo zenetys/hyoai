@@ -180,7 +180,11 @@ export function ToolsTab() {
                                 <p className="text-xs text-destructive">{t("listFailed")}</p>
                             )}
                             {list?.map((tool) => {
-                                const key = toolPolicyKey(provider.id, tool.name);
+                                const key = toolPolicyKey(
+                                    provider.id,
+                                    tool.name,
+                                    provider.policyScope,
+                                );
                                 return (
                                     <div
                                         key={key}

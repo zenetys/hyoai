@@ -21,6 +21,7 @@ import type { ToolDefinition } from "@/types/tools";
  *
  * @param name - Name of the server, for the labels
  * @param providerId - Tool provider id of the server, which the policies are keyed on
+ * @param policyScope - Scope of the server's policies, from its address
  * @param tools - The tools listed, null while loading or after a failure
  * @param loading - Whether a listing is running
  * @param onRefresh - Called to forget the cached listing and list again
@@ -28,12 +29,14 @@ import type { ToolDefinition } from "@/types/tools";
 export function McpToolList({
     name,
     providerId,
+    policyScope,
     tools,
     loading,
     onRefresh,
 }: {
     name: string;
     providerId: string;
+    policyScope: string;
     tools: ToolDefinition[] | null;
     loading: boolean;
     onRefresh: () => void;
@@ -86,7 +89,7 @@ export function McpToolList({
                     <p className="text-xs text-muted-foreground">{t("noTools")}</p>
                 )}
                 {tools?.map((tool) => {
-                    const key = toolPolicyKey(providerId, tool.name);
+                    const key = toolPolicyKey(providerId, tool.name, policyScope);
                     const hints = tool.annotations;
                     const declared =
                         hints?.readOnlyHint || hints?.destructiveHint || hints?.openWorldHint;
