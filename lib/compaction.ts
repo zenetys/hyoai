@@ -1,7 +1,7 @@
 import { streamChatCompletion } from "@/lib/api/chat";
 import { buildApiMessages, type BuildMessagesOptions, chunkSourceIds } from "@/lib/conversation";
 import { getTranslator } from "@/lib/i18n";
-import type { ApiMessage, ChatRequestParams } from "@/types/api";
+import { ApiError, type ApiMessage, type ChatRequestParams } from "@/types/api";
 import type { CompactionState, MessageNode } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 
@@ -134,7 +134,8 @@ export function buildSummaryTranscript(priorSummary: string, nodes: MessageNode[
 /**
  * Summarize a branch slice through the same server, out of band. The call reuses
  * streamChatCompletion (which also covers non-streaming endpoints) and a tight
- * output budget so the summary itself stays small relative to the window.
+ * output budget so the summary itself stays small relative to the window. A
+ * stream cut before its end throws: half a summary must not replace the history.
  *
  * @param entry - Model entry to call
  * @param model - Resolved upstream model id
@@ -142,7 +143,7 @@ export function buildSummaryTranscript(priorSummary: string, nodes: MessageNode[
  * @param nodes - Branch nodes to summarize
  * @param nCtx - Context window used to size the summary output budget
  * @param signal - Abort signal cancelling the request
- * @returns The trimmed summary text
+ * @returns The trimmed summary text, which is never a cut-off one
  */
 export async function summarizeNodes(
     entry: ModelConfig,
@@ -170,6 +171,8 @@ export async function summarizeNodes(
             summary += event.text;
         } else if (event.type === "error") {
             throw event.error;
+        } else if (event.type === "finish" && event.reason === "truncated") {
+            throw new ApiError("stream", "the stream closed before the summary was complete");
         }
     }
     return summary.trim();

@@ -732,6 +732,13 @@ export class ChatInstance {
                         break;
                     case "finish":
                         finishReason = event.reason;
+
+                        // Inside a tool flow the loop classifies the ending itself.
+                        if (event.reason === "truncated" && !flow) {
+                            nodeError = endingMessage("truncated");
+                            errorKind = "truncated";
+                            finishReason = "error";
+                        }
                         break;
                     case "error":
                         nodeError = event.error.message;
