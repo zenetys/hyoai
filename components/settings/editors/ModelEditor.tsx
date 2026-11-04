@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { EditableCard } from "@/components/settings/fields/EditableCard";
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
 import { JsonField } from "@/components/settings/fields/JsonField";
+import { McpScopeField } from "@/components/settings/fields/McpScopeField";
 import { TextField } from "@/components/settings/fields/TextField";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -45,6 +46,7 @@ export function modelAnchorId(index: number): string {
  * @param onMoveDown - Move the entry one position down
  * @param canMoveUp - Whether an up move is possible (not already first)
  * @param canMoveDown - Whether a down move is possible (not already last)
+ * @param mcpServers - The MCP servers of the catalog, for the scope of the entry
  */
 export function ModelEditor({
     index,
@@ -55,6 +57,7 @@ export function ModelEditor({
     onMoveDown,
     canMoveUp,
     canMoveDown,
+    mcpServers,
 }: {
     index: number;
     model: DraftModel;
@@ -64,6 +67,7 @@ export function ModelEditor({
     onMoveDown: () => void;
     canMoveUp: boolean;
     canMoveDown: boolean;
+    mcpServers: { id: string; label: string }[];
 }) {
     const t = useTranslations("settings");
     const title = model.id || t("config.modelUntitled");
@@ -245,6 +249,12 @@ export function ModelEditor({
                             onChange={(value) => onChange({ supportsToolChoice: value })}
                         />
                     </div>
+                    <McpScopeField
+                        servers={mcpServers}
+                        value={model.mcpServers}
+                        onChange={(value) => onChange({ mcpServers: value })}
+                        toolsOff={model.tools === "off"}
+                    />
                 </CollapsibleContent>
             </Collapsible>
         </EditableCard>

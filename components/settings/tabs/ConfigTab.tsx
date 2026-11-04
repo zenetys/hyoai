@@ -257,6 +257,9 @@ export function ConfigTab() {
                         onMoveDown={() => moveModel(index, 1)}
                         canMoveUp={index > 0}
                         canMoveDown={index < draft.models.length - 1}
+                        mcpServers={draft.mcpServers
+                            .filter((server) => server.id.trim())
+                            .map((server) => ({ id: server.id, label: server.label }))}
                     />
                 ))}
             </ListSection>
