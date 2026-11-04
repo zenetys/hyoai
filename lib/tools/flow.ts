@@ -1,4 +1,5 @@
-import type { MessageNode, StageTiming, ToolCall } from "@/types/chat";
+import type { AgentProgress, LiveToolCall } from "@/lib/stores/chat";
+import type { ActivityStep, MessageNode, StageTiming, ToolCall } from "@/types/chat";
 
 /**
  * Whether a node is an assistant message that called tools.
@@ -117,4 +118,73 @@ export function flowStages(flow: MessageNode[]): StageTiming[] {
         }
     }
     return stages;
+}
+
+/**
+ * The tool calls of a flow as activity steps, for the trace above its answer. A
+ * call shows where it stands: waiting for approval, running, how it ended, or
+ * not run because the flow stopped. The text the model wrote before its calls
+ * rides on the first call of that message.
+ *
+ * @param flow - The nodes of the flow in order
+ * @param live - The flow's progress and the calls still being streamed
+ * @returns One step per call, calls being streamed last
+ */
+export function flowSteps(
+    flow: MessageNode[],
+    live: { agent: AgentProgress | null; liveCalls?: LiveToolCall[] },
+): ActivityStep[] {
+    const results = new Map<string, MessageNode>();
+    for (const node of flow) {
+        if (node.role === "tool" && node.toolCallId) results.set(node.toolCallId, node);
+    }
+
+    const steps: ActivityStep[] = [];
+    for (const node of flow) {
+        if (!isToolCallNode(node)) continue;
+        const narration = node.content.trim();
+        (node.toolCalls ?? []).forEach((call, index) => {
+            const result = results.get(call.id);
+            const pending = live.agent?.pending?.callId === call.id ? live.agent.pending : null;
+            const running = live.agent?.phase === "running" && live.agent.callId === call.id;
+            const meta = result?.tool;
+            const omitted =
+                meta?.originalLength !== undefined && result
+                    ? Math.max(0, meta.originalLength - result.content.length)
+                    : undefined;
+            steps.push({
+                id: call.id,
+                kind: "tool",
+                label: meta?.title ??
+                    pending?.title ?? { key: `tools.${call.name}`, text: call.name },
+                status: result
+                    ? (meta?.status ?? "done")
+                    : pending
+                      ? "pending"
+                      : running
+                        ? "running"
+                        : live.agent
+                          ? undefined
+                          : "notRun",
+                durationMs: meta?.durationMs,
+                detail: { input: call.arguments, output: result?.content, truncated: omitted },
+                text: index === 0 && narration ? narration : undefined,
+            });
+        });
+    }
+
+    for (const call of live.liveCalls ?? []) {
+        steps.push({
+            id: `live-${call.index}`,
+            kind: "tool",
+            label: {
+                key: "chat.toolPreparing",
+                values: { name: call.name || "..." },
+                text: call.name || "...",
+            },
+            status: "running",
+            detail: { input: call.arguments },
+        });
+    }
+    return steps;
 }
