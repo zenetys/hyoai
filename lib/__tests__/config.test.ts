@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadAppConfig, normalizeConfig } from "@/lib/config";
+import { readModelScope } from "@/lib/mcp/config";
 import type { AppConfig } from "@/types/server";
 
 // The plugin registry needs Next's bundler; the config only needs the server types.
@@ -68,6 +69,14 @@ describe("normalizeConfig with MCP servers", () => {
 });
 
 describe("model scope on MCP servers", () => {
+    it("is read the same way by the app and by the config form", () => {
+        for (const scope of [undefined, [], ["docs"], "docs", null, [1], ["docs", 5], {}]) {
+            expect(readModelScope(scope)).toEqual(
+                ready({ models: [{ ...model, mcpServers: scope }] }).models[0].mcpServers,
+            );
+        }
+    });
+
     it("leaves the scope unset by default", () => {
         expect(ready({ models: [model] }).models[0].mcpServers).toBeUndefined();
     });
@@ -113,5 +122,23 @@ describe("loadAppConfig", () => {
         expect(result.status).toBe("ready");
         expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0][0]).toContain("mcp.servers[0]");
+    });
+
+    it("applies the stored servers over the deployed ones", async () => {
+        serve({ models: [model], mcp: { servers: [{ id: "docs", url: "/mcp/docs" }] } });
+        stored.override = {
+            mcp: {
+                servers: [
+                    { id: "docs", url: "/mcp/other" },
+                    { id: "new", url: "/mcp/new" },
+                ],
+            },
+        };
+        const result = await loadAppConfig();
+        if (result.status !== "ready") throw new Error(result.status);
+        expect(result.config.mcpServers.map((s) => [s.id, s.url])).toEqual([
+            ["docs", "/mcp/other"],
+            ["new", "/mcp/new"],
+        ]);
     });
 });

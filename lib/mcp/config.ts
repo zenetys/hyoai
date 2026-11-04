@@ -89,3 +89,18 @@ export function normalizeMcpServers(raw: unknown): {
     });
     return { servers, issues };
 }
+
+/**
+ * Read the MCP scope of a model entry as the app applies it: unset offers every
+ * server, a list of ids offers those, and anything else offers none, so a typo
+ * never gives a model more servers than intended. The config form reads the scope
+ * with this too, so saving it never widens what the file says.
+ *
+ * @param value - The `mcpServers` field of a model, as written
+ * @returns undefined when unset, else the ids offered (possibly none)
+ */
+export function readModelScope(value: unknown): string[] | undefined {
+    if (value === undefined) return undefined;
+    if (Array.isArray(value) && value.every((id) => typeof id === "string")) return value;
+    return [];
+}
