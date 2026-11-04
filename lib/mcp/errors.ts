@@ -261,12 +261,16 @@ export function pickConnectError(first: unknown, second: unknown): unknown {
     return classifyMcpError(second).reason === "unauthorized" ? second : first;
 }
 
+// The legacy SSE transport reports a refused message as a plain Error: only its text tells
+const SSE_SESSION_GONE = /^Error POSTing to endpoint \(HTTP (404|410)\)/;
+
 /**
  * Whether a failure says the server forgot the session: the request was refused
  * before anything ran, so it is safe to connect again and repeat it. The MCP
  * specification has a server answer 404 to a request with a session id it no
  * longer knows; some answer 400 and say so. A transport that was closed
- * reports "Not connected" without sending anything.
+ * reports "Not connected" without sending anything. The legacy SSE transport
+ * reports a refused message as a plain Error naming the status.
  *
  * A dropped connection is not on the list: the request may have been processed.
  *
@@ -277,5 +281,8 @@ export function isSessionLost(error: unknown): boolean {
     if (error instanceof StreamableHTTPError) {
         return error.code === 404 || (error.code === 400 && /session/i.test(error.message));
     }
-    return error instanceof Error && error.message === "Not connected";
+    return (
+        error instanceof Error &&
+        (error.message === "Not connected" || SSE_SESSION_GONE.test(error.message))
+    );
 }

@@ -250,6 +250,14 @@ describe("isSessionLost", () => {
         expect(isSessionLost(new Error("Not connected"))).toBe(true);
     });
 
+    it("recognises the legacy SSE transport refusing a message for an unknown session", () => {
+        expect(isSessionLost(new Error("Error POSTing to endpoint (HTTP 404): no session"))).toBe(
+            true,
+        );
+        expect(isSessionLost(new Error("Error POSTing to endpoint (HTTP 410): gone"))).toBe(true);
+        expect(isSessionLost(new Error("Error POSTing to endpoint (HTTP 500): oops"))).toBe(false);
+    });
+
     it("does not take a possibly processed request for a lost session", () => {
         expect(isSessionLost(new McpError(ErrorCode.ConnectionClosed, "closed"))).toBe(false);
         expect(isSessionLost(new TypeError("Failed to fetch"))).toBe(false);

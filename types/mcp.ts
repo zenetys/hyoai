@@ -51,12 +51,19 @@ export interface McpErrorInfo {
 
 /**
  * Connection state of one server. "idle" means not connected yet: connections
- * are opened when tools are first needed.
+ * are opened when tools are first needed. A connected server whose last tool
+ * listing failed (for instance a server without tools, or a malformed answer)
+ * carries the reason in `listError`.
  */
 export type McpStatus =
     | { state: "idle" }
     | { state: "connecting" }
-    | { state: "connected"; transport: McpWireTransport; toolCount?: number }
+    | {
+          state: "connected";
+          transport: McpWireTransport;
+          toolCount?: number;
+          listError?: McpErrorInfo;
+      }
     | { state: "error"; error: McpErrorInfo };
 
 /**
