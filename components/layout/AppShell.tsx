@@ -17,8 +17,10 @@ import { useIsMobile, useOnBreakpointCross } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
 import { ForegroundChatProvider } from "@/lib/chat/context";
 import { activeChatStore } from "@/lib/chat/foreground";
-import { startNewChat } from "@/lib/chat/panes";
+import { paneEntries, startNewChat } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
+import { watchHealth } from "@/lib/stores/health";
+import { modelsStore, selectActiveEntry } from "@/lib/stores/models";
 import { setCommandOpen, setMobileSidebarOpen, toggleSidebar, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +39,16 @@ export function AppShell() {
     useOnBreakpointCross(isMobile, () => {
         if (mobileOpen) setMobileSidebarOpen(false);
     });
+
+    useEffect(
+        () =>
+            watchHealth(() => {
+                const active = selectActiveEntry(modelsStore.getState());
+                const panes = compareStore.getState().enabled ? paneEntries() : [];
+                return active ? [active, ...panes] : panes;
+            }),
+        [],
+    );
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {

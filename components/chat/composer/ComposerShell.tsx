@@ -28,6 +28,7 @@ interface ComposerShellProps {
     audioBlocked?: boolean;
     onSystemMessage?: () => void;
     banner?: React.ReactNode;
+    notice?: React.ReactNode;
     reply?: React.ReactNode;
     rightControls?: React.ReactNode;
     placeholder?: string;
@@ -60,6 +61,7 @@ interface ComposerShellProps {
  * @param audioBlocked - The model rejects audio
  * @param onSystemMessage - Opens the system message dialog when provided
  * @param banner - Indicator rendered above the input, e.g. the system chip
+ * @param notice - Strip at the top of the input card, e.g. why the model cannot answer
  * @param reply - Quoted excerpt chip rendered just above the input
  * @param rightControls - Controls rendered left of the send button
  * @param placeholder - Textarea placeholder override
@@ -80,6 +82,7 @@ export function ComposerShell({
     audioBlocked = false,
     onSystemMessage,
     banner,
+    notice,
     reply,
     rightControls,
     placeholder,
@@ -288,6 +291,16 @@ export function ComposerShell({
                     compact ? "p-1.5" : "p-2",
                 )}
             >
+                {notice && (
+                    <div
+                        className={cn(
+                            "overflow-hidden border-b border-input/60",
+                            compact ? "-mx-1.5 -mt-1.5 mb-1.5" : "-mx-2 -mt-2 mb-2",
+                        )}
+                    >
+                        {notice}
+                    </div>
+                )}
                 {reply}
                 <div
                     ref={rowRef}

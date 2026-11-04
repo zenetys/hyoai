@@ -5,11 +5,14 @@ import { useTranslations } from "next-intl";
 import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
 import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
+import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
 import { SystemMessageChip } from "@/components/chat/composer/SystemMessageChip";
 import { ComposerModelSelector, PaneModelSelector } from "@/components/common/model/ModelSelector";
 import { usePendingReply, useStreamingStatus, useUserHistory } from "@/hooks/useActiveChat";
+import { useAutoDisable, useModelAvailability, useReasonText } from "@/hooks/useAvailability";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useStore } from "@/hooks/useStore";
+import { isEntryInactive } from "@/lib/chat/availability";
 import { useChatInstance } from "@/lib/chat/context";
 import { resolveModalityGate } from "@/lib/chat/modalities";
 import { settingsStore } from "@/lib/stores/settings";
@@ -40,6 +43,14 @@ export function Composer({ home = false }: { home?: boolean }) {
     const focusNonce = useStore(uiStore, (state) => state.composerFocusNonce);
     const { entry, upstream, props, resolveFailed } = useResolvedModel();
 
+    const availability = useModelAvailability();
+    const autoDisable = useAutoDisable();
+    const reasonText = useReasonText();
+    const blocked =
+        availability.state === "unavailable" && isEntryInactive(availability, autoDisable)
+            ? availability
+            : null;
+
     const { visionBlocked, audioBlocked } = resolveModalityGate(entry, props);
 
     const single = chat.controlsGlobalModel;
@@ -54,7 +65,9 @@ export function Composer({ home = false }: { home?: boolean }) {
           ? resolveFailed
               ? th("modelUnavailable")
               : tc("loading")
-          : null;
+          : blocked
+            ? reasonText(blocked)
+            : null;
 
     return (
         <div className="px-4 pb-4">
@@ -72,14 +85,15 @@ export function Composer({ home = false }: { home?: boolean }) {
                 onSubmit={(text, attachments) => void chat.sendMessage(text, attachments)}
                 onStop={chat.stopGeneration}
                 busy={busy}
-                ready={hasModel}
+                ready={hasModel && !blocked}
                 disabledReason={disabledReason}
                 visionBlocked={Boolean(visionBlocked)}
                 audioBlocked={Boolean(audioBlocked)}
                 onSystemMessage={
                     chat.controlsGlobalModel ? () => setSystemPromptOpen(true) : undefined
                 }
-                banner={chat.controlsGlobalModel ? <SystemMessageChip /> : undefined}
+                notice={blocked ? <ModelUnavailable availability={blocked} /> : null}
+                banner={<>{chat.controlsGlobalModel && <SystemMessageChip />}</>}
                 rightControls={
                     <>
                         <ChunkingControl />
