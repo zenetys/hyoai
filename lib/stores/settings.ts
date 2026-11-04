@@ -31,6 +31,7 @@ function withDefaults(stored: Partial<AppSettings>): AppSettings {
         display: { ...DEFAULT_SETTINGS.display, ...stored.display },
         chunking: { ...DEFAULT_SETTINGS.chunking, ...stored.chunking },
         compaction: { ...DEFAULT_SETTINGS.compaction, ...stored.compaction },
+        availability: { ...DEFAULT_SETTINGS.availability, ...stored.availability },
     };
 }
 

@@ -106,6 +106,17 @@ export interface CompactionSettings {
 }
 
 /**
+ * How the app reacts to a model whose server does not answer.
+ *
+ * @param autoDisable - Grey out and skip the unreachable models until they answer again; off keeps them selectable and shows the error on send
+ * @param connectCheckSeconds - Seconds without any stream event before the server is probed; 0 never checks
+ */
+export interface AvailabilitySettings {
+    autoDisable: boolean;
+    connectCheckSeconds: number;
+}
+
+/**
  * All persisted user settings.
  *
  * @param systemPrompt - Default system prompt sent with each conversation
@@ -119,6 +130,7 @@ export interface CompactionSettings {
  * @param display - Purely visual preferences
  * @param chunking - Over-context chunking settings
  * @param compaction - Conversation compaction settings
+ * @param availability - Reaction to models whose server does not answer
  * @param imageMaxDimension - Max pixel dimension images are downscaled to
  * @param pdfAsImage - Whether PDFs are sent as page images instead of extracted text
  */
@@ -134,6 +146,7 @@ export interface AppSettings {
     display: DisplaySettings;
     chunking: ChunkingSettings;
     compaction: CompactionSettings;
+    availability: AvailabilitySettings;
     imageMaxDimension: number;
     pdfAsImage: boolean;
 }
@@ -166,6 +179,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
         enabled: true,
         thresholdFraction: 0.8,
         keepRecentTurns: 2,
+    },
+    availability: {
+        autoDisable: true,
+        connectCheckSeconds: 20,
     },
     imageMaxDimension: 1024,
     pdfAsImage: false,

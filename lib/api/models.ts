@@ -236,3 +236,48 @@ export async function fetchContextWindow(
 
     return undefined;
 }
+
+/**
+ * Outcome of a reachability probe: up, or down because the host did not answer
+ * at all (unreachable) or not in time (timeout).
+ */
+export type ProbeResult = { up: true } | { up: false; reason: "unreachable" | "timeout" };
+
+/**
+ * Whether the entry's server type answers the OpenAI-compatible GET /v1/models
+ * probe. Types that do not are never probed, so they are never marked down by a
+ * check, only by what an actual request reports.
+ *
+ * @param endpoint - Config entry
+ * @returns true when the entry can be probed
+ */
+export function canProbe(endpoint: ModelConfig): boolean {
+    return endpoint.listModels === true;
+}
+
+/**
+ * Check that a server answers, through GET /v1/models. Conservative on purpose:
+ * the server counts as down only on a network error, a timeout or an HTTP
+ * 502/503/504 from a gateway in front of it. Any other answer, errors and
+ * authorization failures included, proves something is listening.
+ *
+ * @param endpoint - Config entry with the endpoint to call
+ * @returns Whether the server answered
+ */
+export async function probeEndpoint(endpoint: ModelConfig): Promise<ProbeResult> {
+    try {
+        const response = await fetch(buildUrl(endpoint, "/v1/models"), {
+            method: "GET",
+            headers: buildHeaders(endpoint),
+            signal: withTimeout(),
+        });
+        void response.body?.cancel();
+        if (response.status === 502 || response.status === 503 || response.status === 504) {
+            return { up: false, reason: "unreachable" };
+        }
+        return { up: true };
+    } catch (err) {
+        const timedOut = err instanceof Error && err.name === "TimeoutError";
+        return { up: false, reason: timedOut ? "timeout" : "unreachable" };
+    }
+}

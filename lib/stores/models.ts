@@ -65,7 +65,7 @@ function persistSelection(): void {
  * @param entry - Config entry
  * @returns A comparable key over the endpoint fields
  */
-function endpointKey(entry: ModelConfig): string {
+export function endpointKey(entry: ModelConfig): string {
     return JSON.stringify([
         entry.baseUrl,
         entry.type,
