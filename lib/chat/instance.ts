@@ -101,7 +101,7 @@ export class ChatInstance {
     controlsGlobalModel: boolean;
 
     private syncUrl: boolean;
-    private readonly followGlobalModel: boolean;
+    private followGlobalModel: boolean;
     private abortRef: AbortController | null = null;
     private compactAbort: AbortController | null = null;
     private disposed = false;
@@ -156,6 +156,38 @@ export class ChatInstance {
         }
         this.syncUrl = active;
         this.controlsGlobalModel = active && this.followGlobalModel;
+    };
+
+    /**
+     * Whether this instance follows and drives the global model selection while
+     * it is the active foreground one.
+     *
+     * @returns true for the single chat, false for a compare pane
+     */
+    get followsGlobalModel(): boolean {
+        return this.followGlobalModel;
+    }
+
+    /**
+     * Switch a live instance between the single chat and a pane, without
+     * touching what it is running. Joining publishes the instance's own model,
+     * thinking and effort to the global selection (the caller then promotes it).
+     * Leaving pins the currently resolved choice on the instance, stops URL sync
+     * and stops driving the global selection.
+     *
+     * @param follow - true to join the single chat, false to leave it
+     */
+    setFollowGlobalModel = (follow: boolean): void => {
+        if (follow === this.followGlobalModel) return;
+        if (follow) {
+            modelOps.publishSelection(this.model);
+        } else {
+            // While it controls the global selection, thinking and effort read the global values.
+            this.freezeModelSelection();
+            this.syncUrl = false;
+            this.controlsGlobalModel = false;
+        }
+        this.followGlobalModel = follow;
     };
 
     /**

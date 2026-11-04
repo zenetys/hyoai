@@ -4,6 +4,7 @@ import {
     getUpstreamModel,
     modelsStore,
     resolveSelectionUpstream,
+    setActiveModel,
 } from "@/lib/stores/models";
 import {
     setEffort as setGlobalEffort,
@@ -192,4 +193,22 @@ export function freezeModelSelection(
         thinking: getThinking(selection, controlsGlobalModel),
         effort: getEffort(selection, controlsGlobalModel),
     });
+}
+
+/**
+ * Copy an instance's own model, thinking and effort into the global selection,
+ * so an instance joining the single chat keeps answering with what it was set
+ * to. Only the fields the instance pinned are applied, and an entry that is
+ * missing or disabled is skipped (the single chat then keeps its own choice).
+ *
+ * @param selection - Per-instance model selection store
+ */
+export function publishSelection(selection: Store<ChatModelSelection>): void {
+    const { entryId, upstreamModel, thinking, effort } = selection.getState();
+    if (entryId) {
+        const entry = modelsStore.getState().entries.find((candidate) => candidate.id === entryId);
+        if (entry && !entry.disabled) setActiveModel(entry.id, upstreamModel ?? undefined);
+    }
+    if (thinking !== null) setGlobalThinking(thinking);
+    if (effort !== null) setGlobalEffort(effort);
 }
