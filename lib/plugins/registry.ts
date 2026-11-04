@@ -60,6 +60,7 @@ function scopeProvider(pluginId: string, provider: ToolProvider): RegisteredTool
         id: provider.id,
         pluginId,
         label: scopeText(pluginId, provider.label),
+        policyScope: provider.policyScope,
         listTools: async (signal) =>
             (await provider.listTools(signal)).map((tool) =>
                 tool.title ? { ...tool, title: scopeText(pluginId, tool.title) } : tool,

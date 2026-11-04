@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveProviderId, serverKey } from "@/lib/mcp/id";
+import { deriveProviderId, policyScopeFor, serverKey } from "@/lib/mcp/id";
 
 // Same rule as isToolProviderId in lib/plugins/registry, which cannot be loaded outside Next.
 const PROVIDER_ID = /^[a-z][a-zA-Z0-9]*$/;
@@ -79,5 +79,22 @@ describe("serverKey", () => {
         expect(serverKey({ ...base, headers: { Authorization: "Bearer u" } })).not.toBe(
             serverKey({ ...base, headers: { Authorization: "Bearer t" } }),
         );
+    });
+});
+
+describe("policyScopeFor", () => {
+    it("is equal for equal addresses and differs for another endpoint", () => {
+        expect(policyScopeFor("https://a.example.com/mcp")).toBe(
+            policyScopeFor("https://a.example.com/mcp"),
+        );
+        expect(policyScopeFor("https://a.example.com/mcp")).not.toBe(
+            policyScopeFor("https://b.example.com/mcp"),
+        );
+        expect(policyScopeFor("/mcp/docs")).not.toBe(policyScopeFor("/mcp/wiki"));
+    });
+
+    it("does not carry the address", () => {
+        const scope = policyScopeFor("https://a.example.com/mcp?key=secret");
+        expect(scope).toMatch(/^[a-z0-9]{14}$/);
     });
 });

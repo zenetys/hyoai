@@ -5,6 +5,7 @@ import {
     invalidateToolList,
     listProviderTools,
     listToolProviders,
+    policyFor,
     registerToolProvider,
     retryTimedOutToolList,
     toolPolicyKey,
@@ -155,6 +156,26 @@ describe("retryTimedOutToolList", () => {
         retryTimedOutToolList("docs");
         await expect(listProviderTools(registered, signal())).rejects.toThrow("boom");
         expect(docs.listTools).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("policy keys", () => {
+    it("keep the plain form for a provider without a scope", () => {
+        expect(toolPolicyKey("clock", "now")).toBe("clock/now");
+        expect(toolPolicyKey("docs", "search", "abc")).toBe("docs@abc/search");
+    });
+
+    it("do not carry an approval from one scope to another", async () => {
+        register({ ...provider("docs"), policyScope: "second" });
+        const settings = {
+            ...DEFAULT_SETTINGS.tools,
+            disabledProviders: ["clock"],
+            policies: { [toolPolicyKey("docs", "search", "first")]: "allow" as const },
+        };
+        const set = await collectToolSet(settings, signal());
+        const resolved = set.byWireName.get("docs_search");
+        expect(resolved?.policyKey).toBe("docs@second/search");
+        expect(policyFor(settings, resolved?.policyKey ?? "")).toBe("ask");
     });
 });
 

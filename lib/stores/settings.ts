@@ -101,7 +101,7 @@ export function setSkin(skin: SkinId): void {
 /**
  * Set the policy of one tool, or drop its entry so the default policy applies.
  *
- * @param key - Policy key, "<providerId>/<toolName>"
+ * @param key - Policy key, from toolPolicyKey
  * @param policy - New policy, or null to fall back to the default
  */
 export function setToolPolicy(key: string, policy: ToolPolicy | null): void {

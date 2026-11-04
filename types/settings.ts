@@ -126,7 +126,8 @@ export type ToolPolicy = "ask" | "allow" | "deny";
  * @param maxSteps - Model requests per answer before asking to continue
  * @param defaultPolicy - Policy of the tools without an entry of their own
  * @param maxResultChars - Characters of one result sent to the model
- * @param policies - Policy per tool, keyed by "<providerId>/<toolName>"
+ * @param policies - Policy per tool, keyed by "<providerId>/<toolName>", with "@<scope>" after the
+ *        provider id for a provider whose backing can change (an MCP server's address)
  * @param disabledProviders - Providers whose tools are never offered
  */
 export interface ToolSettings {

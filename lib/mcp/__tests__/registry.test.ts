@@ -77,6 +77,22 @@ describe("syncMcpServers", () => {
         ]);
     });
 
+    it("ties the approvals of a provider to the address of its server", () => {
+        syncMcpServers([docs], open);
+        const first = catalog.providers.get("docs")?.policyScope;
+        expect(first).toBeTruthy();
+        syncMcpServers([{ ...docs, url: "https://other.example.com/mcp" }], open);
+        expect(catalog.providers.get("docs")?.policyScope).not.toBe(first);
+
+        // New headers are the same endpoint: its approvals stay.
+        const moved = catalog.providers.get("docs")?.policyScope;
+        syncMcpServers(
+            [{ ...docs, url: "https://other.example.com/mcp", headers: { Authorization: "x" } }],
+            open,
+        );
+        expect(catalog.providers.get("docs")?.policyScope).toBe(moved);
+    });
+
     it("serves tools and calls through the provider", async () => {
         syncMcpServers([docs], open);
         const provider = catalog.providers.get("docs") as ToolProvider;

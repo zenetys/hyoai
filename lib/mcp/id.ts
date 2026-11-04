@@ -12,7 +12,8 @@ const FALLBACK_ID = "server";
  * digits, "-" and "_") may start with a digit or hold separators: "my-search"
  * gives "mySearch". Two servers can derive the same id, or one a built-in
  * provider already uses; a number is appended until the id is free, so the
- * result depends on the order of the catalog.
+ * result depends on the order of the catalog. Nothing stored may rely on it
+ * alone: tool policies are tied to the server address as well.
  *
  * @param serverId - Id from the server definition
  * @param taken - Tells if an id is already used
@@ -50,4 +51,25 @@ export function deriveProviderId(serverId: string, taken: (id: string) => boolea
 export function serverKey(definition: McpServerDefinition): string {
     const headers = Object.entries(definition.headers ?? {}).sort(([a], [b]) => a.localeCompare(b));
     return JSON.stringify([definition.url, definition.transport ?? "auto", headers]);
+}
+
+/**
+ * Scope the approval policies of a server to its address. A policy is keyed on the
+ * provider id, which depends on the order of the catalog and on what an operator
+ * puts behind an id, so on its own it could let a tool of another endpoint inherit an
+ * "always allow". Two 32-bit hashes keep the address itself out of the stored key,
+ * which settings exports carry.
+ *
+ * @param url - Address of the server, as declared
+ * @returns A short string, equal for equal addresses
+ */
+export function policyScopeFor(url: string): string {
+    let djb = 5381;
+    let fnv = 0x811c9dc5;
+    for (let i = 0; i < url.length; i += 1) {
+        const code = url.charCodeAt(i);
+        djb = ((djb << 5) + djb + code) | 0;
+        fnv = Math.imul(fnv ^ code, 0x01000193);
+    }
+    return (djb >>> 0).toString(36).padStart(7, "0") + (fnv >>> 0).toString(36).padStart(7, "0");
 }

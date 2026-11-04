@@ -47,10 +47,12 @@ const reportedFailures = new WeakSet<object>();
  *
  * @param providerId - Provider that serves the tool
  * @param toolName - The provider's own name for the tool
- * @returns The key, "<providerId>/<toolName>"
+ * @param scope - The provider's policyScope, when it has one
+ * @returns The key, "<providerId>/<toolName>", or "<providerId>@<scope>/<toolName>" for a
+ *          provider whose backing can change
  */
-export function toolPolicyKey(providerId: string, toolName: string): string {
-    return `${providerId}/${toolName}`;
+export function toolPolicyKey(providerId: string, toolName: string, scope?: string): string {
+    return `${scope ? `${providerId}@${scope}` : providerId}/${toolName}`;
 }
 
 /**
@@ -269,7 +271,7 @@ export async function collectToolSet(
             continue;
         }
         for (const tool of tools) {
-            const policyKey = toolPolicyKey(provider.id, tool.name);
+            const policyKey = toolPolicyKey(provider.id, tool.name, provider.policyScope);
             if (policyFor(settings, policyKey) === "deny") continue;
 
             let wireName = wireNameFor(provider.id, tool.name);

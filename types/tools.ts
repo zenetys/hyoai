@@ -59,10 +59,14 @@ export interface ToolResult {
  *
  * @param id - camelCase and unique; namespaces the tool names the model sees and the policies
  * @param label - Name shown to the user
+ * @param policyScope - Identifies what stands behind the provider when that can change under
+ *        the same id, such as the address of a server. Approval policies are kept per scope, so
+ *        an "always allow" given to one endpoint never carries over to another.
  */
 export interface ToolProvider {
     id: string;
     label: LocalizedText;
+    policyScope?: string;
     listTools(signal?: AbortSignal): ToolDefinition[] | Promise<ToolDefinition[]>;
     callTool(
         name: string,
