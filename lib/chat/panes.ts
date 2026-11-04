@@ -27,27 +27,6 @@ import { getMeta } from "@/lib/stores/conversations";
 import { modelsStore } from "@/lib/stores/models";
 import { setCompareInUrl } from "@/lib/url";
 
-export {
-    ensurePaneRuntime,
-    paneRuntimeStore,
-    peekPaneInstance,
-    type PaneRuntime,
-} from "@/lib/chat/slots";
-export {
-    newConversationInPane,
-    openConversationInPane,
-    releaseFromPanes,
-    reloadPaneConversation,
-} from "@/lib/chat/occupants";
-export {
-    currentBroadcastPlan,
-    paneEntries,
-    retryPane,
-    sendToPanes,
-    stopPanes,
-} from "@/lib/chat/broadcast";
-export { analyzePanes } from "@/lib/chat/analysis";
-
 /**
  * Model fields for a pane created without an explicit model: the first model no
  * other pane uses, so a fresh comparison is not model X against model X. The pane

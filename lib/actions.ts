@@ -8,10 +8,10 @@ import {
 import type { ChatInstance } from "@/lib/chat/instance";
 import {
     openConversationInPane,
-    peekPaneInstance,
     releaseFromPanes,
     reloadPaneConversation,
-} from "@/lib/chat/panes";
+} from "@/lib/chat/occupants";
+import { peekPaneInstance } from "@/lib/chat/slots";
 import { deleteConversation as deleteConversationPayload } from "@/lib/storage/persistence";
 import { compareStore } from "@/lib/stores/compare";
 import { removeMeta } from "@/lib/stores/conversations";
