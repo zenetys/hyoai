@@ -190,7 +190,13 @@
         "toolsManage": "Manage in settings",
         "toolsUnsupported": "This model does not support tools.",
         "toolsOffNotice": "This conversation used tools, which are off for now.",
-        "toolsOffEnable": "Enable"
+        "toolsOffEnable": "Enable",
+        "toolsMcp": "MCP",
+        "toolsOutOfScope": "Not offered to this model",
+        "toolsRetry": "Retry",
+        "toolsRetryLabel": "Retry the connection to {provider}",
+        "toolsCorsDetail": "The browser blocked the request: the server may be down, or it does not allow this page. The details are in the settings.",
+        "toolsLocalNetworkDetail": "The server is on the local network: allow this site to reach it in the browser, then retry. The details are in the settings."
     },
     "contextBar": {
         "context": "Context: {used}/{total} ({percent}%)",

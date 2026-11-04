@@ -190,7 +190,13 @@
         "toolsManage": "Gérer dans les réglages",
         "toolsUnsupported": "Ce modèle ne gère pas les outils.",
         "toolsOffNotice": "Cette conversation a utilisé des outils, désactivés pour l'instant.",
-        "toolsOffEnable": "Activer"
+        "toolsOffEnable": "Activer",
+        "toolsMcp": "MCP",
+        "toolsOutOfScope": "Non proposé à ce modèle",
+        "toolsRetry": "Réessayer",
+        "toolsRetryLabel": "Réessayer la connexion à {provider}",
+        "toolsCorsDetail": "Le navigateur a bloqué la requête : le serveur est peut-être arrêté, ou il n'autorise pas cette page. Le détail est dans les réglages.",
+        "toolsLocalNetworkDetail": "Le serveur est sur le réseau local : autorise ce site à y accéder dans le navigateur, puis réessaie. Le détail est dans les réglages."
     },
     "contextBar": {
         "context": "Contexte : {used}/{total} ({percent} %)",
