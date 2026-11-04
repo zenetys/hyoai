@@ -7,6 +7,7 @@ import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
 import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
 import { SystemMessageChip } from "@/components/chat/composer/SystemMessageChip";
+import { ToolsOffNotice } from "@/components/chat/composer/ToolsOffNotice";
 import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
 import { ComposerModelSelector, PaneModelSelector } from "@/components/common/model/ModelSelector";
 import { useChatBusy, usePendingReply, useUserHistory } from "@/hooks/useActiveChat";
@@ -95,7 +96,12 @@ export function Composer({ home = false }: { home?: boolean }) {
                     chat.controlsGlobalModel ? () => setSystemPromptOpen(true) : undefined
                 }
                 notice={blocked ? <ModelUnavailable availability={blocked} /> : null}
-                banner={<>{chat.controlsGlobalModel && <SystemMessageChip />}</>}
+                banner={
+                    <>
+                        <ToolsOffNotice />
+                        {chat.controlsGlobalModel && <SystemMessageChip />}
+                    </>
+                }
                 rightControls={
                     <>
                         <ToolsToggle />
