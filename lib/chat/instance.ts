@@ -260,7 +260,11 @@ export class ChatInstance {
     private persistActiveConversation = (): void => {
         const conversationId = this.store.getState().conversationId;
         if (!conversationId) return;
-        scheduleConversationWrite(conversationId, this.snapshotData);
+
+        // Bound to the id, so a late flush cannot write another conversation's tree under it
+        scheduleConversationWrite(conversationId, () =>
+            this.store.getState().conversationId === conversationId ? this.snapshotData() : null,
+        );
     };
 
     /**
@@ -549,8 +553,9 @@ export class ChatInstance {
             streaming: IDLE_STREAMING,
         }));
 
+        // Skip the final save once the instance moved on or the conversation was deleted
         const conversationId = this.store.getState().conversationId;
-        if (conversationId) {
+        if (conversationId && conversationId === liveConvId && getMeta(conversationId)) {
             const data = this.snapshotData();
             if (data) await writeConversationNow(conversationId, data);
             patchMeta(conversationId, { lastModified: Date.now() });

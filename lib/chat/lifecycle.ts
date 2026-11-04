@@ -1,13 +1,19 @@
 import type { ChatModelSelection } from "@/lib/chat/model";
 import { createConversation } from "@/lib/conversation";
 import { newId } from "@/lib/id";
-import { flushAll, readConversation, writeConversationNow } from "@/lib/storage/persistence";
+import {
+    flushAll,
+    flushKey,
+    readConversation,
+    writeConversationNow,
+} from "@/lib/storage/persistence";
 import type { Store } from "@/lib/store";
 import { type ChatState, IDLE_STREAMING } from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
 import { modelsStore, setActiveModel } from "@/lib/stores/models";
 import { cloneBranch } from "@/lib/tree";
 import type { ConversationData } from "@/types/chat";
+import { STORAGE_KEYS } from "@/types/storage";
 
 /**
  * What conversation lifecycle operations need from the owning ChatInstance:
@@ -100,6 +106,11 @@ export function setConversationSystemPrompt(ctx: LifecycleContext, prompt: strin
  * @param ctx - Owning instance context
  */
 export function startNewConversation(ctx: LifecycleContext): void {
+    // Capture the outgoing tree before the swap: flushKey builds its value synchronously.
+    const outgoing = ctx.store.getState().conversationId;
+    if (outgoing && getMeta(outgoing)) {
+        void flushKey(STORAGE_KEYS.conversation(outgoing)).catch(() => undefined);
+    }
     if (ctx.isChunking() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
     const { meta, data } = createConversation(Date.now());
     ctx.store.setState({
