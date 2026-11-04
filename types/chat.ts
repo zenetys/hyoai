@@ -70,6 +70,20 @@ export interface StageTiming {
 }
 
 /**
+ * A function call the model emitted. The arguments are kept verbatim, as the
+ * model wrote them, so the call can be replayed to the server exactly.
+ *
+ * @param id - Id from the server, or generated when the server sent none
+ * @param name - Function name as the model called it
+ * @param arguments - Raw JSON text of the arguments
+ */
+export interface ToolCall {
+    id: string;
+    name: string;
+    arguments: string;
+}
+
+/**
  * Generation statistics attached to an assistant message. The footer shows
  * either the reading (prompt processing) phase or the generation (token
  * output) phase, hence the two parallel sets of token/duration/rate fields.

@@ -54,7 +54,7 @@ function buildChatBody(endpoint: ModelConfig, params: ChatRequestParams): Record
         body.messages = body.messages.map((message: ChatRequestParams["messages"][number]) => {
             const copy = { ...message };
 
-            delete copy.reasoning_content;
+            if (copy.role === "assistant") delete copy.reasoning_content;
 
             return copy;
         });

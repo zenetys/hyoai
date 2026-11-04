@@ -602,6 +602,11 @@ export class ChatInstance {
                         }
                         queueFlush();
                         break;
+                    case "toolCallDelta":
+                    case "toolCalls":
+
+                        // Tool calls are run by the agentic loop, which reads these events.
+                        break;
                     case "finish":
                         finishReason = event.reason;
                         break;
