@@ -1,6 +1,6 @@
 import { newId } from "@/lib/id";
 import { findLeaf } from "@/lib/tree";
-import type { Attachment, Conversation, MessageNode, MessageRole } from "@/types/chat";
+import type { Attachment, Conversation, MessageNode, MessageRole, ToolCall } from "@/types/chat";
 
 /**
  * The llama.cpp webui exports an array of { conv, messages } items mirroring
@@ -25,6 +25,40 @@ function asString(value: unknown): string | undefined {
  */
 function asNumber(value: unknown): number | undefined {
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * Read the tool calls of a llama.cpp message: a JSON string holding an array of
+ * OpenAI-shaped calls. Entries without an id or a function name are dropped.
+ *
+ * @param value - The message's toolCalls field
+ * @returns The calls, or undefined when there are none
+ */
+function importToolCalls(value: unknown): ToolCall[] | undefined {
+    if (typeof value !== "string" || value.trim().length === 0) return undefined;
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(value);
+    } catch {
+        return undefined;
+    }
+    if (!Array.isArray(parsed)) return undefined;
+    const calls: ToolCall[] = [];
+    for (const entry of parsed) {
+        if (entry === null || typeof entry !== "object") continue;
+        const source = entry as { id?: unknown; function?: unknown };
+        const fn = source.function as { name?: unknown; arguments?: unknown } | null | undefined;
+        const id = asString(source.id);
+        const name = asString(fn?.name);
+        if (!id || !name) continue;
+        const args = fn?.arguments;
+        calls.push({
+            id,
+            name,
+            arguments: typeof args === "string" ? args : JSON.stringify(args ?? {}),
+        });
+    }
+    return calls.length > 0 ? calls : undefined;
 }
 
 /**
@@ -135,7 +169,10 @@ export function parseLlamaCppExport(raw: unknown): Conversation[] | null {
             const rawRole = asString(source.role);
             const role: MessageRole = isRoot
                 ? "root"
-                : rawRole === "user" || rawRole === "assistant" || rawRole === "system"
+                : rawRole === "user" ||
+                    rawRole === "assistant" ||
+                    rawRole === "system" ||
+                    rawRole === "tool"
                   ? rawRole
                   : "assistant";
             const attachments = Array.isArray(source.extra)
@@ -154,16 +191,23 @@ export function parseLlamaCppExport(raw: unknown): Conversation[] | null {
                 reasoningContent: asString(source.thinking) || undefined,
                 attachments: attachments.length > 0 ? attachments : undefined,
                 model: asString(source.model),
+                toolCalls: role === "assistant" ? importToolCalls(source.toolCalls) : undefined,
+                toolCallId: role === "tool" ? asString(source.toolCallId) : undefined,
                 createdAt: asNumber(source.timestamp) ?? 0,
             };
             if (isRoot) rootId = id;
         }
         if (!rootId) continue;
 
-        // second pass: drop dangling child references
         for (const node of Object.values(nodes)) {
             node.children = node.children.filter((child) => nodes[child] !== undefined);
             if (node.parent !== null && !nodes[node.parent]) node.parent = rootId;
+            if (node.role === "tool") {
+                const call = nodes[node.parent ?? ""]?.toolCalls?.find(
+                    (candidate) => candidate.id === node.toolCallId,
+                );
+                node.tool = { name: call?.name ?? "tool", status: "done" };
+            }
         }
 
         const storedCurrNode = asString(convSource.currNode);
@@ -207,7 +251,16 @@ export function toLlamaCppExport(conversations: Conversation[]): unknown[] {
                 parent: node.parent,
                 children: node.children,
                 thinking: node.reasoningContent ?? "",
-                toolCalls: "",
+                toolCalls: node.toolCalls
+                    ? JSON.stringify(
+                          node.toolCalls.map((call) => ({
+                              id: call.id,
+                              type: "function",
+                              function: { name: call.name, arguments: call.arguments },
+                          })),
+                      )
+                    : "",
+                ...(node.toolCallId ? { toolCallId: node.toolCallId } : {}),
                 ...(node.model ? { model: node.model } : {}),
                 ...(extra.length > 0 ? { extra } : {}),
             };

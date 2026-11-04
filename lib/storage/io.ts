@@ -37,12 +37,42 @@ const citationSchema = z.object({
     score: z.number().optional(),
 });
 
+const activityDetailSchema = z.object({
+    input: z.string().optional(),
+    output: z.string().optional(),
+    truncated: z.number().optional(),
+});
+
 const activityStepSchema = z.object({
     id: z.string(),
-    kind: z.enum(["search", "step"]).catch("step"),
+    kind: z.enum(["search", "step", "tool"]).catch("step"),
     label: localizedTextSchema,
     items: z.array(z.string()).optional(),
     citations: z.array(citationSchema).optional(),
+    status: z
+        .enum(["pending", "running", "done", "error", "denied", "cancelled", "notRun"])
+        .optional()
+        .catch(undefined),
+    durationMs: z.number().optional(),
+    detail: activityDetailSchema.optional(),
+    text: z.string().optional(),
+});
+
+const toolCallSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    arguments: z.string().catch(""),
+});
+
+const toolResultMetaSchema = z.object({
+    name: z.string(),
+    providerId: z.string().optional(),
+    toolName: z.string().optional(),
+    title: localizedTextSchema.optional(),
+    status: z.enum(["done", "error", "denied", "cancelled"]).catch("done"),
+    approval: z.enum(["once", "always", "policy", "denied"]).optional().catch(undefined),
+    durationMs: z.number().optional(),
+    originalLength: z.number().optional(),
 });
 
 const stageTimingSchema = z.object({
@@ -67,7 +97,7 @@ const messageNodeSchema = z.object({
     id: z.string(),
     parent: z.string().nullable(),
     children: z.array(z.string()).catch([]),
-    role: z.enum(["root", "system", "user", "assistant"]),
+    role: z.enum(["root", "system", "user", "assistant", "tool"]),
     content: z.string().catch(""),
     reasoningContent: z.string().optional(),
     quote: z.object({ text: z.string(), sourceId: z.string().optional() }).optional(),
@@ -90,6 +120,9 @@ const messageNodeSchema = z.object({
         .optional(),
     summary: z.boolean().optional(),
     feedback: z.enum(["up", "down"]).optional(),
+    toolCalls: z.array(toolCallSchema).optional(),
+    toolCallId: z.string().optional(),
+    tool: toolResultMetaSchema.optional(),
     createdAt: z.number().catch(0),
 });
 
@@ -102,6 +135,7 @@ const conversationSchema = z.object({
     modelId: z.string().optional(),
     model: z.string().optional(),
     systemPrompt: z.string().optional(),
+    tools: z.boolean().optional(),
     rootId: z.string(),
     currNode: z.string(),
     nodes: z.record(z.string(), messageNodeSchema),

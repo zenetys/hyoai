@@ -96,7 +96,7 @@ describe("buildApiMessages reasoning history", () => {
     });
 
     it("sends the saved reasoning on assistant messages when enabled", () => {
-        expect(buildApiMessages(path, "", true)[1]).toEqual({
+        expect(buildApiMessages(path, "", { preserveThinking: true })[1]).toEqual({
             role: "assistant",
             content: "answer",
             reasoning_content: "because",
@@ -107,7 +107,7 @@ describe("buildApiMessages reasoning history", () => {
         const messages = buildApiMessages(
             [node("1", "user", "q"), node("2", "assistant", "", { reasoningContent: "thinking" })],
             "",
-            true,
+            { preserveThinking: true },
         );
 
         expect(messages.at(-1)).toEqual({
@@ -121,7 +121,7 @@ describe("buildApiMessages reasoning history", () => {
         const messages = buildApiMessages(
             [node("1", "user", "q", { reasoningContent: "odd" })],
             "",
-            true,
+            { preserveThinking: true },
         );
 
         expect(messages[0]).toEqual({ role: "user", content: "q" });

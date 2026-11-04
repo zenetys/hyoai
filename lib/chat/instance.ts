@@ -24,6 +24,7 @@ import {
 } from "@/lib/compaction";
 import {
     buildApiMessages,
+    currentTurn,
     defaultTitleFromContent,
     stripTrailingAssistant,
 } from "@/lib/conversation";
@@ -431,10 +432,7 @@ export class ChatInstance {
             const path = getPath(state.nodes, nodeId);
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
             const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
-            messages = buildApiMessages(
-                path.filter((node) => node.role === "user").slice(-1),
-                systemPrompt,
-            );
+            messages = buildApiMessages(currentTurn(path), systemPrompt);
         } else {
             const path = getPath(state.nodes, nodeId);
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
@@ -751,7 +749,9 @@ export class ChatInstance {
             thinking: this.getThinking(),
             effort: this.getEffort(),
         });
-        const messages = buildCompactedMessages(path, systemPrompt, compaction, preserveThinking);
+        const messages = buildCompactedMessages(path, systemPrompt, compaction, {
+            preserveThinking,
+        });
         const settings = settingsStore.getState().settings;
         if (!settings.compaction.enabled) return messages;
 
@@ -764,12 +764,9 @@ export class ChatInstance {
             return messages;
         }
         if (!(await this.runCompaction(nodeId, entry, model, nCtx))) return messages;
-        return buildCompactedMessages(
-            path,
-            systemPrompt,
-            this.store.getState().compaction,
+        return buildCompactedMessages(path, systemPrompt, this.store.getState().compaction, {
             preserveThinking,
-        );
+        });
     };
 
     /**
@@ -952,6 +949,9 @@ export class ChatInstance {
                     attachments: node.attachments,
                     model: node.model,
                     chunk: node.chunk,
+                    toolCalls: node.toolCalls,
+                    toolCallId: node.toolCallId,
+                    tool: node.tool,
                 },
                 node.createdAt,
             );
