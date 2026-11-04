@@ -6,3 +6,7 @@ node_modules/
 .next/
 /out/
 .env
+
+# Build-time plugins: drop a folder here (see plugins/README.md)
+/plugins/*
+!/plugins/README.md
