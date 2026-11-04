@@ -50,14 +50,14 @@ const trackers = new Map<ChatInstance, () => void>();
 let requestToken = 0;
 
 /**
- * Whether an instance is doing any work that must not be dropped.
+ * Whether an instance is doing any work that must not be dropped: a turn, a
+ * stream, a compaction or a chunked run.
  *
  * @param instance - Instance to inspect
- * @returns true when the instance is streaming, compacting, or chunking
+ * @returns true when the instance is busy
  */
 function isBusy(instance: ChatInstance): boolean {
-    const state = instance.store.getState();
-    return state.streaming.status !== "idle" || state.compacting || state.chunking !== null;
+    return instance.isBusy();
 }
 
 /**

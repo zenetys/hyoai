@@ -75,6 +75,7 @@ export interface RevealTarget {
  * @param chunking - Over-context chunking progress, or null when inactive
  * @param compaction - Pending compaction state, or null when none
  * @param compacting - Whether a compaction is currently running
+ * @param running - Whether a user-initiated turn is in progress, from its first step to its final write
  * @param pendingReply - Quote staged for the next reply, or null when none
  * @param revealTarget - Node and term to jump to, or null when none
  */
@@ -87,6 +88,7 @@ export interface ChatState {
     chunking: ChunkingProgress | null;
     compaction: CompactionState | null;
     compacting: boolean;
+    running: boolean;
     pendingReply: MessageQuote | null;
     revealTarget: RevealTarget | null;
 }
@@ -117,6 +119,7 @@ export function createChatStore(): Store<ChatState> {
         chunking: null,
         compaction: null,
         compacting: false,
+        running: false,
         pendingReply: null,
         revealTarget: null,
     });

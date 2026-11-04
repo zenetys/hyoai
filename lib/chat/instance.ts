@@ -33,7 +33,7 @@ import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/p
 import { createStore, type Store } from "@/lib/store";
 import { type ChatState, createChatStore, IDLE_STREAMING } from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
-import { setGenerationDone, setLivePreview, setLiveStatus } from "@/lib/stores/live";
+import { liveStore, setGenerationDone, setLivePreview, setLiveStatus } from "@/lib/stores/live";
 import { modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
@@ -104,6 +104,11 @@ export class ChatInstance {
     private readonly followGlobalModel: boolean;
     private abortRef: AbortController | null = null;
     private compactAbort: AbortController | null = null;
+    private disposed = false;
+    private stopEpoch = 0;
+    private turnEpoch = 0;
+    private turnDepth = 0;
+    private turnConversationId: string | null = null;
     private chunking = false;
     private chunkAbort = false;
     private chunkRun: {
@@ -196,11 +201,77 @@ export class ChatInstance {
     setEffort = (value: string): void =>
         modelOps.setEffort(this.model, this.controlsGlobalModel, value);
 
+    /**
+     * Whether the instance runs work that must not be dropped by whoever owns it:
+     * a turn (including its steps before the stream), a stream, a compaction or a
+     * chunked run.
+     *
+     * @returns true while the instance is busy
+     */
+    isBusy = (): boolean => {
+        const state = this.store.getState();
+        return (
+            state.running ||
+            state.streaming.status !== "idle" ||
+            state.compacting ||
+            state.chunking !== null ||
+            this.chunking
+        );
+    };
+
+    /**
+     * Whether the turn in progress was stopped, or the instance disposed, since
+     * it started. Checked after every await of a turn so a stopped turn never
+     * sends a request it was about to make.
+     *
+     * @returns true when the turn must end without doing more work
+     */
+    private cancelled = (): boolean =>
+        this.disposed || (this.turnDepth > 0 && this.stopEpoch !== this.turnEpoch);
+
+    /**
+     * Run a user-initiated turn. The instance is flagged running from the first
+     * step to the final write, so an owner (foreground registry, compare panes)
+     * never drops it halfway, and the sidebar shows it as connecting before the
+     * stream starts. Turns nest: only the outermost one sets and clears the flag.
+     *
+     * @param body - The turn's work
+     */
+    private runTurn = async (body: () => Promise<void>): Promise<void> => {
+        if (this.turnDepth === 0) {
+            this.turnEpoch = this.stopEpoch;
+            this.turnConversationId = this.store.getState().conversationId;
+            this.store.setState({ running: true });
+            setLiveStatus(this.turnConversationId, "connecting", this.stopGeneration);
+        }
+        this.turnDepth += 1;
+        try {
+            await body();
+        } finally {
+            this.turnDepth -= 1;
+            if (this.turnDepth === 0) {
+                const id = this.turnConversationId;
+                this.turnConversationId = null;
+
+                // Only when no request was ever sent: a stream that ran already set done or idle.
+                if (
+                    id &&
+                    liveStore.getState().status[id] === "connecting" &&
+                    this.store.getState().streaming.status === "idle"
+                ) {
+                    setLiveStatus(id, "idle");
+                }
+                this.store.setState({ running: false });
+            }
+        }
+    };
+
     // Whether a generation can start right now (idle stream, usable model).
     canGenerate = (): boolean => {
         const { entry, model } = this.resolveEntry();
         return (
             this.store.getState().streaming.status === "idle" &&
+            !this.store.getState().running &&
             !this.chunking &&
             !this.store.getState().compacting &&
             entry !== null &&
@@ -210,6 +281,7 @@ export class ChatInstance {
 
     // Stop any live generation, either a normal one, a chunked run or a compaction.
     stopGeneration = (): void => {
+        this.stopEpoch += 1;
         if (this.chunking) this.chunkAbort = true;
         this.compactAbort?.abort();
         this.abortRef?.abort();
@@ -254,7 +326,7 @@ export class ChatInstance {
 
     private persistActiveConversation = (): void => {
         const conversationId = this.store.getState().conversationId;
-        if (!conversationId) return;
+        if (!conversationId || this.disposed) return;
 
         // Bound to the id, so a late flush cannot write another conversation's tree under it
         scheduleConversationWrite(conversationId, () =>
@@ -272,7 +344,7 @@ export class ChatInstance {
      */
     private ensureIndexed = (firstText: string, entry: ModelConfig, model: string | null): void => {
         const conversationId = this.store.getState().conversationId;
-        if (!conversationId) return;
+        if (!conversationId || this.disposed) return;
 
         const now = Date.now();
         const upstream = model ?? undefined;
@@ -335,6 +407,15 @@ export class ChatInstance {
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
             const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
             messages = await this.compactForBudget(nodeId, path, systemPrompt, entry, model);
+        }
+
+        if (this.cancelled()) {
+            // Stopped (or deleted) while preparing the request: nothing was sent.
+            this.store.setState((current) => ({
+                nodes: updateNode(current.nodes, nodeId, { finishReason: "aborted" }),
+            }));
+            this.persistActiveConversation();
+            return;
         }
 
         if (!messagesOverride) messages = stripTrailingAssistant(messages);
@@ -508,7 +589,13 @@ export class ChatInstance {
             else setLiveStatus(liveConvId, "idle");
         }
 
-        if (!messagesOverride && retryOnOverflow && finishReason === "error" && nodeError) {
+        if (
+            !this.cancelled() &&
+            !messagesOverride &&
+            retryOnOverflow &&
+            finishReason === "error" &&
+            nodeError
+        ) {
             const overflow = parseContextOverflow(nodeError);
             if (overflow) {
                 const current = settingsStore.getState().settings;
@@ -698,8 +785,15 @@ export class ChatInstance {
         const currNode = this.store.getState().currNode;
         if (!currNode) return;
 
-        const done = await this.runCompaction(currNode, entry, model, this.contextWindow(entry));
-        if (done) toast.success(getTranslator("compaction")("success"));
+        await this.runTurn(async () => {
+            const done = await this.runCompaction(
+                currNode,
+                entry,
+                model,
+                this.contextWindow(entry),
+            );
+            if (done) toast.success(getTranslator("compaction")("success"));
+        });
     };
 
     /**
@@ -867,37 +961,52 @@ export class ChatInstance {
         const { entry, model } = this.resolveEntry();
         if (!entry) return;
 
-        let state = this.store.getState();
-        if (!state.conversationId) {
-            this.startNewConversation();
-            state = this.store.getState();
-        }
+        if (!this.store.getState().conversationId) this.startNewConversation();
 
-        await this.ensureChunkContextFits(entry);
-        state = this.store.getState();
+        await this.runTurn(async () => {
+            await this.ensureChunkContextFits(entry);
+            const state = this.store.getState();
 
-        const parentId = state.currNode ?? state.rootId;
-        if (!parentId) return;
+            const parentId = state.currNode ?? state.rootId;
+            if (!parentId) return;
 
-        const quote = state.pendingReply ?? undefined;
-        const afterUser = appendNode(
-            state.nodes,
-            parentId,
-            {
-                role: "user",
-                content: trimmed,
-                quote,
-                attachments: attachments.length > 0 ? attachments : undefined,
-            },
-            Date.now(),
-        );
-        this.store.setState({
-            nodes: afterUser.nodes,
-            currNode: afterUser.id,
-            pendingReply: null,
+            const quote = state.pendingReply ?? undefined;
+            const afterUser = appendNode(
+                state.nodes,
+                parentId,
+                {
+                    role: "user",
+                    content: trimmed,
+                    quote,
+                    attachments: attachments.length > 0 ? attachments : undefined,
+                },
+                Date.now(),
+            );
+            this.store.setState({
+                nodes: afterUser.nodes,
+                currNode: afterUser.id,
+                pendingReply: null,
+            });
+
+            await this.startAssistantTurn(afterUser.id, entry, model);
         });
+    };
 
-        await this.startAssistantTurn(afterUser.id, entry, model);
+    /**
+     * A turn stopped before any request: keep the user's prompt in the index and on
+     * disk, so it shows after a reload and can be regenerated.
+     *
+     * @param userNode - User node the cancelled turn started from
+     * @param entry - Resolved model entry
+     * @param model - Resolved upstream model id
+     */
+    private keepPromptOfCancelledTurn = (
+        userNode: MessageNode,
+        entry: ModelConfig,
+        model: string | null,
+    ): void => {
+        this.ensureIndexed(userNode.content, entry, model);
+        this.persistActiveConversation();
     };
 
     /**
@@ -918,6 +1027,11 @@ export class ChatInstance {
         const userNode = this.store.getState().nodes[userNodeId];
         if (!userNode || userNode.role !== "user") return;
 
+        if (this.cancelled()) {
+            this.keepPromptOfCancelledTurn(userNode, entry, model);
+            return;
+        }
+
         const settings = settingsStore.getState().settings;
         if (settings.chunking.enabled) {
             const contextTokens = this.contextWindow(entry);
@@ -926,6 +1040,10 @@ export class ChatInstance {
                 corpus.length > contextTokens
                     ? ((await measureCharsPerToken(entry, corpus)) ?? undefined)
                     : undefined;
+            if (this.cancelled()) {
+                this.keepPromptOfCancelledTurn(userNode, entry, model);
+                return;
+            }
             const plan = planInputChunking({
                 text: userNode.content,
                 attachments: userNode.attachments ?? [],
@@ -990,6 +1108,7 @@ export class ChatInstance {
         entry: ModelConfig,
         model: string | null,
     ): Promise<void> => {
+        if (this.cancelled()) return;
         this.chunking = true;
         this.chunkAbort = false;
         try {
@@ -998,7 +1117,7 @@ export class ChatInstance {
             let runningSummary = "";
 
             for (let index = 0; index < total; index += 1) {
-                if (this.chunkAbort) break;
+                if (this.chunkAbort || this.cancelled()) break;
                 const now = Date.now();
                 const state = this.store.getState();
                 const parentId = state.currNode ?? state.rootId;
@@ -1261,9 +1380,17 @@ export class ChatInstance {
             this.abortRef?.abort();
             return;
         }
-        this.rechunkAttempts = 0;
-        this.resetChunkBranch();
-        await this.runChunkedAnalysis(run.instruction, run.chunks, strategy, run.entry, run.model);
+        await this.runTurn(async () => {
+            this.rechunkAttempts = 0;
+            this.resetChunkBranch();
+            await this.runChunkedAnalysis(
+                run.instruction,
+                run.chunks,
+                strategy,
+                run.entry,
+                run.model,
+            );
+        });
     };
 
     /**
@@ -1275,6 +1402,15 @@ export class ChatInstance {
      */
     retryChunkRun = async (fromNodeId: string): Promise<void> => {
         if (!this.canGenerate()) return;
+        await this.runTurn(() => this.replayChunkRun(fromNodeId));
+    };
+
+    /**
+     * Retry body without the idle guard, for callers already inside a turn.
+     *
+     * @param fromNodeId - The failed chapter node the retry starts from
+     */
+    private replayChunkRun = async (fromNodeId: string): Promise<void> => {
         if (!this.chunkRun && !this.rebuildChunkRun(fromNodeId)) return;
         this.rechunkAttempts = 0;
         await this.relaunchChunking(settingsStore.getState().settings.chunking.strategy);
@@ -1332,27 +1468,29 @@ export class ChatInstance {
         const state = this.store.getState();
         const node = state.nodes[nodeId];
         if (!node || node.role !== "assistant") return;
-        if (node.chunk) {
-            await this.regenerateSynthesis(nodeId);
-            return;
-        }
+        await this.runTurn(async () => {
+            if (node.chunk) {
+                await this.regenerateSynthesis(nodeId);
+                return;
+            }
 
-        const parent = node.parent ? state.nodes[node.parent] : null;
-        if (parent?.role === "user") {
-            this.store.setState({ currNode: parent.id });
-            await this.startAssistantTurn(parent.id, entry, model);
-            return;
-        }
+            const parent = node.parent ? state.nodes[node.parent] : null;
+            if (parent?.role === "user") {
+                this.store.setState({ currNode: parent.id });
+                await this.startAssistantTurn(parent.id, entry, model);
+                return;
+            }
 
-        const result = addSibling(
-            state.nodes,
-            nodeId,
-            { role: "assistant", content: "" },
-            Date.now(),
-        );
-        this.store.setState({ nodes: result.nodes, currNode: result.id });
-        this.persistActiveConversation();
-        await this.runGeneration(result.id);
+            const result = addSibling(
+                state.nodes,
+                nodeId,
+                { role: "assistant", content: "" },
+                Date.now(),
+            );
+            this.store.setState({ nodes: result.nodes, currNode: result.id });
+            this.persistActiveConversation();
+            await this.runGeneration(result.id);
+        });
     };
 
     /**
@@ -1406,6 +1544,7 @@ export class ChatInstance {
         total: number,
         strategy: ChunkingStrategy,
     ): Promise<void> => {
+        if (this.cancelled()) return;
         this.store.setState({ currNode: lastChapterId });
         this.chunking = true;
         this.chunkAbort = false;
@@ -1434,7 +1573,7 @@ export class ChatInstance {
         const path = getPath(this.store.getState().nodes, synthesisId);
         const { analyses, lastChapterId, total } = this.collectChapterRun(path);
         if (analyses.length === 0 || !lastChapterId) {
-            await this.retryChunkRun(synthesisId);
+            await this.replayChunkRun(synthesisId);
             return;
         }
 
@@ -1510,20 +1649,22 @@ export class ChatInstance {
         const next = attachments ?? node.attachments;
         if (!trimmed && !(next && next.length > 0)) return;
 
-        const sibling = addSibling(
-            state.nodes,
-            nodeId,
-            {
-                role: "user",
-                content: trimmed,
-                quote: node.quote,
-                attachments: next && next.length > 0 ? next : undefined,
-            },
-            Date.now(),
-        );
-        this.store.setState({ nodes: sibling.nodes, currNode: sibling.id });
-        this.persistActiveConversation();
-        await this.startAssistantTurn(sibling.id, entry, model);
+        await this.runTurn(async () => {
+            const sibling = addSibling(
+                state.nodes,
+                nodeId,
+                {
+                    role: "user",
+                    content: trimmed,
+                    quote: node.quote,
+                    attachments: next && next.length > 0 ? next : undefined,
+                },
+                Date.now(),
+            );
+            this.store.setState({ nodes: sibling.nodes, currNode: sibling.id });
+            this.persistActiveConversation();
+            await this.startAssistantTurn(sibling.id, entry, model);
+        });
     };
 
     /**
@@ -1682,6 +1823,7 @@ export class ChatInstance {
 
     // Tear down the instance, aborting any in-flight generation or pipeline.
     dispose = (): void => {
+        this.disposed = true;
         this.chunkAbort = true;
         this.stopGeneration();
     };
