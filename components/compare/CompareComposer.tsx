@@ -7,7 +7,7 @@ import { ComposerShell } from "@/components/chat/composer/ComposerShell";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/hooks/useStore";
-import { analyzePanes, sendToPanes, stopAllPanes } from "@/lib/chat/panes";
+import { analyzePanes, sendToPanes, stopPanes } from "@/lib/chat/panes";
 import { compareStore, MAX_PANES, setBroadcastTarget } from "@/lib/stores/compare";
 import { liveStore } from "@/lib/stores/live";
 import { modelsStore } from "@/lib/stores/models";
@@ -99,7 +99,7 @@ export function CompareComposer() {
             </div>
             <ComposerShell
                 onSubmit={(text, attachments) => sendToPanes(target, text, attachments)}
-                onStop={stopAllPanes}
+                onStop={() => stopPanes(panes.map((pane) => pane.paneId))}
                 busy={busy}
                 ready={ready}
                 focusSignal={focusNonce}

@@ -2,7 +2,7 @@
 
 import { PenLine, Square, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
 import { MessageList } from "@/components/chat/message/MessageList";
@@ -12,23 +12,77 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/hooks/useStore";
 import { ChatInstanceProvider } from "@/lib/chat/context";
-import { getPaneInstance, initPane, newConversationInPane, removePane } from "@/lib/chat/panes";
+import type { ChatInstance } from "@/lib/chat/instance";
+import {
+    ensurePaneRuntime,
+    newConversationInPane,
+    paneRuntimeStore,
+    removePane,
+} from "@/lib/chat/panes";
+import { parseModelName } from "@/lib/format";
 import { compareStore, setFocusedPane } from "@/lib/stores/compare";
 import { conversationsStore } from "@/lib/stores/conversations";
 import { liveStore, stopConversation } from "@/lib/stores/live";
+import { modelsStore } from "@/lib/stores/models";
 import { cn } from "@/lib/utils";
+
+/**
+ * Read-only model name shown in a pane header while the pane has no instance
+ * yet, so nothing in it can write to another chat's selection.
+ *
+ * @param paneId - Pane id from the compare store
+ */
+function PaneModelLabel({ paneId }: { paneId: string }) {
+    const label = useStore(compareStore, (state) => {
+        const pane = state.panes.find((candidate) => candidate.paneId === paneId);
+        const entry = modelsStore.getState().entries.find((e) => e.id === pane?.modelEntryId);
+        return (
+            entry?.shortName ??
+            (pane?.upstreamModel ? parseModelName(pane.upstreamModel).base : null) ??
+            entry?.name ??
+            ""
+        );
+    });
+    return <span className="truncate px-1.5 text-xs text-muted-foreground">{label}</span>;
+}
+
+/**
+ * Wrap children in the pane's chat context once it has an instance. The serial
+ * keys the wrapper, so a pane that receives another instance remounts cleanly.
+ *
+ * @param runtime - The pane's runtime, absent while it loads
+ * @param children - Content that may need the chat context
+ */
+function WithInstance({
+    runtime,
+    children,
+}: {
+    runtime: { instance: ChatInstance; serial: number } | undefined;
+    children: ReactNode;
+}) {
+    if (!runtime) return <>{children}</>;
+    return (
+        <ChatInstanceProvider key={runtime.serial} instance={runtime.instance}>
+            {children}
+        </ChatInstanceProvider>
+    );
+}
 
 /**
  * One compare pane: a self-contained conversation rendered as a rounded card
  * through the shared chat components via its own ChatInstance context. Input is
  * driven by the compare's single bottom composer rather than a per-pane one.
+ * The instance comes from the runtime store; until it arrives the header shows
+ * only what the pane's descriptor says. An inactive pane greys its body but
+ * keeps a usable header, so it can still be closed, retried or given another
+ * model.
  *
  * @param paneId - Pane id from the compare store
  */
 export function ChatPane({ paneId }: { paneId: string }) {
     const t = useTranslations("compare");
     const ts = useTranslations("sidebar");
-    const instance = useMemo(() => getPaneInstance(paneId), [paneId]);
+    const runtime = useStore(paneRuntimeStore, (state) => state.runtimes[paneId]);
     const [hovered, setHovered] = useState(false);
     const conversationId = useStore(
         compareStore,
@@ -43,13 +97,13 @@ export function ChatPane({ paneId }: { paneId: string }) {
         : "";
     const generating = Boolean(conversationId && (liveStatus[conversationId] ?? "idle") !== "idle");
 
+    const hasRuntime = Boolean(runtime);
     useEffect(() => {
-        const descriptor = compareStore.getState().panes.find((p) => p.paneId === paneId);
-        if (descriptor) void initPane(descriptor);
-    }, [paneId]);
+        if (!hasRuntime) ensurePaneRuntime(paneId);
+    }, [paneId, hasRuntime]);
 
     return (
-        <ChatInstanceProvider instance={instance}>
+        <WithInstance runtime={runtime}>
             <section
                 onMouseDown={() => setFocusedPane(paneId)}
                 className={cn(
@@ -61,8 +115,14 @@ export function ChatPane({ paneId }: { paneId: string }) {
                     <span className="min-w-0 flex-1 truncate pl-1 text-xs font-medium text-muted-foreground">
                         {title || ts("untitled")}
                     </span>
-                    <PaneModelSelector align="end" />
-                    <ChunkingControl />
+                    {runtime ? (
+                        <>
+                            <PaneModelSelector align="end" />
+                            <ChunkingControl />
+                        </>
+                    ) : (
+                        <PaneModelLabel paneId={paneId} />
+                    )}
                     {generating && (
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -112,15 +172,21 @@ export function ChatPane({ paneId }: { paneId: string }) {
                         <TooltipContent>{t("removePane")}</TooltipContent>
                     </Tooltip>
                 </header>
-                <MessageList />
-                <div
-                    onMouseEnter={() => setHovered(true)}
-                    onMouseLeave={() => setHovered(false)}
-                    className="min-h-6 shrink-0"
-                >
-                    <ContextBar forceVisible={hovered} />
-                </div>
+                {runtime ? (
+                    <>
+                        <MessageList />
+                        <div
+                            onMouseEnter={() => setHovered(true)}
+                            onMouseLeave={() => setHovered(false)}
+                            className="min-h-6 shrink-0"
+                        >
+                            <ContextBar forceVisible={hovered} />
+                        </div>
+                    </>
+                ) : (
+                    <div className="min-h-0 flex-1" />
+                )}
             </section>
-        </ChatInstanceProvider>
+        </WithInstance>
     );
 }
