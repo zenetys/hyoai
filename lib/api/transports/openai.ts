@@ -261,7 +261,8 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
 /**
  * Stream a chat completion from an OpenAI-compatible server as typed events.
  * Reads SSE chunks until the "[DONE]" sentinel, which matters for vLLM: its
- * usage arrives on an extra empty-choices chunk after finish_reason.
+ * usage arrives on an extra empty-choices chunk after finish_reason. A stream
+ * that closes without any finish_reason ends with a synthetic "truncated" finish.
  * Servers configured with streaming:false get a single JSON request whose
  * response is converted into the same event sequence.
  *
@@ -298,6 +299,7 @@ export async function* streamOpenAiCompatChat(
 
     const payloads = parseSseStream(response);
     const accumulator = new ToolCallAccumulator();
+    let finished = false;
     for (;;) {
         let result: IteratorResult<string>;
         try {
@@ -311,6 +313,9 @@ export async function* streamOpenAiCompatChat(
                 const calls = accumulator.finalize();
                 if (calls.length > 0) yield { type: "toolCalls", calls };
             }
+
+            // A complete answer ends with a finish reason: without one the connection was cut
+            if (!finished) yield { type: "finish", reason: "truncated" };
             return;
         }
 
@@ -377,6 +382,7 @@ export async function* streamOpenAiCompatChat(
                 const calls = accumulator.finalize();
                 if (calls.length > 0) yield { type: "toolCalls", calls };
             }
+            finished = true;
             yield { type: "finish", reason: choice.finish_reason };
         }
     }
