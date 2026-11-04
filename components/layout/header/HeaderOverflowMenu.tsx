@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Link, Monitor, Moon, MoreVertical, Sun } from "lucide-react";
+import { Check, Columns2, Link, Monitor, Moon, MoreVertical, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useState } from "react";
@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useIsMobile, useOnBreakpointCross } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { closeCompare } from "@/lib/chat/panes";
+import { compareStore } from "@/lib/stores/compare";
 import { localeStore, setLocale } from "@/lib/stores/locale";
 import { setSkin, settingsStore } from "@/lib/stores/settings";
 import { LOCALES, type SkinId } from "@/types/settings";
@@ -35,6 +37,7 @@ export function HeaderOverflowMenu() {
     const { theme, setTheme } = useTheme();
     const locale = useStore(localeStore, (state) => state.locale);
     const skin = useStore(settingsStore, (state) => state.settings.skin);
+    const compareEnabled = useStore(compareStore, (state) => state.enabled);
     const [open, setOpen] = useState(false);
     const isMobile = useIsMobile();
 
@@ -67,6 +70,15 @@ export function HeaderOverflowMenu() {
                 </Button>
             }
         >
+            {compareEnabled && (
+                <>
+                    <ResponsiveMenuItem onSelect={closeCompare}>
+                        <Columns2 aria-hidden="true" />
+                        {t("toggleSingleChat")}
+                    </ResponsiveMenuItem>
+                    <ResponsiveMenuSeparator />
+                </>
+            )}
             <ResponsiveMenuLabel>{tt("label")}</ResponsiveMenuLabel>
             <ResponsiveMenuItem onSelect={() => setTheme("light")} closeOnSelect={false}>
                 <Sun aria-hidden="true" />

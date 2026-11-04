@@ -49,7 +49,7 @@ import {
     liveStore,
     stopConversation,
 } from "@/lib/stores/live";
-import { focusComposer, setMobileSidebarOpen } from "@/lib/stores/ui";
+import { focusComposer, setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
 import { downloadJson, exportOneConversation } from "@/lib/transfer";
 import { conversationShareUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
@@ -70,6 +70,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const activeId = useActiveConversationId();
     const generating = useStore(liveStore, (state) => (state.status[meta.id] ?? "idle") !== "idle");
     const done = useStore(liveStore, (state) => state.done?.[meta.id]);
+    const embed = useStore(uiStore, (state) => state.embed);
     const compare = useStore(compareStore, (state) => ({
         enabled: state.enabled,
         focusedPaneId: state.focusedPaneId,
@@ -240,10 +241,12 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                     <Download aria-hidden="true" />
                     {t("exportConversation")}
                 </ResponsiveMenuItem>
-                <ResponsiveMenuItem onSelect={() => compareConversation(meta.id)}>
-                    <Columns2 aria-hidden="true" />
-                    {t("compare")}
-                </ResponsiveMenuItem>
+                {!embed && (
+                    <ResponsiveMenuItem onSelect={() => compareConversation(meta.id)}>
+                        <Columns2 aria-hidden="true" />
+                        {t("compare")}
+                    </ResponsiveMenuItem>
+                )}
                 <ResponsiveMenuSeparator />
                 <ResponsiveMenuItem
                     variant="destructive"
