@@ -1,7 +1,7 @@
 # Plugins
 
-A plugin adds a server type to HYOAI: a chat backend the core does not speak natively, with its own
-wire protocol. Plugins are discovered at **build time**. Drop a folder here, restart `npm run dev`
+A plugin adds a server type to HYOAI (a chat backend the core does not speak natively, with its own
+wire protocol), tool providers for tool calling, or both. Plugins are discovered at **build time**. Drop a folder here, restart `npm run dev`
 or run `npm run build`, and the type is available in `config.json`. Remove the folder and the app
 still builds and runs; entries of that type are then shown as unavailable.
 
@@ -66,13 +66,15 @@ The build fails, with the plugin named in the message, when:
 A `transport` is `(endpoint, params, signal) => AsyncGenerator<StreamEvent>`. `capabilities` are
 opt-in; a missing flag means the feature is off for that type.
 
-| Capability         | Meaning                                                                       |
-| ------------------ | ----------------------------------------------------------------------------- |
-| `supportsThinking` | the type reasons by default, without a `thinking` config on the entry         |
-| `runtimeProps`     | `GET /props` reports the context size and modalities of the loaded model      |
-| `tokenize`         | `POST /tokenize` counts tokens                                                |
-| `listModels`       | `GET /v1/models` lists the models of an entry that does not pin `"model"`     |
-| `contextProbe`     | the context size comes from `/get_model_info`, `/get_server_info` or `/props` |
+| Capability           | Meaning                                                                       |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `supportsThinking`   | the type reasons by default, without a `thinking` config on the entry         |
+| `runtimeProps`       | `GET /props` reports the context size and modalities of the loaded model      |
+| `tokenize`           | `POST /tokenize` counts tokens                                                |
+| `listModels`         | `GET /v1/models` lists the models of an entry that does not pin `"model"`     |
+| `contextProbe`       | the context size comes from `/get_model_info`, `/get_server_info` or `/props` |
+| `tools`              | the transport can send tools to the model and read the calls it makes         |
+| `supportsToolChoice` | the server accepts the `tool_choice` field of a chat request                  |
 
 A type without `listModels` needs `"model"` set on every entry that uses it; an entry that does not
 is disabled with an explanation.
@@ -90,6 +92,55 @@ The transport yields the same `StreamEvent` objects as the built-in ones: `conte
 A `label` is `{ key, values?, text }`. `key` is relative to the plugin's catalog (`"search"`, not
 `"plugins.echo.search"`): the core resolves it in `messages` when the catalog has it and shows
 `text` otherwise.
+
+### Tool providers
+
+`toolProviders` adds tools the model can call, whatever the server type. A provider has an `id`
+(camelCase, unique, also the prefix of the tool names the model sees), a `label`, `listTools()` and
+`callTool()`; the shapes follow MCP's `Tool` and `CallToolResult`, so an MCP client can sit behind
+the same interface.
+
+```ts
+import { definePlugin, type ToolProvider } from "@/lib/plugins/sdk";
+
+const echoTools: ToolProvider = {
+    id: "echoTools",
+    label: { key: "label", text: "Echo tools" },
+    listTools: () => [
+        {
+            name: "shout",
+            title: { key: "shout", text: "Shout" },
+            description: "Return the given text in capital letters.",
+            inputSchema: {
+                type: "object",
+                properties: { text: { type: "string" } },
+                required: ["text"],
+                additionalProperties: false,
+            },
+            annotations: { readOnlyHint: true },
+        },
+    ],
+    callTool: async (name, args) => {
+        if (name !== "shout" || typeof args.text !== "string") {
+            return { text: "Invalid call.", isError: true };
+        }
+        return { text: args.text.toUpperCase() };
+    },
+};
+
+export default definePlugin({ id: "echo", apiVersion: 1, toolProviders: [echoTools] });
+```
+
+`callTool` receives an `AbortSignal` (stop, or the 60 second timeout) and the UI locale. Return
+`isError: true` to tell the model the call failed; a thrown error is reported the same way. The
+`title` and `label` keys resolve in the plugin's catalog like the other labels. A provider id
+already taken by a built-in provider (`clock`) or another plugin fails the build.
+
+Each call is shown to the user with its arguments and approved before it runs, unless the user
+allowed that tool; `annotations` are displayed as declared by the plugin and never skip the
+approval. **A provider runs with the full access of the page**: it can read conversations and reach
+the network, so a tool that fetches content or writes somewhere deserves the same scrutiny as any
+other plugin code.
 
 ### Strings
 

@@ -191,20 +191,23 @@ localized word (`AI` / `IA`).
 
 Keys of a `models` entry:
 
-| Key                | Type                                               | Description                                                                                                                                                                                                                                                  |
-| ------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`               | string (required)                                  | Stable identifier, referenced by `defaultModel` and local preferences                                                                                                                                                                                        |
-| `name`             | string                                             | Name shown in the selector (default: `id`)                                                                                                                                                                                                                   |
-| `baseUrl`          | string (required)                                  | Endpoint base URL, with or without `/v1`; absolute, or relative to the site (`/llm`, `./llm`)                                                                                                                                                                |
-| `model`            | string                                             | Pins the upstream model sent to the API; when absent, every model listed by the endpoint's `GET /v1/models` becomes selectable (llama.cpp, llama-swap)                                                                                                       |
-| `type`             | `vllm` \| `llama.cpp` \| `openai` \| a plugin type | Selects the transport: OpenAI-compatible (`vllm`/`llama.cpp`/`openai`) or a type added by an installed [plugin](#plugins); also drives the sampling-parameter mapping (default: `vllm`). An entry whose type no installed plugin serves is kept but disabled |
-| `apiKey`           | string                                             | Optional; sent as `Authorization: Bearer` when present                                                                                                                                                                                                       |
-| `streaming`        | boolean                                            | `true`: token-by-token SSE; `false`: single JSON response (default: `true`)                                                                                                                                                                                  |
-| `sendContext`      | boolean                                            | `true`: full branch history; `false`: last message only (default: `true`)                                                                                                                                                                                    |
-| `disabled`         | boolean                                            | `true`: keep the entry in the file but hide it from the model selector (default: `false`)                                                                                                                                                                    |
-| `modalities`       | `{ image?, audio? }`                               | Attachment capabilities; a `false` flag disables that attachment menu entry. Off by default unless the endpoint is probed (`runtimeProps`, e.g. llama.cpp `/props`); overridable                                                                             |
-| `supportsThinking` | boolean                                            | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                                                                      |
-| `runtimeProps`     | boolean                                            | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                                                                        |
+| Key                  | Type                                               | Description                                                                                                                                                                                                                                                  |
+| -------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                 | string (required)                                  | Stable identifier, referenced by `defaultModel` and local preferences                                                                                                                                                                                        |
+| `name`               | string                                             | Name shown in the selector (default: `id`)                                                                                                                                                                                                                   |
+| `baseUrl`            | string (required)                                  | Endpoint base URL, with or without `/v1`; absolute, or relative to the site (`/llm`, `./llm`)                                                                                                                                                                |
+| `model`              | string                                             | Pins the upstream model sent to the API; when absent, every model listed by the endpoint's `GET /v1/models` becomes selectable (llama.cpp, llama-swap)                                                                                                       |
+| `type`               | `vllm` \| `llama.cpp` \| `openai` \| a plugin type | Selects the transport: OpenAI-compatible (`vllm`/`llama.cpp`/`openai`) or a type added by an installed [plugin](#plugins); also drives the sampling-parameter mapping (default: `vllm`). An entry whose type no installed plugin serves is kept but disabled |
+| `apiKey`             | string                                             | Optional; sent as `Authorization: Bearer` when present                                                                                                                                                                                                       |
+| `streaming`          | boolean                                            | `true`: token-by-token SSE; `false`: single JSON response (default: `true`)                                                                                                                                                                                  |
+| `sendContext`        | boolean                                            | `true`: full branch history; `false`: last message only (default: `true`)                                                                                                                                                                                    |
+| `disabled`           | boolean                                            | `true`: keep the entry in the file but hide it from the model selector (default: `false`)                                                                                                                                                                    |
+| `modalities`         | `{ image?, audio? }`                               | Attachment capabilities; a `false` flag disables that attachment menu entry. Off by default unless the endpoint is probed (`runtimeProps`, e.g. llama.cpp `/props`); overridable                                                                             |
+| `supportsThinking`   | boolean                                            | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                                                                      |
+| `tools`              | boolean                                            | Tool calling for this entry; off unless the config says `true` or a llama.cpp server reports a chat template that handles tools. `false` forces it off. See [Tool calling](#tool-calling)                                                                    |
+| `parallelToolCalls`  | boolean                                            | Lets the model call several tools in one step (sent as `parallel_tool_calls`; default: not sent)                                                                                                                                                             |
+| `supportsToolChoice` | boolean                                            | Whether the server accepts the `tool_choice` field. Defaults from `type` (`false` for `openai`, which covers Ollama), overridable                                                                                                                            |
+| `runtimeProps`       | boolean                                            | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                                                                        |
 
 An optional `headers` object adds custom request headers to every call to the
 endpoint (merged after the `apiKey` bearer) — use it for provider opt-ins such
@@ -265,7 +268,8 @@ The reasoning of earlier turns is never sent back by default. To send it back as
 `reasoning_content` to a model whose chat template supports it, opt in with
 `chat_template_kwargs.preserve_thinking` set to the boolean `true`, in the `on`
 fragment or in the `body` of an effort level. The saved reasoning then counts
-toward the context estimate:
+toward the context estimate, and it goes along with the tool calls of the
+assistant messages that made them:
 
 ```json
 {
@@ -276,6 +280,51 @@ toward the context estimate:
     }
 }
 ```
+
+## Tool calling
+
+The model can call tools while it answers. A tool is a function a provider exposes (the app ships
+a harmless `clock` tool that returns the time in an IANA time zone; [plugins](#plugins) can add
+others). Tools are off by default: turn them on per conversation from the wrench button in the
+composer, whose panel also lists the providers and their tools, or for new conversations in
+Settings → Tools. The wrench is greyed out when the model cannot take tools. A conversation that
+used tools and has them switched off shows a notice above the composer with a button to switch them
+back on.
+
+For each step the model asks for a call, the app shows the tool and its full arguments, waits for
+your decision (allow once, always allow this tool, or deny), runs it, and sends the result back so
+the model can answer or call again. Calls run one after the other, an answer stops after 10 steps
+by default (then **Continue** or **Answer without tools**), and a stopped or reloaded flow can be
+continued the same way. The calls show as cards above the answer, each with its arguments and
+result; regenerating, branching and deleting act on the whole flow.
+
+The server has to support it, and some need a flag:
+
+- **llama.cpp**: start `llama-server` with `--jinja`. Without it the server refuses the tools and
+  the error says so. With `runtimeProps`, the app reads the chat template from `GET /props` and
+  turns tools on by itself when the template handles them; set `"tools": false` on the entry when
+  that detection is wrong.
+- **vLLM**: start it with `--enable-auto-tool-choice --tool-call-parser <parser>` (for example
+  `hermes`), and set `"tools": true` on the entry.
+- **Ollama and other OpenAI-compatible servers**: use `"type": "openai"` and `"tools": true`. These
+  servers may reject `tool_choice`, which is why `supportsToolChoice` is off for that type.
+- A model whose chat template does not support tools keeps working: when the request offers no
+  tools, the results of earlier calls stay in the context as text added to the message they
+  answer, and the calls themselves are not written out, so the model does not imitate them.
+
+Security defaults:
+
+- Every tool asks before it runs. "Always allow" applies to one tool, never to a whole provider,
+  and Settings → Tools lists the decisions and can reset them. Setting the default to "always
+  allow" is a deliberate choice and shows a warning. Approvals are never imported from an export.
+- A result is capped at 20,000 characters, shown as plain text (never rendered as Markdown or
+  HTML), and a call is cut after 60 seconds. What the model writes after a result loads no remote
+  image, so an injected instruction cannot send data out through an image address.
+- Tools are never offered in an embed. A tool provider is code running in the page: see
+  [Plugins](#plugins).
+
+An export that contains tool calls imports into this app without loss. Older builds of the app, and
+the llama.cpp web interface, may drop or flatten them.
 
 ## Integrations
 
@@ -318,8 +367,9 @@ A plugin adds a server type for a backend with its own protocol, without touchin
 are found at build time in the git-ignored `plugins/` folder: drop a folder there, restart
 `npm run dev` or run `npm run build`, and `"type": "<id>"` works in `config.json`. Without any plugin
 the app builds and runs as usual. The contract, the events a transport can emit (steps, citations,
-stage timings), the hook that upgrades the messages it stored and a complete example are in [plugins/README.md](plugins/README.md). Plugins are
-trusted code, bundled into the app: only install ones you wrote or audited.
+stage timings), the hook that upgrades the messages it stored, the tool providers a plugin can add,
+and a complete example are in [plugins/README.md](plugins/README.md). Plugins are trusted code,
+bundled into the app: only install ones you wrote or audited.
 
 ## Embed
 
@@ -448,6 +498,10 @@ types/          shared types (chat, server, settings, api, storage)
   cut off. The "Disable unavailable models automatically" setting turns this off:
   the model then stays selectable and the error shows on send. A model removed or
   disabled in the configuration is never replaced by another one.
+
+- Tool calling: the model can call tools during an answer, with the arguments shown and your
+  approval asked before each call (see [Tool calling](#tool-calling)); calls and their results
+  appear as cards above the answer and stay in the conversation
 
 - Markdown & sources: tables, code highlighting and blockquotes render inline;
   answers can carry source citations and a trace of the backend's steps
