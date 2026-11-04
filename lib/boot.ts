@@ -2,7 +2,13 @@ import { openConversation, reloadActiveConversation, startNewConversation } from
 import { setPersistenceGate } from "@/lib/storage/local";
 import { runMigrations } from "@/lib/storage/migrations";
 import { registerLifecycleFlush } from "@/lib/storage/persistence";
-import { applyCompareUrlState, enableCompareUrlSync, hydrateCompare } from "@/lib/stores/compare";
+import {
+    applyCompareUrlState,
+    compareStore,
+    enableCompareUrlSync,
+    hydrateCompare,
+    setCompareEnabled,
+} from "@/lib/stores/compare";
 import { hydrateConversations } from "@/lib/stores/conversations";
 import { hydrateLocale, setLocale } from "@/lib/stores/locale";
 import { initModels, modelsStore, setActiveModel } from "@/lib/stores/models";
@@ -30,12 +36,17 @@ export async function bootApp(): Promise<void> {
     registerLifecycleFlush();
 
     const compare = getCompareFromUrl();
-    if (compare) applyCompareUrlState(compare);
-
     const urlChatId = getChatIdFromUrl();
-    if (!urlChatId || !(await openConversation(urlChatId))) {
-        startNewConversation();
+    if (compare) {
+        applyCompareUrlState(compare);
+    } else if (urlChatId) {
+        // A link to a single conversation opens it alone, whatever compare was saved.
+        setCompareEnabled(false);
     }
+
+    // The panes own their conversations; the single chat behind them starts empty.
+    if (compareStore.getState().enabled) startNewConversation();
+    else if (!urlChatId || !(await openConversation(urlChatId))) startNewConversation();
 
     enableCompareUrlSync();
     enableCrossTabRefresh();
