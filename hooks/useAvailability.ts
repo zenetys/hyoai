@@ -11,7 +11,7 @@ import {
     resolveAvailability,
 } from "@/lib/chat/availability";
 import { useChatModel } from "@/lib/chat/context";
-import { paneRuntimeStore } from "@/lib/chat/panes";
+import { paneRuntimeStore } from "@/lib/chat/slots";
 import { compareStore, paneSelection } from "@/lib/stores/compare";
 import { healthStore } from "@/lib/stores/health";
 import { modelsStore } from "@/lib/stores/models";
