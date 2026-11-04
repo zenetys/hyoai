@@ -1,3 +1,4 @@
+import type { ChatModelSelection } from "@/lib/chat/model";
 import { newId } from "@/lib/id";
 import { loadJson, scheduleJson } from "@/lib/storage/persistence";
 import { createStore } from "@/lib/store";
@@ -70,6 +71,54 @@ export function createPaneDescriptor(seed: Partial<PaneDescriptor> = {}): PaneDe
     };
 }
 
+/**
+ * The model, thinking and effort a pane was given, as an instance selection.
+ *
+ * @param pane - Pane whose modelEntryId, upstreamModel, thinking and effort are read; unset fields become null
+ * @returns The selection the pane's instance starts with
+ */
+export function paneSelection(pane: PaneDescriptor): ChatModelSelection {
+    return {
+        entryId: pane.modelEntryId ?? null,
+        upstreamModel: pane.upstreamModel ?? null,
+        thinking: pane.thinking ?? null,
+        effort: pane.effort ?? null,
+    };
+}
+
+/**
+ * Clean a stored or incoming layout: at most MAX_PANES well-formed panes, a
+ * conversation shown by a single pane (a later duplicate starts empty), and a
+ * focus that belongs to a pane.
+ *
+ * @param panes - Panes as read from storage or built from the URL
+ * @param focusedPaneId - Focused pane id as read, if any
+ * @returns Panes and focus that are safe to put in the store
+ */
+function normalizeLayout(
+    panes: unknown,
+    focusedPaneId: string | null | undefined,
+): { panes: PaneDescriptor[]; focusedPaneId: string | null } {
+    const seen = new Set<string>();
+    const clean = (Array.isArray(panes) ? panes : [])
+        .filter(
+            (pane): pane is PaneDescriptor =>
+                typeof pane === "object" && pane !== null && typeof pane.paneId === "string",
+        )
+        .slice(0, MAX_PANES)
+        .map((pane) => {
+            const id = pane.conversationId;
+            if (!id) return pane;
+            if (seen.has(id)) return { ...pane, conversationId: null };
+            seen.add(id);
+            return pane;
+        });
+    const focused = clean.some((pane) => pane.paneId === focusedPaneId)
+        ? (focusedPaneId ?? null)
+        : (clean[0]?.paneId ?? null);
+    return { panes: clean, focusedPaneId: focused };
+}
+
 export function setCompareEnabled(enabled: boolean): void {
     if (compareStore.getState().enabled === enabled) return;
     compareStore.setState({ enabled });
@@ -140,10 +189,10 @@ export function setBroadcastTarget(target: BroadcastTarget): void {
  */
 export async function hydrateCompare(): Promise<void> {
     const stored = await loadJson<PersistedCompare>(STORAGE_KEYS.compare);
+    const layout = normalizeLayout(stored?.panes, stored?.focusedPaneId);
     compareStore.setState({
         enabled: stored?.enabled ?? false,
-        panes: Array.isArray(stored?.panes) ? stored.panes.slice(0, MAX_PANES) : [],
-        focusedPaneId: stored?.focusedPaneId ?? null,
+        ...layout,
         broadcastTarget: stored?.broadcastTarget === "active" ? "active" : "all",
         hydrated: true,
     });
@@ -154,15 +203,35 @@ export async function hydrateCompare(): Promise<void> {
  */
 function toCompareUrlState(): CompareUrlState {
     const { panes, broadcastTarget } = compareStore.getState();
-    return {
+    return normalizeUrlState({
         p: panes.map((pane) => ({
-            ...(pane.conversationId ? { c: pane.conversationId } : {}),
-            ...(pane.modelEntryId ? { e: pane.modelEntryId } : {}),
-            ...(pane.upstreamModel ? { m: pane.upstreamModel } : {}),
-            ...(pane.thinking != null ? { tk: pane.thinking } : {}),
-            ...(pane.effort ? { ef: pane.effort } : {}),
+            c: pane.conversationId ?? undefined,
+            e: pane.modelEntryId ?? undefined,
+            m: pane.upstreamModel ?? undefined,
+            tk: pane.thinking ?? undefined,
+            ef: pane.effort ?? undefined,
         })),
         t: broadcastTarget,
+    });
+}
+
+/**
+ * Bring a URL payload to one canonical shape (fixed key order, no empty fields,
+ * capped pane count), so two payloads describing the same layout compare equal.
+ *
+ * @param state - Payload from the URL, or built from the store
+ * @returns The canonical payload
+ */
+function normalizeUrlState(state: CompareUrlState): CompareUrlState {
+    return {
+        p: state.p.slice(0, MAX_PANES).map((pane) => ({
+            ...(pane.c ? { c: pane.c } : {}),
+            ...(pane.e ? { e: pane.e } : {}),
+            ...(pane.m ? { m: pane.m } : {}),
+            ...(pane.tk != null ? { tk: pane.tk } : {}),
+            ...(pane.ef ? { ef: pane.ef } : {}),
+        })),
+        t: state.t === "active" ? "active" : "all",
     };
 }
 
@@ -175,20 +244,31 @@ function toCompareUrlState(): CompareUrlState {
  * @param state - Comparison state decoded from the URL
  */
 export function applyCompareUrlState(state: CompareUrlState): void {
-    const panes = state.p.slice(0, MAX_PANES).map((pane) =>
-        createPaneDescriptor({
-            conversationId: pane.c ?? null,
-            modelEntryId: pane.e ?? null,
-            upstreamModel: pane.m ?? null,
-            thinking: pane.tk ?? null,
-            effort: pane.ef ?? null,
-        }),
+    // A URL describing what is already on screen changes nothing, so ids and focus survive.
+    const incoming = normalizeUrlState(state);
+    if (
+        compareStore.getState().enabled &&
+        JSON.stringify(incoming) === JSON.stringify(toCompareUrlState())
+    ) {
+        return;
+    }
+
+    const layout = normalizeLayout(
+        incoming.p.map((pane) =>
+            createPaneDescriptor({
+                conversationId: pane.c ?? null,
+                modelEntryId: pane.e ?? null,
+                upstreamModel: pane.m ?? null,
+                thinking: pane.tk ?? null,
+                effort: pane.ef ?? null,
+            }),
+        ),
+        null,
     );
     compareStore.setState({
         enabled: true,
-        panes,
-        focusedPaneId: panes[0]?.paneId ?? null,
-        broadcastTarget: state.t === "active" ? "active" : "all",
+        ...layout,
+        broadcastTarget: incoming.t,
         hydrated: true,
     });
     persist();

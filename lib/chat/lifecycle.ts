@@ -162,7 +162,8 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
     ) {
         if (ctx.followGlobalModel) {
             setActiveModel(meta.modelId, meta.model);
-        } else {
+        } else if (!ctx.selection.getState().entryId) {
+            // A pinned instance (a compare pane) keeps the model it was given.
             ctx.selection.setState({ entryId: meta.modelId, upstreamModel: meta.model ?? null });
         }
     }
