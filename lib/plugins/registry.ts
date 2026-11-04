@@ -12,6 +12,16 @@ const PLUGIN_ID = /^[a-z][a-zA-Z0-9]*$/;
 const TOOL_PROVIDER_ID = /^[a-z][a-zA-Z0-9]*$/;
 
 /**
+ * Whether a string can be a tool provider id.
+ *
+ * @param id - Candidate id
+ * @returns True when it is camelCase letters and digits
+ */
+export function isToolProviderId(id: string): boolean {
+    return TOOL_PROVIDER_ID.test(id);
+}
+
+/**
  * A tool provider and where it comes from.
  *
  * @param pluginId - Plugin that ships the provider, null for a built-in or runtime one
@@ -176,7 +186,7 @@ export function buildRegistry(
             fail("toolProviders must be an array");
         }
         for (const provider of plugin.toolProviders ?? []) {
-            if (typeof provider.id !== "string" || !TOOL_PROVIDER_ID.test(provider.id)) {
+            if (typeof provider.id !== "string" || !isToolProviderId(provider.id)) {
                 fail(`invalid tool provider id ${JSON.stringify(provider.id)}, expected camelCase`);
             }
             if (

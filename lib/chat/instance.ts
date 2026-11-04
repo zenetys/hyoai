@@ -1293,7 +1293,7 @@ export class ChatInstance {
      * when no provider has a tool left.
      *
      * @param entry - Model entry the turn goes to
-     * @param signal - Aborts the listing of the tools
+     * @param signal - Aborts the listing of the tools; the result is then null
      * @returns The tools, listed once for the whole turn
      */
     private toolsForTurn = async (
@@ -1307,6 +1307,7 @@ export class ChatInstance {
         if (!resolveToolSupport(entry, props)) return null;
 
         const set = await collectToolSet(settings, signal);
+        if (signal.aborted) return null;
         for (const provider of set.failed) {
             toast.error(getTranslator("chat")("toolProviderFailed", { provider }));
         }
@@ -1408,8 +1409,20 @@ export class ChatInstance {
     ): Promise<void> => {
         const controller = new AbortController();
         const { entry, model } = this.resolveEntry();
-        const tools = entry && model ? await this.toolsForTurn(entry, controller.signal) : null;
-        if (!entry || !model || !tools || this.cancelled()) {
+
+        // Listing the tools can take a while: Stop must reach it from the start.
+        this.abortRef = controller;
+        let tools: ToolSet | null = null;
+        try {
+            if (entry && model) tools = await this.toolsForTurn(entry, controller.signal);
+        } finally {
+            if (this.abortRef === controller) this.abortRef = null;
+        }
+        const stopped = controller.signal.aborted || this.cancelled();
+
+        // Stopped while listing: leave the open calls as they are, so Continue still finds them.
+        if (stopped && resume) return;
+        if (!entry || !model || !tools || stopped) {
             if (resume)
                 nodeId = this.appendAssistant(this.skipToolCalls(resume.afterId, resume.calls));
             await this.runGeneration(nodeId);

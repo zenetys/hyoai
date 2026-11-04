@@ -6,6 +6,9 @@ import type { Citation, ToolCallStatus } from "@/types/chat";
 // A call that has not answered after this long is given up on.
 export const TOOL_TIMEOUT_MS = 60_000;
 
+// A provider that has not listed its tools after this long is left out of the turn.
+export const TOOL_LIST_TIMEOUT_MS = 10_000;
+
 // Calls run per model step; the others get a "not run" result.
 export const MAX_CALLS_PER_STEP = 16;
 
