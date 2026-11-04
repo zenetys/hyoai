@@ -80,7 +80,10 @@ export function ToolsToggle() {
                 </TooltipTrigger>
                 <TooltipContent>{t("tools")}</TooltipContent>
             </Tooltip>
-            <PopoverContent align="end" className="w-88 max-w-[calc(100vw-2rem)]">
+            <PopoverContent
+                align="end"
+                className="max-h-[min(var(--radix-popover-content-available-height),32rem)] w-88 max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto"
+            >
                 <ToolsPanel onNavigate={() => setOpen(false)} />
             </PopoverContent>
         </Popover>
