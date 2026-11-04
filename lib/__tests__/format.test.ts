@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { exportFilename, slugify } from "./format";
+import { exportFilename, slugify } from "../format";
 
 describe("slugify", () => {
     it("strips accents and separates words with single dashes", () => {

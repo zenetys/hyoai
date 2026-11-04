@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Conversation, MessageNode } from "@/types/chat";
 
-import { toMarkdownExport } from "./markdown";
+import { toMarkdownExport } from "../markdown";
 
 const labels = { user: "User", assistant: "Assistant", untitled: "Untitled" };
 

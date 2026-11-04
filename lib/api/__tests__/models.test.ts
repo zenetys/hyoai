@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ModelConfig } from "@/types/server";
 
-import { fetchContextWindow, parseContextLength } from "./models";
+import { fetchContextWindow, parseContextLength } from "../models";
 
 describe("parseContextLength", () => {
     it("reads the vLLM /get_model_info shape", () => {

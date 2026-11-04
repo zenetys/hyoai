@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Conversation, MessageNode } from "@/types/chat";
 
-import { toOpenAiExport } from "./openai";
+import { toOpenAiExport } from "../openai";
 
 /**
  * Build a conversation whose messages form a single chain under the root.

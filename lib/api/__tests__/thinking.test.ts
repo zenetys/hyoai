@@ -5,7 +5,7 @@ import { buildApiMessages } from "@/lib/conversation";
 import type { MessageNode } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 
-import { applyThinkingConfig, preservesThinking, shouldPreserveThinking } from "./thinking";
+import { applyThinkingConfig, preservesThinking, shouldPreserveThinking } from "../thinking";
 
 const preserve = { chat_template_kwargs: { preserve_thinking: true } };
 
