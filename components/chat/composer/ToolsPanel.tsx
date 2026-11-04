@@ -2,31 +2,38 @@
 
 import { Settings, ShieldQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
+import { ToolsProviderRow } from "@/components/chat/composer/ToolsProviderRow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { usePendingApproval, useToolsEnabled } from "@/hooks/useActiveChat";
 import { useLocalizedText } from "@/hooks/useLocalizedText";
+import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
+import { patchMcpServer } from "@/lib/mcp/edit";
+import { mcpStore } from "@/lib/mcp/registry";
+import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, setToolProviderEnabled } from "@/lib/stores/settings";
 import { openSettings } from "@/lib/stores/ui";
 import { listToolProviders } from "@/lib/tools/catalog";
 
 /**
  * Content of the tools popover: the switch of the open conversation, then every
- * provider with how many tools it offers and its own switch. The conversation
- * switch is the chat's own; the provider switches are the global setting, which is
- * said next to them. A provider that cannot list its tools says so instead of a count.
- * A call waiting for approval is pointed out at the top.
+ * provider with how many tools it offers and its own switch, then the MCP servers of
+ * the catalog with their connection state. The conversation switch is the chat's own;
+ * the provider switches are the global setting, which is said next to them, and the
+ * switch of a server is the one of its card in the settings. A server the model of the
+ * chat is not scoped to says so. A call waiting for approval is pointed out at the top.
  *
  * @param onNavigate - Called when the panel sends the user elsewhere, so the popover can close
  */
 export function ToolsPanel({ onNavigate }: { onNavigate: () => void }) {
     const t = useTranslations("composer");
+    const tMcp = useTranslations("settings.tools.mcp");
     const localize = useLocalizedText();
     const chat = useChatInstance();
     const enabled = useToolsEnabled();
@@ -35,27 +42,17 @@ export function ToolsPanel({ onNavigate }: { onNavigate: () => void }) {
         settingsStore,
         (state) => state.settings.tools.disabledProviders,
     );
-    const providers = useMemo(() => listToolProviders(), []);
-    const [counts, setCounts] = useState<Record<string, number | null>>({});
+    const { entry } = useResolvedModel();
+    const catalog = useStore(modelsStore, (state) => state.mcpServers);
+    const states = useStore(mcpStore, (state) => state.servers);
+    const registered = listToolProviders();
+    const serverProviderIds = new Set(states.map((state) => state.providerId));
+    const providers = registered.filter((provider) => !serverProviderIds.has(provider.id));
 
-    useEffect(() => {
-        let cancelled = false;
-        const controller = new AbortController();
-        for (const provider of providers) {
-            Promise.resolve()
-                .then(() => provider.listTools(controller.signal))
-                .then(
-                    (list) =>
-                        !cancelled &&
-                        setCounts((prev) => ({ ...prev, [provider.id]: list.length })),
-                )
-                .catch(() => !cancelled && setCounts((prev) => ({ ...prev, [provider.id]: null })));
-        }
-        return () => {
-            cancelled = true;
-            controller.abort();
-        };
-    }, [providers]);
+    const switchServer = async (id: string, enabled: boolean) => {
+        const error = await patchMcpServer(id, { enabled });
+        if (error) toast.error(tMcp("saveFailed", { detail: error }));
+    };
 
     return (
         <>
@@ -87,32 +84,31 @@ export function ToolsPanel({ onNavigate }: { onNavigate: () => void }) {
                 <Badge variant="outline">{t("toolsGlobal")}</Badge>
             </div>
             <ul className="flex flex-col">
-                {providers.map((provider) => {
-                    const name = localize(provider.label);
-                    const count = counts[provider.id];
+                {providers.map((provider) => (
+                    <ToolsProviderRow
+                        key={provider.id}
+                        provider={provider}
+                        name={localize(provider.label)}
+                        enabled={!disabledProviders.includes(provider.id)}
+                        onEnabledChange={(checked) => setToolProviderEnabled(provider.id, checked)}
+                    />
+                ))}
+                {catalog.map((config) => {
+                    const state = states.find((candidate) => candidate.id === config.id);
 
                     return (
-                        <li key={provider.id} className="flex items-start gap-3 py-1.5">
-                            <div className="min-w-0 flex-1">
-                                <p className="break-words">{name}</p>
-                                {count === null ? (
-                                    <p className="text-xs text-destructive">
-                                        {t("toolsListFailed")}
-                                    </p>
-                                ) : count !== undefined ? (
-                                    <p className="text-xs text-muted-foreground">
-                                        {t("toolsCount", { count })}
-                                    </p>
-                                ) : null}
-                            </div>
-                            <Switch
-                                checked={!disabledProviders.includes(provider.id)}
-                                onCheckedChange={(checked) =>
-                                    setToolProviderEnabled(provider.id, checked)
-                                }
-                                aria-label={t("toolsProviderSwitch", { provider: name })}
-                            />
-                        </li>
+                        <ToolsProviderRow
+                            key={`mcp:${config.id}`}
+                            provider={registered.find((p) => p.id === state?.providerId) ?? null}
+                            name={config.label || config.id}
+                            enabled={config.enabled}
+                            onEnabledChange={(checked) => switchServer(config.id, checked)}
+                            server={{ id: config.id, status: state?.status ?? null }}
+                            outOfScope={
+                                entry?.mcpServers !== undefined &&
+                                !entry.mcpServers.includes(config.id)
+                            }
+                        />
                     );
                 })}
             </ul>
