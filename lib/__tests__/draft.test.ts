@@ -210,3 +210,30 @@ describe("MCP scope of a model in the config form", () => {
         expect(models[1].mcpServers).toEqual([]);
     });
 });
+
+describe("recoverToolCalls of a model in the config form", () => {
+    it("reads the flag, off when absent", () => {
+        const draft = rawToDraft({
+            models: [
+                { id: "a", baseUrl: "/a" },
+                { id: "b", baseUrl: "/b", recoverToolCalls: true },
+            ],
+        });
+        expect(draft.models.map((model) => model.recoverToolCalls)).toEqual([false, true]);
+        expect(newDraftModel().recoverToolCalls).toBe(false);
+    });
+
+    it("writes it only when on", () => {
+        const draft = rawToDraft({
+            models: [
+                { id: "a", baseUrl: "/a" },
+                { id: "b", baseUrl: "/b", recoverToolCalls: true },
+            ],
+        });
+        const built = buildConfig(draft);
+        if (!built.ok) throw new Error("unbuildable");
+        const models = built.config.models as Record<string, unknown>[];
+        expect("recoverToolCalls" in models[0]).toBe(false);
+        expect(models[1].recoverToolCalls).toBe(true);
+    });
+});

@@ -32,6 +32,7 @@ export interface DraftModel {
     runtimeProps: Capability;
     tools: Capability;
     parallelToolCalls: Capability;
+    recoverToolCalls: boolean;
     supportsToolChoice: Capability;
     mcpServers: string[] | null;
 }
@@ -184,6 +185,7 @@ export function newDraftModel(): DraftModel {
         runtimeProps: "auto",
         tools: "auto",
         parallelToolCalls: "auto",
+        recoverToolCalls: false,
         supportsToolChoice: "auto",
         mcpServers: null,
     };
@@ -237,6 +239,7 @@ export function rawToDraft(raw: unknown): Draft {
                 runtimeProps: asCapability(model.runtimeProps),
                 tools: asCapability(model.tools),
                 parallelToolCalls: asCapability(model.parallelToolCalls),
+                recoverToolCalls: model.recoverToolCalls === true,
                 supportsToolChoice: asCapability(model.supportsToolChoice),
 
                 // Unset offers all servers; a malformed value is an empty scope, as in the config.
@@ -341,6 +344,7 @@ export function buildConfig(
         put(entry, "runtimeProps", fromCapability(model.runtimeProps));
         put(entry, "tools", fromCapability(model.tools));
         put(entry, "parallelToolCalls", fromCapability(model.parallelToolCalls));
+        put(entry, "recoverToolCalls", model.recoverToolCalls || undefined);
         put(entry, "supportsToolChoice", fromCapability(model.supportsToolChoice));
         put(entry, "mcpServers", model.mcpServers ?? undefined);
         return entry;

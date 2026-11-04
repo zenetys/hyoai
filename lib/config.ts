@@ -56,6 +56,7 @@ const modelSchema = z.object({
     runtimeProps: z.boolean().optional(),
     tools: z.boolean().optional(),
     parallelToolCalls: z.boolean().optional(),
+    recoverToolCalls: z.boolean().optional(),
     supportsToolChoice: z.boolean().optional(),
 
     // A malformed scope offers no server, never all of them.

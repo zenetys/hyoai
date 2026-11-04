@@ -72,7 +72,11 @@ export interface ModalityFlags {
  * model call several tools in one step. The "supportsToolChoice", "tokenize"
  * and "listModels" flags are resolved from the server type, and the entry can
  * override "supportsToolChoice". The "issue" field is set when the entry cannot
- * be used as authored, the entry then being disabled. The "mcpServers" field is
+ * be used as authored, the entry then being disabled. The "recoverToolCalls"
+ * flag is authored and off unless true: when a step ends without a structured
+ * tool call but its text ends with a complete call written as markup, that call
+ * runs through the usual approval, for servers whose chat parser lets a call
+ * leak into the text. The "mcpServers" field is
  * authored and lists the ids of the MCP servers the model may use: unset offers
  * every enabled server, a list only those, an empty list none, and it is ignored
  * while tools are off.
@@ -96,6 +100,7 @@ export interface ModelConfig {
     runtimeProps?: boolean;
     tools?: boolean;
     parallelToolCalls?: boolean;
+    recoverToolCalls?: boolean;
     mcpServers?: string[];
     supportsToolChoice?: boolean;
     tokenize?: boolean;

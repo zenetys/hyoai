@@ -102,6 +102,23 @@ describe("model scope on MCP servers", () => {
     });
 });
 
+describe("recoverToolCalls", () => {
+    it("is off unless the entry says true", () => {
+        const config = ready({
+            models: [
+                { ...model, id: "a" },
+                { ...model, id: "b", recoverToolCalls: true },
+                { ...model, id: "c", recoverToolCalls: false },
+            ],
+        });
+        expect(config.models.map((entry) => entry.recoverToolCalls)).toEqual([
+            undefined,
+            true,
+            false,
+        ]);
+    });
+});
+
 describe("loadAppConfig", () => {
     beforeEach(() => {
         stored.override = null;
