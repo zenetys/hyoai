@@ -56,9 +56,6 @@ export const paneRuntimeStore = createStore<{ runtimes: Record<string, PaneRunti
 // Teardown of the descriptor mirrors, per attached pane.
 const mirrors = new Map<string, () => void>();
 
-// Instances created before their pane claimed them, kept until the first attach.
-const pending = new Map<string, ChatInstance>();
-
 // Conversation loads in flight: a load is current only while its token is.
 const loads = new Map<string, { token: number; conversationId: string | null }>();
 
@@ -116,11 +113,6 @@ function attachRuntime(
     if (previous) {
         if (release === "dispose") previous.dispose();
         else keepInBackground(previous);
-    }
-    const waiting = pending.get(paneId);
-    if (waiting) {
-        pending.delete(paneId);
-        if (waiting !== instance) waiting.dispose();
     }
 
     let lastConversation = instance.store.getState().conversationId;
@@ -184,11 +176,6 @@ function sweep(): void {
         if (alive.has(paneId)) continue;
         const instance = detachRuntime(paneId);
         if (instance) keepInBackground(instance);
-    }
-    for (const [paneId, instance] of pending) {
-        if (alive.has(paneId)) continue;
-        pending.delete(paneId);
-        instance.dispose();
     }
     for (const paneId of loads.keys()) {
         if (!alive.has(paneId)) loads.delete(paneId);
@@ -291,7 +278,7 @@ export function ensurePaneRuntime(paneId: string): void {
         return;
     }
 
-    const fresh = pending.get(paneId) ?? createPaneInstance(paneSelection(pane));
+    const fresh = createPaneInstance(paneSelection(pane));
     if (!conversationId) {
         fresh.startNewConversation();
         attachRuntime(paneId, fresh);
@@ -302,7 +289,7 @@ export function ensurePaneRuntime(paneId: string): void {
     loads.set(paneId, { token, conversationId });
     void fresh.openConversation(conversationId).then((ok) => {
         if (!isCurrentLoad(paneId, token)) {
-            if (pending.get(paneId) !== fresh) fresh.dispose();
+            fresh.dispose();
             return;
         }
         loads.delete(paneId);
@@ -716,45 +703,4 @@ export function analyzePanes(instruction: string, paneNoun: string): void {
  */
 export function stopPanes(paneIds: string[]): void {
     for (const paneId of paneIds) peekPaneInstance(paneId)?.stopGeneration();
-}
-
-/**
- * Instance of a pane, created on first use so it can be rendered before the
- * pane claims its runtime.
- *
- * @deprecated Read the pane runtime store; this stays until the panes are
- * mounted from it.
- * @param paneId - Pane id from the compare store
- * @returns The pane's instance
- */
-export function getPaneInstance(paneId: string): ChatInstance {
-    const existing = peekPaneInstance(paneId) ?? pending.get(paneId);
-    if (existing) return existing;
-    const pane = compareStore.getState().panes.find((candidate) => candidate.paneId === paneId);
-    const instance = createPaneInstance(
-        pane
-            ? paneSelection(pane)
-            : { entryId: null, upstreamModel: null, thinking: null, effort: null },
-    );
-    pending.set(paneId, instance);
-    return instance;
-}
-
-/**
- * Initialize a pane from its descriptor.
- *
- * @deprecated Call ensurePaneRuntime.
- * @param descriptor - Persisted pane descriptor
- */
-export async function initPane(descriptor: PaneDescriptor): Promise<void> {
-    ensurePaneRuntime(descriptor.paneId);
-}
-
-/**
- * Abort every pane's in-flight generation.
- *
- * @deprecated Call stopPanes.
- */
-export function stopAllPanes(): void {
-    stopPanes(compareStore.getState().panes.map((pane) => pane.paneId));
 }
