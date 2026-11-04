@@ -33,6 +33,7 @@ import {
     newDraftModel,
     rawToDraft,
 } from "@/lib/draft";
+import { maskMcpHeaders } from "@/lib/mcp/config";
 import { describeOverride, diffConfig, pruneOverride } from "@/lib/merge";
 import {
     modelsStore,
@@ -71,6 +72,7 @@ export function ConfigTab() {
 
     const built = useMemo(() => (draft ? buildConfig(draft) : null), [draft]);
     const preview = built?.ok ? JSON.stringify(built.config, null, 4) : "";
+    const shown = built?.ok ? JSON.stringify(maskMcpHeaders(built.config), null, 4) : "";
 
     const overrideItems = useMemo(() => {
         const canonical = buildConfig(rawToDraft(baseRaw ?? { models: [] }));
@@ -348,7 +350,7 @@ export function ConfigTab() {
                     </p>
                 ) : (
                     <pre className="max-h-60 overflow-auto rounded-md border bg-muted/40 p-3 text-xs break-all whitespace-pre-wrap">
-                        {preview}
+                        {shown}
                     </pre>
                 )}
             </section>

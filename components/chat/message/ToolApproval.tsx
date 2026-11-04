@@ -36,9 +36,14 @@ export function ToolApproval({
             className="mt-2 space-y-2 rounded-md border border-l-2 border-l-amber-500 bg-muted/40 p-2.5"
         >
             <div className="min-w-0 space-y-0.5">
-                <p className="text-sm font-medium">
+                <p className="line-clamp-3 text-sm font-medium break-words">
                     {t("toolApprovalTitle", { tool: localize(pending.title) })}
                 </p>
+                {pending.toolName && pending.toolName !== localize(pending.title) && (
+                    <p className="font-mono text-xs break-all text-muted-foreground">
+                        {t("toolApprovalName", { name: pending.toolName })}
+                    </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                     {t(noArguments ? "toolApprovalNoArguments" : "toolApprovalDescription", {
                         provider: localize(pending.provider),
