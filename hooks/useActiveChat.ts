@@ -2,7 +2,9 @@
 
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
-import { type StreamingState } from "@/lib/stores/chat";
+import { type AgentProgress, type StreamingState } from "@/lib/stores/chat";
+import { settingsStore } from "@/lib/stores/settings";
+import { flowHeadOf, flowRootOf } from "@/lib/tools/flow";
 import { getPath, getSiblingInfo } from "@/lib/tree";
 import type { MessageNode, MessageQuote } from "@/types/chat";
 
@@ -106,4 +108,90 @@ export function useStreamingStatus(): StreamingState["status"] {
 export function useIsRevealTarget(id: string): boolean {
     const { store } = useChatInstance();
     return useStore(store, (state) => state.revealTarget?.nodeId) === id;
+}
+
+/**
+ * Whether the instance is busy with anything that should keep the composer in its
+ * stop state and lock message actions: a stream, a turn between its steps, or a
+ * tool flow waiting for approval.
+ *
+ * @returns true while the instance is busy
+ */
+export function useChatBusy(): boolean {
+    const { store } = useChatInstance();
+    return useStore(
+        store,
+        (state) => state.streaming.status !== "idle" || state.running || state.agent !== null,
+    );
+}
+
+/**
+ * Progress of the tool flow in progress, null when there is none.
+ *
+ * @returns The flow's step, phase and pending call
+ */
+export function useAgentProgress(): AgentProgress | null {
+    const { store } = useChatInstance();
+    return useStore(store, (state) => state.agent);
+}
+
+/**
+ * Whether tools are on for the open conversation: its own switch, else the
+ * setting for new conversations.
+ *
+ * @returns true when the model is offered tools
+ */
+export function useToolsEnabled(): boolean {
+    const { store } = useChatInstance();
+    const enabledByDefault = useStore(
+        settingsStore,
+        (state) => state.settings.tools.enabledByDefault,
+    );
+    const own = useStore(store, (state) => state.toolsEnabled);
+    return own ?? enabledByDefault;
+}
+
+/**
+ * Whether the open conversation already holds a tool result, on any branch.
+ *
+ * @returns true when a tool was used in this conversation
+ */
+export function useHasToolHistory(): boolean {
+    const { store } = useChatInstance();
+    return useStore(store, (state) =>
+        Object.values(state.nodes).some((node) => node.role === "tool"),
+    );
+}
+
+/**
+ * Whether a tool call of the open conversation waits for the user's decision.
+ *
+ * @returns true while an approval prompt is showing
+ */
+export function usePendingApproval(): boolean {
+    const { store } = useChatInstance();
+    return useStore(store, (state) => state.agent?.pending != null);
+}
+
+/**
+ * The first node of the tool flow a message belongs to, which holds the sibling
+ * branches. A message outside any flow is its own head.
+ *
+ * @param id - Node id
+ * @returns The node whose siblings are the branches of this message
+ */
+export function useFlowHead(id: string): string {
+    const { store } = useChatInstance();
+    return useStore(store, (state) => flowHeadOf(state.nodes, id));
+}
+
+/**
+ * Whether a message is a step of a tool flow.
+ *
+ * @param id - Node id
+ * @returns true when the message belongs to a flow
+ */
+export function useIsInFlow(id: string): boolean {
+    const { store } = useChatInstance();
+    return useStore(store, (state) => flowRootOf(state.nodes, id) !== null);
 }
