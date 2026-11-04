@@ -14,15 +14,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAutoDisable, usePaneAvailability } from "@/hooks/useAvailability";
 import { useStore } from "@/hooks/useStore";
 import { isEntryInactive } from "@/lib/chat/availability";
+import { retryPane } from "@/lib/chat/broadcast";
 import { ChatInstanceProvider } from "@/lib/chat/context";
 import type { ChatInstance } from "@/lib/chat/instance";
-import {
-    ensurePaneRuntime,
-    newConversationInPane,
-    paneRuntimeStore,
-    removePane,
-    retryPane,
-} from "@/lib/chat/panes";
+import { newConversationInPane } from "@/lib/chat/occupants";
+import { removePane } from "@/lib/chat/panes";
+import { ensurePaneRuntime, paneRuntimeStore } from "@/lib/chat/slots";
 import { parseModelName } from "@/lib/format";
 import { compareStore, setFocusedPane } from "@/lib/stores/compare";
 import { conversationsStore } from "@/lib/stores/conversations";
