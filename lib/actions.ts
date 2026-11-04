@@ -6,8 +6,10 @@ import {
     startNewForeground,
 } from "@/lib/chat/foreground";
 import type { ChatInstance } from "@/lib/chat/instance";
+import { releaseFromPanes } from "@/lib/chat/panes";
 import { deleteConversation as deleteConversationPayload } from "@/lib/storage/persistence";
 import { removeMeta } from "@/lib/stores/conversations";
+import { setLiveStatus } from "@/lib/stores/live";
 import { refreshStorage } from "@/lib/stores/storage";
 
 // The default chat instance is re-exported for the historic import sites.
@@ -74,14 +76,16 @@ export async function openConversationAtNode(
 
 /**
  * Delete a conversation from the index and storage. Its live instance, if any,
- * is aborted and dropped first so a trailing write cannot resurrect the key;
+ * is aborted and dropped first (compare panes showing it are reset) so a trailing write cannot resurrect the key;
  * when it was the active one, the view resets to a fresh conversation.
  *
  * @param id - Conversation id
  */
 export async function deleteConversationById(id: string): Promise<void> {
     removeMeta(id);
+    releaseFromPanes(id);
     releaseFromForeground(id);
+    setLiveStatus(id, "idle");
     await deleteConversationPayload(id);
     void refreshStorage();
 }

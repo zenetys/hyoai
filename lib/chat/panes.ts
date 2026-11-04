@@ -120,6 +120,26 @@ function releaseFromDefaultChat(conversationId: string): void {
 }
 
 /**
+ * Reset every pane showing a conversation that is being deleted: a live pane gets
+ * a fresh empty conversation (aborting its run), a pane without an instance just
+ * drops the id. Without this the pane keeps writing the deleted conversation back.
+ *
+ * @param conversationId - Conversation being deleted
+ */
+export function releaseFromPanes(conversationId: string): void {
+    for (const pane of compareStore.getState().panes) {
+        if (pane.conversationId !== conversationId) continue;
+        const runtime = runtimes.get(pane.paneId);
+        if (runtime) {
+            // The store mirror then updates the descriptor to the new conversation id.
+            runtime.instance.startNewConversation();
+        } else {
+            updatePaneDescriptor(pane.paneId, { conversationId: null });
+        }
+    }
+}
+
+/**
  * Initialize a pane's instance from its descriptor: restore the model override,
  * then open the saved conversation or start a fresh one. Releases the
  * conversation from the default chat first so they never alias.
