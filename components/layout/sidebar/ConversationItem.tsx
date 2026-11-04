@@ -39,8 +39,8 @@ import { useActiveConversationId } from "@/hooks/useConversations";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
-import { deleteConversationById, openConversation } from "@/lib/actions";
-import { compareConversation, openConversationInPane } from "@/lib/chat/panes";
+import { deleteConversationById, openConversationInView } from "@/lib/actions";
+import { compareConversation } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
 import { patchMeta } from "@/lib/stores/conversations";
 import {
@@ -91,11 +91,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     }, [active, done, meta.id]);
 
     const handleOpen = () => {
-        if (compare.enabled && compare.focusedPaneId) {
-            void openConversationInPane(compare.focusedPaneId, meta.id);
-        } else {
-            void openConversation(meta.id);
-        }
+        void openConversationInView(meta.id);
         setMobileSidebarOpen(false);
     };
 

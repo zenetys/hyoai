@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/command";
 import { useConversationSearch } from "@/hooks/useConversations";
 import { useStore } from "@/hooks/useStore";
-import { openConversation, openConversationAtNode } from "@/lib/actions";
+import { openConversationAtNode, openConversationInView } from "@/lib/actions";
 import { startNewChat } from "@/lib/chat/panes";
 import { openSettings, setCommandOpen, uiStore } from "@/lib/stores/ui";
 
@@ -77,7 +77,9 @@ export function CommandPalette() {
                             <CommandItem
                                 key={meta.id}
                                 value={meta.id}
-                                onSelect={() => runAndClose(() => void openConversation(meta.id))}
+                                onSelect={() =>
+                                    runAndClose(() => void openConversationInView(meta.id))
+                                }
                             >
                                 <MessageSquare aria-hidden="true" />
                                 <span className="min-w-0 flex-1 truncate">
