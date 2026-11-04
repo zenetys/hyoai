@@ -54,6 +54,8 @@
             "baseUrl": "http://127.0.0.1:8000/v1",
             "type": "vllm",
             "model": "Qwen/Qwen2.5-7B-Instruct",
+            "tools": true,
+            "parallelToolCalls": true,
             "disabled": true
         },
         {
