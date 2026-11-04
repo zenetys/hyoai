@@ -1718,6 +1718,7 @@ export class ChatInstance {
                         callId: call.id,
                         title: resolved.title,
                         provider: resolved.provider.label,
+                        toolName: resolved.tool.name,
                         readOnlyHint: resolved.tool.annotations?.readOnlyHint === true,
                         arguments: call.arguments,
                     },

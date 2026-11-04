@@ -49,6 +49,7 @@ export type AgentPhase = "generating" | "approval" | "running";
  * @param callId - Id of the call
  * @param title - Tool label
  * @param provider - Provider label
+ * @param toolName - The provider's own name for the tool, which a title may not show
  * @param readOnlyHint - The provider declared the tool read-only (shown, never trusted)
  * @param arguments - Raw JSON text of the arguments
  */
@@ -56,6 +57,7 @@ export interface PendingToolCall {
     callId: string;
     title: LocalizedText;
     provider: LocalizedText;
+    toolName?: string;
     readOnlyHint: boolean;
     arguments: string;
 }
