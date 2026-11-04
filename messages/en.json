@@ -117,7 +117,8 @@
         "errorNetwork": "Could not reach the model. Check that its endpoint is running and that CORS allows this origin.",
         "errorAuth": "Authentication refused: check the server API key.",
         "errorHttp": "The server returned an error: {message}",
-        "errorStream": "The stream was interrupted: {message}"
+        "errorStream": "The stream was interrupted: {message}",
+        "errorTimeout": "The server did not start answering in time and looks unreachable."
     },
     "composer": {
         "placeholder": "Send a message...",
@@ -178,7 +179,24 @@
         "maxPanes": "Maximum panes reached",
         "removePane": "Close pane",
         "newConversation": "New conversation",
-        "stopGeneration": "Stop generation"
+        "stopGeneration": "Stop generation",
+        "sendingTo": "{count, plural, one {Sending to # pane of {total}} other {Sending to # panes of {total}}}",
+        "skippedList": "Skipped: {names}",
+        "noTarget": "No pane can receive this message right now.",
+        "closedRunning": "The answer keeps generating in the background. You will find it in the sidebar."
+    },
+    "availability": {
+        "unavailable": "Unavailable",
+        "unreachable": "Unreachable",
+        "checking": "Checking…",
+        "retry": "Retry",
+        "reasonMissing": "This model is no longer in the configuration. Pick another one.",
+        "reasonDisabled": "This model is disabled in the configuration.",
+        "reasonNotListed": "The server no longer offers this model.",
+        "reasonUnreachable": "The server does not answer. The model is available again as soon as it is reachable.",
+        "reasonTimeout": "The server did not start answering in time.",
+        "skippedHint": "This pane is left out of shared sends while its model is unavailable.",
+        "keptHint": "Auto-disable is off: this model still receives messages."
     },
     "modelInfo": {
         "title": "Model Information",
@@ -257,7 +275,13 @@
             "imageMaxDimensionDescription": "Images are downscaled before sending and local storage.",
             "visionRequired": "Requires a vision model",
             "mobileUnavailable": "Not available on mobile",
-            "narrowUnavailable": "Not available at this window width"
+            "narrowUnavailable": "Not available at this window width",
+            "availabilityTitle": "Model availability",
+            "availabilityDescription": "What the app does when a model stops answering.",
+            "autoDisable": "Automatically disable unavailable models",
+            "autoDisableDescription": "A model whose server stops answering is greyed out as \"Unavailable\" in the menus. In a single chat, sending is blocked with the reason; in compare, the pane is greyed out and left out of shared sends. It is available again as soon as the server answers. Off: the model stays selectable and the error is shown when sending. A model removed or disabled in the configuration is never replaced by another one.",
+            "connectCheck": "Check a silent server after (seconds)",
+            "connectCheckDescription": "When a server has sent nothing after this delay, the app checks it is reachable and gives up on the request if it is not. A slow but reachable server is never interrupted. 0: never."
         },
         "sampling": {
             "description": "Empty fields use the server defaults.",

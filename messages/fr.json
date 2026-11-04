@@ -117,7 +117,8 @@
         "errorNetwork": "Impossible de joindre le modèle. Vérifie que son endpoint est démarré et que CORS autorise cette origine.",
         "errorAuth": "Authentification refusée : vérifie la clé API du serveur.",
         "errorHttp": "Le serveur a renvoyé une erreur : {message}",
-        "errorStream": "Le flux a été interrompu : {message}"
+        "errorStream": "Le flux a été interrompu : {message}",
+        "errorTimeout": "Le serveur n'a pas commencé à répondre à temps et semble injoignable."
     },
     "composer": {
         "placeholder": "Envoie un message...",
@@ -178,7 +179,24 @@
         "maxPanes": "Maximum de panneaux atteint",
         "removePane": "Fermer le panneau",
         "newConversation": "Nouvelle conversation",
-        "stopGeneration": "Arrêter la génération"
+        "stopGeneration": "Arrêter la génération",
+        "sendingTo": "{count, plural, one {Envoi à # panneau sur {total}} other {Envoi à # panneaux sur {total}}}",
+        "skippedList": "Ignorés : {names}",
+        "noTarget": "Aucun panneau ne peut recevoir ce message pour le moment.",
+        "closedRunning": "La réponse continue de se générer en arrière-plan. Tu la retrouveras dans la barre latérale."
+    },
+    "availability": {
+        "unavailable": "Indisponible",
+        "unreachable": "Injoignable",
+        "checking": "Vérification…",
+        "retry": "Réessayer",
+        "reasonMissing": "Ce modèle n'est plus dans la configuration. Choisis-en un autre.",
+        "reasonDisabled": "Ce modèle est désactivé dans la configuration.",
+        "reasonNotListed": "Le serveur ne propose plus ce modèle.",
+        "reasonUnreachable": "Le serveur ne répond pas. Le modèle redevient disponible dès qu'il est joignable.",
+        "reasonTimeout": "Le serveur n'a pas commencé à répondre à temps.",
+        "skippedHint": "Ce panneau est ignoré par l'envoi groupé tant que son modèle est indisponible.",
+        "keptHint": "La désactivation automatique est coupée : ce modèle reçoit quand même les messages."
     },
     "modelInfo": {
         "title": "Informations du modèle",
@@ -257,7 +275,13 @@
             "imageMaxDimensionDescription": "Les images sont réduites avant envoi et stockage local.",
             "visionRequired": "Nécessite un modèle de vision",
             "mobileUnavailable": "Non disponible sur mobile",
-            "narrowUnavailable": "Non disponible à cette largeur de fenêtre"
+            "narrowUnavailable": "Non disponible à cette largeur de fenêtre",
+            "availabilityTitle": "Disponibilité des modèles",
+            "availabilityDescription": "Ce que fait l'application quand un modèle ne répond plus.",
+            "autoDisable": "Désactiver automatiquement les modèles indisponibles",
+            "autoDisableDescription": "Un modèle dont le serveur ne répond plus est grisé « Indisponible » dans les menus. En conversation simple, l'envoi est bloqué avec le motif ; en comparaison, le panneau est grisé et ignoré par l'envoi groupé. Il redevient disponible dès que le serveur répond. Coupé : le modèle reste sélectionnable et l'erreur s'affiche à l'envoi. Un modèle retiré ou désactivé dans la configuration n'est jamais remplacé par un autre.",
+            "connectCheck": "Vérifier un serveur silencieux après (secondes)",
+            "connectCheckDescription": "Si un serveur n'a rien renvoyé après ce délai, l'application vérifie qu'il est joignable et abandonne la requête s'il ne l'est pas. Un serveur lent mais joignable n'est jamais interrompu. 0 : jamais."
         },
         "sampling": {
             "description": "Les champs vides utilisent les valeurs par défaut du serveur.",
