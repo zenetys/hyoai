@@ -103,6 +103,7 @@ export function ChatPane({ paneId }: { paneId: string }) {
                                 variant="ghost"
                                 size="icon-xs"
                                 aria-label={t("removePane")}
+                                onMouseDown={(event) => event.stopPropagation()}
                                 onClick={() => removePane(paneId)}
                             >
                                 <X aria-hidden="true" />
