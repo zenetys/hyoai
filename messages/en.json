@@ -137,6 +137,7 @@
         "toolNoArguments": "No arguments",
         "toolApprovalDescription": "{provider} will receive the arguments below.",
         "toolApprovalNoArguments": "{provider} will receive no arguments.",
+        "toolApprovalName": "Tool name: {name}",
         "toolApprovalReadOnly": "Declared read-only by its provider",
         "toolAllowOnce": "Allow once",
         "toolAllowAlways": "Always allow",
@@ -536,7 +537,13 @@
             "toolsHint": "Auto: on only when llama.cpp's chat template supports tools. vLLM needs --enable-auto-tool-choice --tool-call-parser.",
             "parallelToolCalls": "Parallel tool calls",
             "supportsToolChoice": "Send tool_choice",
-            "supportsToolChoiceHint": "Off for servers that reject the field (e.g. Ollama)."
+            "supportsToolChoiceHint": "Off for servers that reject the field (e.g. Ollama).",
+            "mcpScope": "MCP servers",
+            "mcpScopeHint": "Which servers of the catalog this model may use.",
+            "mcpScopeAll": "Every enabled server",
+            "mcpScopeNone": "No server is set up yet. Add one in the Tools tab.",
+            "mcpScopeMissing": "{id} (not in the catalog)",
+            "mcpScopeOff": "Tool calling is off for this model."
         },
         "tools": {
             "title": "Tool calling",
@@ -557,7 +564,119 @@
             "listFailed": "The tools of this provider could not be listed.",
             "providerEnabled": "Offer the tools of {provider} to models",
             "resetApprovals": "Reset approvals",
-            "resetApprovalsDone": "Every tool asks again."
+            "resetApprovalsDone": "Every tool asks again.",
+            "mcp": {
+                "title": "MCP servers",
+                "description": "An MCP server gives models more tools. Its calls ask for your approval like any other tool, unless you allow them.",
+                "storedHere": "Tokens and headers are kept in this browser like API keys, and are sent to the server with every request.",
+                "none": "No MCP server is set up.",
+                "add": "Add a server",
+                "newServer": "New server",
+                "enable": "Offer the tools of {name} to models",
+                "edit": "Edit {name}",
+                "remove": "Remove {name}",
+                "removedDone": "{name} removed.",
+                "undo": "Undo",
+                "save": "Save",
+                "cancel": "Cancel",
+                "saved": "{name} saved.",
+                "saveFailed": "The change was refused: {detail}",
+                "refresh": "Refresh",
+                "refreshLabel": "Refresh {name}",
+                "resetServer": "Back to config.json",
+                "resetServerDone": "{name} is back to config.json.",
+                "origin": {
+                    "file": "config.json",
+                    "modified": "Changed here",
+                    "local": "Added here"
+                },
+                "removedTitle": "Removed from config.json",
+                "restore": "Restore {name}",
+                "fields": {
+                    "label": "Name",
+                    "labelPlaceholder": "Shown in the list",
+                    "id": "Identifier",
+                    "idHint": "Letters, digits, - and _ (30 at most). It cannot change once saved.",
+                    "url": "Address",
+                    "urlHint": "The MCP endpoint, or a path on this site.",
+                    "transport": "Transport",
+                    "transportAuto": "Automatic",
+                    "transportHttp": "Streamable HTTP",
+                    "transportSse": "SSE",
+                    "transportHint": "Automatic: Streamable HTTP, then SSE if the server does not know it.",
+                    "token": "Bearer token",
+                    "tokenHint": "Sent as Authorization: Bearer. Leave empty if the server needs none.",
+                    "showToken": "Show the token",
+                    "hideToken": "Hide the token",
+                    "copyToken": "Copy the token",
+                    "headers": "Other headers (JSON, not masked)"
+                },
+                "problems": {
+                    "id": "The identifier must have 1 to 30 letters, digits, - or _.",
+                    "idTaken": "Another server already uses this identifier.",
+                    "url": "The address must be an http(s) URL or a path starting with /.",
+                    "headers": "The headers must be a JSON object whose values are all text."
+                },
+                "tools": "Tools ({count})",
+                "toolsLoading": "Listing the tools…",
+                "toolsFailed": "The tools could not be listed.",
+                "listError": "The server is connected, but it did not list its tools correctly.",
+                "noTools": "This server lists no tool.",
+                "policy": "Approval for {tool}",
+                "annotations": {
+                    "readOnly": "Read-only",
+                    "destructive": "Destructive",
+                    "openWorld": "Reaches outside",
+                    "unverified": "declared by the server, not verified"
+                },
+                "corsHeaders": "The server must send these headers, and list the name of each header configured here in Access-Control-Allow-Headers:",
+                "status": {
+                    "disabled": {
+                        "label": "Off",
+                        "detail": "This server is not offered to models."
+                    },
+                    "idle": {
+                        "label": "Not connected",
+                        "detail": "The server connects when its tools are first needed."
+                    },
+                    "connecting": {
+                        "label": "Connecting…",
+                        "detail": "Waiting for the server to answer."
+                    },
+                    "connected": {
+                        "label": "Connected",
+                        "detail": "{count, plural, one {# tool} other {# tools}} offered."
+                    },
+                    "cors": {
+                        "label": "CORS blocked",
+                        "detail": "The browser blocked the request. It does not say why: the server may be down, or, on another origin, it must allow this page and expose the headers below."
+                    },
+                    "localNetwork": {
+                        "label": "Local network",
+                        "detail": "The server is on a local address. Allow this site to reach the local network in the browser, then refresh. If the browser already allows it, the server must also send the headers below."
+                    },
+                    "unauthorized": {
+                        "label": "Authentication",
+                        "detail": "The server refused the credentials (HTTP {status}). Check the token or the headers."
+                    },
+                    "notFound": {
+                        "label": "Not found",
+                        "detail": "The server answered HTTP {status}: check the address."
+                    },
+                    "timeout": {
+                        "label": "No answer",
+                        "detail": "The server did not answer in time."
+                    },
+                    "network": {
+                        "label": "Unreachable",
+                        "detail": "The server could not be reached or closed the connection."
+                    },
+                    "protocol": {
+                        "label": "Protocol error",
+                        "detail": "The server answered, but not as an MCP server should."
+                    }
+                }
+            }
         }
     },
     "errors": {

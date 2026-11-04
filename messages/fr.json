@@ -137,6 +137,7 @@
         "toolNoArguments": "Aucun argument",
         "toolApprovalDescription": "{provider} recevra les arguments ci-dessous.",
         "toolApprovalNoArguments": "{provider} ne recevra aucun argument.",
+        "toolApprovalName": "Nom de l'outil : {name}",
         "toolApprovalReadOnly": "Déclaré en lecture seule par son fournisseur",
         "toolAllowOnce": "Autoriser une fois",
         "toolAllowAlways": "Toujours autoriser",
@@ -536,7 +537,13 @@
             "toolsHint": "Auto : actif seulement si le modèle de chat llama.cpp gère les outils. vLLM exige --enable-auto-tool-choice --tool-call-parser.",
             "parallelToolCalls": "Appels d'outils parallèles",
             "supportsToolChoice": "Envoyer tool_choice",
-            "supportsToolChoiceHint": "Désactivé pour les serveurs qui refusent ce champ (ex. Ollama)."
+            "supportsToolChoiceHint": "Désactivé pour les serveurs qui refusent ce champ (ex. Ollama).",
+            "mcpScope": "Serveurs MCP",
+            "mcpScopeHint": "Quels serveurs du catalogue ce modèle peut utiliser.",
+            "mcpScopeAll": "Tous les serveurs activés",
+            "mcpScopeNone": "Aucun serveur n'est encore configuré. Ajoutes-en un dans l'onglet Outils.",
+            "mcpScopeMissing": "{id} (absent du catalogue)",
+            "mcpScopeOff": "L'appel d'outils est désactivé pour ce modèle."
         },
         "tools": {
             "title": "Appel d'outils",
@@ -557,7 +564,119 @@
             "listFailed": "Les outils de ce fournisseur n'ont pas pu être listés.",
             "providerEnabled": "Proposer les outils de {provider} aux modèles",
             "resetApprovals": "Réinitialiser les autorisations",
-            "resetApprovalsDone": "Chaque outil redemandera."
+            "resetApprovalsDone": "Chaque outil redemandera.",
+            "mcp": {
+                "title": "Serveurs MCP",
+                "description": "Un serveur MCP donne des outils de plus aux modèles. Ses appels demandent ton accord comme les autres outils, sauf si tu les autorises.",
+                "storedHere": "Les jetons et les en-têtes restent dans ce navigateur comme les clés d'API, et sont envoyés au serveur à chaque requête.",
+                "none": "Aucun serveur MCP n'est configuré.",
+                "add": "Ajouter un serveur",
+                "newServer": "Nouveau serveur",
+                "enable": "Proposer les outils de {name} aux modèles",
+                "edit": "Modifier {name}",
+                "remove": "Supprimer {name}",
+                "removedDone": "{name} supprimé.",
+                "undo": "Annuler",
+                "save": "Enregistrer",
+                "cancel": "Annuler",
+                "saved": "{name} enregistré.",
+                "saveFailed": "La modification a été refusée : {detail}",
+                "refresh": "Actualiser",
+                "refreshLabel": "Actualiser {name}",
+                "resetServer": "Revenir à config.json",
+                "resetServerDone": "{name} est revenu à config.json.",
+                "origin": {
+                    "file": "config.json",
+                    "modified": "Modifié ici",
+                    "local": "Ajouté ici"
+                },
+                "removedTitle": "Retirés de config.json",
+                "restore": "Rétablir {name}",
+                "fields": {
+                    "label": "Nom",
+                    "labelPlaceholder": "Affiché dans la liste",
+                    "id": "Identifiant",
+                    "idHint": "Lettres, chiffres, - et _ (30 au plus). Il ne change plus une fois enregistré.",
+                    "url": "Adresse",
+                    "urlHint": "Le point d'accès MCP, ou un chemin sur ce site.",
+                    "transport": "Transport",
+                    "transportAuto": "Automatique",
+                    "transportHttp": "Streamable HTTP",
+                    "transportSse": "SSE",
+                    "transportHint": "Automatique : Streamable HTTP, puis SSE si le serveur ne le connaît pas.",
+                    "token": "Jeton Bearer",
+                    "tokenHint": "Envoyé en Authorization: Bearer. Laisse vide si le serveur n'en demande pas.",
+                    "showToken": "Afficher le jeton",
+                    "hideToken": "Masquer le jeton",
+                    "copyToken": "Copier le jeton",
+                    "headers": "Autres en-têtes (JSON, non masqués)"
+                },
+                "problems": {
+                    "id": "L'identifiant doit compter de 1 à 30 lettres, chiffres, - ou _.",
+                    "idTaken": "Un autre serveur utilise déjà cet identifiant.",
+                    "url": "L'adresse doit être une URL http(s) ou un chemin commençant par /.",
+                    "headers": "Les en-têtes doivent être un objet JSON dont toutes les valeurs sont du texte."
+                },
+                "tools": "Outils ({count})",
+                "toolsLoading": "Liste des outils en cours…",
+                "toolsFailed": "Les outils n'ont pas pu être listés.",
+                "listError": "Le serveur est connecté, mais il n'a pas listé ses outils correctement.",
+                "noTools": "Ce serveur ne liste aucun outil.",
+                "policy": "Autorisation pour {tool}",
+                "annotations": {
+                    "readOnly": "Lecture seule",
+                    "destructive": "Destructif",
+                    "openWorld": "Accès extérieur",
+                    "unverified": "déclaré par le serveur, non vérifié"
+                },
+                "corsHeaders": "Le serveur doit envoyer ces en-têtes, et lister dans Access-Control-Allow-Headers le nom de chaque en-tête configuré ici :",
+                "status": {
+                    "disabled": {
+                        "label": "Désactivé",
+                        "detail": "Ce serveur n'est pas proposé aux modèles."
+                    },
+                    "idle": {
+                        "label": "Pas connecté",
+                        "detail": "Le serveur se connecte quand ses outils servent pour la première fois."
+                    },
+                    "connecting": {
+                        "label": "Connexion…",
+                        "detail": "En attente de la réponse du serveur."
+                    },
+                    "connected": {
+                        "label": "Connecté",
+                        "detail": "{count, plural, one {# outil proposé} other {# outils proposés}}."
+                    },
+                    "cors": {
+                        "label": "CORS bloqué",
+                        "detail": "Le navigateur a bloqué la requête sans dire pourquoi : le serveur est peut-être arrêté, ou, sur une autre origine, il doit autoriser cette page et exposer les en-têtes ci-dessous."
+                    },
+                    "localNetwork": {
+                        "label": "Réseau local",
+                        "detail": "Le serveur est sur une adresse locale. Autorise ce site à accéder au réseau local dans le navigateur, puis actualise. Si le navigateur l'autorise déjà, le serveur doit aussi envoyer les en-têtes ci-dessous."
+                    },
+                    "unauthorized": {
+                        "label": "Authentification",
+                        "detail": "Le serveur a refusé les identifiants (HTTP {status}). Vérifie le jeton ou les en-têtes."
+                    },
+                    "notFound": {
+                        "label": "Introuvable",
+                        "detail": "Le serveur a répondu HTTP {status} : vérifie l'adresse."
+                    },
+                    "timeout": {
+                        "label": "Pas de réponse",
+                        "detail": "Le serveur n'a pas répondu à temps."
+                    },
+                    "network": {
+                        "label": "Injoignable",
+                        "detail": "Le serveur est injoignable ou a fermé la connexion."
+                    },
+                    "protocol": {
+                        "label": "Erreur de protocole",
+                        "detail": "Le serveur a répondu, mais pas comme le ferait un serveur MCP."
+                    }
+                }
+            }
         }
     },
     "errors": {
