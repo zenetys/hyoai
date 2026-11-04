@@ -1,9 +1,11 @@
 "use client";
 
-import { ChevronDown, ListChecks, Search } from "lucide-react";
+import { ChevronDown, ListChecks, Search, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
+import { ToolCallCard } from "@/components/chat/message/ToolCallCard";
+import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLocalizedText } from "@/hooks/useLocalizedText";
 import { useStore } from "@/hooks/useStore";
@@ -79,6 +81,8 @@ function CitationStage({ label, citations }: { label: string; citations: Citatio
 interface ActivityTraceProps {
     steps: ActivityStep[] | undefined;
     isStreaming: boolean;
+    renderExtra?: (step: ActivityStep) => ReactNode;
+    forceOpen?: boolean;
 }
 
 /**
@@ -87,10 +91,20 @@ interface ActivityTraceProps {
  * Auto-opened while the answer streams, then collapsed; the final sources are
  * recapped below the answer by the Sources block.
  *
+ * Tool calls show as cards, with the text the model wrote before them. A call
+ * waiting for approval keeps the trace open.
+ *
  * @param steps - Activity steps accumulated so far
  * @param isStreaming - Whether the generation is still streaming
+ * @param renderExtra - Content added under a step, such as an approval prompt
+ * @param forceOpen - Keep the trace open, for a search hit inside it
  */
-export function ActivityTrace({ steps, isStreaming }: ActivityTraceProps) {
+export function ActivityTrace({
+    steps,
+    isStreaming,
+    renderExtra,
+    forceOpen = false,
+}: ActivityTraceProps) {
     const t = useTranslations("chat");
     const localize = useLocalizedText();
     const expandDefault = useStore(
@@ -106,19 +120,24 @@ export function ActivityTrace({ steps, isStreaming }: ActivityTraceProps) {
         setManualOpen(null);
     }
 
-    const open = manualOpen ?? (isStreaming || expandDefault);
+    const waiting = steps?.some((step) => step.status === "pending") ?? false;
+    const open = forceOpen || waiting || (manualOpen ?? (isStreaming || expandDefault));
 
     if (!steps || steps.length === 0) return null;
 
     const searching = steps.some((step) => step.kind === "search");
-    const Icon = searching ? Search : ListChecks;
-    const title = searching
-        ? isStreaming
-            ? t("searching")
-            : t("search")
-        : isStreaming
-          ? t("activityRunning")
-          : t("activity");
+    const tools = steps.filter((step) => step.kind === "tool").length;
+    const onlyTools = tools === steps.length;
+    const Icon = onlyTools ? Wrench : searching ? Search : ListChecks;
+    const title = onlyTools
+        ? t("toolCalls", { count: tools })
+        : searching
+          ? isStreaming
+              ? t("searching")
+              : t("search")
+          : isStreaming
+            ? t("activityRunning")
+            : t("activity");
 
     return (
         <Collapsible open={open} onOpenChange={setManualOpen} className="mb-2">
@@ -137,6 +156,14 @@ export function ActivityTrace({ steps, isStreaming }: ActivityTraceProps) {
                 <div className="mt-2 space-y-2 border-l-2 border-border pl-3 text-sm text-muted-foreground">
                     {steps.map((step) => (
                         <div key={step.id}>
+                            {step.kind === "tool" ? (
+                                <div className="space-y-1.5">
+                                    {step.text && (
+                                        <MarkdownRenderer content={step.text} untrusted />
+                                    )}
+                                    <ToolCallCard step={step}>{renderExtra?.(step)}</ToolCallCard>
+                                </div>
+                            ) : null}
                             {step.items && step.items.length > 0 && (
                                 <>
                                     <p className="mb-1 text-xs font-medium text-foreground/70">

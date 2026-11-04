@@ -22,6 +22,7 @@ import { useChatInstance } from "@/lib/chat/context";
 import { errorText } from "@/lib/chat/errors";
 import { resolveModalityGate } from "@/lib/chat/modalities";
 import type { StreamingState } from "@/lib/stores/chat";
+import { flowSteps } from "@/lib/tools/flow";
 import type { MessageNode } from "@/types/chat";
 
 /**
@@ -103,6 +104,9 @@ function UserMessage({ node }: { node: MessageNode }) {
 
 /**
  * Assistant message row: shows the content, reasoning and the action bar with edit.
+ * What follows a tool result may have been steered by it, so no remote image gets
+ * loaded there. The first request of a turn has no flow yet, so its calls show
+ * here while they are written.
  *
  * @param node - Assistant node
  * @param streaming - Streaming state, if any
@@ -126,7 +130,11 @@ function AssistantMessage({
     const activity = streaming ? streaming.activity : node.activity;
     const citations = streaming ? streaming.citations : node.citations;
     const isThinking = Boolean(streaming && reasoning && !content);
-    const isWaiting = Boolean(streaming && !content && !reasoning);
+    const isWaiting = Boolean(streaming && !content && !reasoning && !streaming.toolCalls);
+    const afterTool = useMessageNode(node.parent ?? "")?.role === "tool";
+    const preparing = streaming?.toolCalls
+        ? flowSteps([], { agent: null, liveCalls: streaming.toolCalls })
+        : undefined;
 
     if (editing) {
         return (
@@ -148,6 +156,7 @@ function AssistantMessage({
         <div className="group/message select-none" {...longPress.handlers}>
             <ReasoningBlock reasoning={reasoning} isThinking={isThinking} />
             <ActivityTrace steps={activity} isStreaming={Boolean(streaming)} />
+            <ActivityTrace steps={preparing} isStreaming />
             {isWaiting && (
                 <div className="flex items-center gap-1.5 py-2" aria-hidden="true">
                     <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" />
@@ -157,7 +166,7 @@ function AssistantMessage({
             )}
             {content && (
                 <div className="select-text" data-assistant-content data-message-id={node.id}>
-                    <MarkdownRenderer content={content} />
+                    <MarkdownRenderer content={content} untrusted={afterTool} />
                 </div>
             )}
             <Sources citations={citations} content={content} />
@@ -187,14 +196,18 @@ function AssistantMessage({
 
 /**
  * One row of the active branch. Memoized so untouched nodes skip re-renders;
- * only the streaming row subscribes to the live token buffers.
+ * only the streaming row subscribes to the live token buffers. Tool results
+ * render nothing here, since they only show inside the flow they belong to.
  *
  * @param id - Node id on the active path
  */
 export const MessageRow = memo(function MessageRow({ id }: { id: string }) {
     const node = useMessageNode(id);
     const streaming = useStreamingFor(id);
-    if (!node || node.role === "root" || node.role === "system") return null;
+
+    if (!node || node.role === "root" || node.role === "system" || node.role === "tool") {
+        return null;
+    }
     if (node.chunk?.kind === "chunk") return <ChapterMessage node={node} streaming={streaming} />;
     if (node.summary) return <SummaryMessage node={node} />;
     if (node.role === "user") return <UserMessage node={node} />;

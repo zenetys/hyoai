@@ -6,10 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChapterGroup } from "@/components/chat/message/ChapterGroup";
 import { MessageRow } from "@/components/chat/message/MessageRow";
+import { ToolFlow } from "@/components/chat/message/ToolFlow";
 import { Button } from "@/components/ui/button";
 import { useActivePathIds, useMessageNode } from "@/hooks/useActiveChat";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
+import { isToolCallNode } from "@/lib/tools/flow";
 import { cn } from "@/lib/utils";
 import type { MessageNode } from "@/types/chat";
 
@@ -26,7 +28,11 @@ interface GroupSegment {
     start: number;
     end: number;
 }
-type ListSegment = RowSegment | GroupSegment;
+interface FlowSegment {
+    kind: "flow";
+    ids: string[];
+}
+type ListSegment = RowSegment | GroupSegment | FlowSegment;
 
 /**
  * Build a group segment labeled by the 1-based chapter span its nodes cover.
@@ -44,7 +50,9 @@ function makeGroup(ids: string[], nodes: Record<string, MessageNode>): GroupSegm
  * Turn the flat active path into render segments, bundling runs of consecutive
  * chapter rows into buckets of CHAPTER_GROUP_SIZE chapters so a long map-reduce
  * shows a few headers instead of dozens of rows. Runs no longer than one bucket,
- * and every non-chapter node, stay as plain rows.
+ * and every non-chapter node, stay as plain rows. A tool flow, from the message
+ * that called tools to the answer that closes it, is one segment; a result with
+ * no call before it is dropped.
  *
  * @param ids - Active path node ids
  * @param nodes - Node map, for each id's chapter metadata
@@ -53,7 +61,29 @@ function planSegments(ids: string[], nodes: Record<string, MessageNode>): ListSe
     const segments: ListSegment[] = [];
     let i = 0;
     while (i < ids.length) {
-        const chunk = nodes[ids[i]]?.chunk;
+        const first = nodes[ids[i]];
+        if (isToolCallNode(first)) {
+            const flow = [ids[i]];
+            i += 1;
+            while (i < ids.length) {
+                const node = nodes[ids[i]];
+                const previous = nodes[ids[i - 1]];
+                const continues =
+                    node?.role === "tool" ||
+                    (node?.role === "assistant" && previous?.role === "tool");
+                if (!continues) break;
+                flow.push(ids[i]);
+                i += 1;
+                if (node.role === "assistant" && !isToolCallNode(node)) break;
+            }
+            segments.push({ kind: "flow", ids: flow });
+            continue;
+        }
+        if (first?.role === "tool") {
+            i += 1;
+            continue;
+        }
+        const chunk = first?.chunk;
         if (chunk?.kind !== "chunk") {
             segments.push({ kind: "row", id: ids[i] });
             i += 1;
@@ -255,6 +285,8 @@ interface MessageListProps {
 /**
  * Scrollable message list of the active branch: sticks to the bottom while
  * streaming, detaches when the user scrolls up and offers a jump-back pill.
+ * A step inside a tool flow has no row of its own, so it is found through the
+ * flow's data-row-ids attribute.
  *
  * @param topInset - Height of a floating top bar, so messages scroll under it rather than being cut
  * @param bottomInset - Height of the composer, so the list doesn't scroll under it
@@ -282,7 +314,11 @@ export function MessageList({
     );
     const chunking = useStore(store, (state) => Boolean(state.chunking?.active));
     const streamingNodeId = useStore(store, (state) => state.streaming.nodeId);
-    const segments = useMemo(() => planSegments(ids, store.getState().nodes), [ids, store]);
+    const agentTick = useStore(store, (state) =>
+        state.agent ? `${state.agent.step}:${state.agent.phase}:${state.agent.callId}` : "",
+    );
+    const plan = useStore(store, (state) => JSON.stringify(planSegments(ids, state.nodes)));
+    const segments = useMemo(() => JSON.parse(plan) as ListSegment[], [plan]);
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior) => {
         const el = containerRef.current;
@@ -293,7 +329,7 @@ export function MessageList({
 
     useEffect(() => {
         if (stickRef.current && !revealTarget) scrollToBottom("auto");
-    }, [ids, streamTick, bottomInset, scrollToBottom, revealTarget]);
+    }, [ids, streamTick, agentTick, bottomInset, scrollToBottom, revealTarget]);
 
     useEffect(() => {
         if (!revealTarget) return;
@@ -339,9 +375,9 @@ export function MessageList({
         const find = () => {
             if (cancelled) return;
 
-            const row = containerRef.current?.querySelector<HTMLElement>(
-                `[data-row-id="${nodeId}"]`,
-            );
+            const row =
+                containerRef.current?.querySelector<HTMLElement>(`[data-row-id="${nodeId}"]`) ??
+                containerRef.current?.querySelector<HTMLElement>(`[data-row-ids~="${nodeId}"]`);
             const mark = row ? markTerm(row, term) : null;
             if (mark) {
                 stickRef.current = false;
@@ -402,6 +438,10 @@ export function MessageList({
                                     id={seg.id}
                                     prevId={prevOf.get(seg.id) ?? ""}
                                 />
+                            ) : seg.kind === "flow" ? (
+                                <div key={`flow-${seg.ids[0]}`} className={cn(i > 0 && "mt-6")}>
+                                    <ToolFlow ids={seg.ids} />
+                                </div>
                             ) : (
                                 <ChapterGroup
                                     key={`group-${seg.ids[0]}`}
