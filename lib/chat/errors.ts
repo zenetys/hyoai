@@ -26,6 +26,14 @@ export function errorText(
             return t("errorAuth");
         case "stream":
             return t("errorStream", { message: node.error ?? "" });
+        case "truncated":
+            return t("errorTruncated");
+        case "callCutOff":
+            return t("errorCallCutOff");
+        case "callMissing":
+            return t("errorCallMissing");
+        case "emptyAnswer":
+            return t("errorEmptyAnswer");
         case "http":
             return TOOLS_REJECTED.test(node.error ?? "")
                 ? t("errorToolsRejected", { message: node.error ?? "" })

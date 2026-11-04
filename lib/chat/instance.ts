@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { streamChatCompletion } from "@/lib/api/chat";
 import { shouldPreserveThinking } from "@/lib/api/thinking";
 import { measureCharsPerToken } from "@/lib/api/tokenize";
+import { classifyEnding, endingMessage, type SilentEnding } from "@/lib/chat/endings";
+import { detectLeakedMarkupBlock } from "@/lib/chat/leakedtoolcall";
 import * as lifecycle from "@/lib/chat/lifecycle";
 import * as modelOps from "@/lib/chat/model";
 import type { ChatModelSelection } from "@/lib/chat/model";
@@ -1479,20 +1481,33 @@ export class ChatInstance {
             for (let step = 1; ; step += 1) {
                 this.patchAgent({ step, phase: "generating", callId: null, pending: null });
                 lastId = currentId;
-                const outcome = await this.runGeneration(
-                    currentId,
-                    undefined,
-                    true,
-                    undefined,
-                    flow,
-                );
+                let outcome = await this.runGeneration(currentId, undefined, true, undefined, flow);
                 if (outcome.rerouted) {
                     rerouted = true;
                     return;
                 }
-                const reason = outcome.finishReason;
-                if (reason === null || reason === "aborted" || reason === "error") return;
+                if (
+                    outcome.finishReason === null ||
+                    outcome.finishReason === "aborted" ||
+                    outcome.finishReason === "error"
+                ) {
+                    return;
+                }
                 if (controller.signal.aborted || this.cancelled()) return;
+
+                // A call the model wrote as text joins the normal path, approval included.
+                if (!answerNow) outcome = this.recoverTextCalls(currentId, outcome, flow);
+                const reason = outcome.finishReason;
+                const ending = classifyEnding({
+                    finishReason: reason ?? "stop",
+                    toolCalls: outcome.toolCalls.length,
+                    content: this.store.getState().nodes[currentId]?.content ?? "",
+                    afterTools: step > 1 || resume !== undefined,
+                });
+                if (ending) {
+                    this.failEnding(currentId, ending);
+                    return;
+                }
 
                 // An answer, a cut-off one, "answer without tools" or the step limit ends the flow.
                 if (
@@ -1519,6 +1534,62 @@ export class ChatInstance {
                 else setLiveStatus(liveConvId, "idle");
             }
         }
+    };
+
+    /**
+     * Turn a tool call the model wrote as text into a real one. Some chat parsers let a
+     * call leak into the answer instead of the structured channel; when the entry opts in
+     * and the step made no call, a complete block at the end of the text that names a tool
+     * of this flow becomes the step's call and leaves the displayed text. The caller runs
+     * it like any other call, so it is approved first.
+     *
+     * @param nodeId - Assistant message the step wrote
+     * @param outcome - What the step produced
+     * @param flow - The flow, for its entry and the tools it offers
+     * @returns The outcome with the recovered calls, or the same outcome
+     */
+    private recoverTextCalls = (
+        nodeId: string,
+        outcome: GenerationOutcome,
+        flow: FlowStep,
+    ): GenerationOutcome => {
+        if (flow.entry.recoverToolCalls !== true || outcome.toolCalls.length > 0) return outcome;
+        if (flow.toolChoice === "none") return outcome;
+        if (outcome.finishReason !== "stop" && outcome.finishReason !== "tool_calls")
+            return outcome;
+        const node = this.store.getState().nodes[nodeId];
+        if (!node) return outcome;
+        const leaked = detectLeakedMarkupBlock(node.content, [...flow.tools.byWireName.keys()]);
+        if (!leaked) return outcome;
+
+        this.store.setState((current) => ({
+            nodes: updateNode(current.nodes, nodeId, {
+                content: leaked.prefix.trimEnd(),
+                toolCalls: leaked.calls,
+                finishReason: "tool_calls",
+            }),
+        }));
+        this.persistActiveConversation();
+        return { ...outcome, finishReason: "tool_calls", toolCalls: leaked.calls };
+    };
+
+    /**
+     * End a step that stopped without saying why with an error on its message, so the
+     * user sees what happened. Calls the step left half written are not kept.
+     *
+     * @param nodeId - Assistant message of the step
+     * @param ending - What went wrong
+     */
+    private failEnding = (nodeId: string, ending: SilentEnding): void => {
+        this.store.setState((current) => ({
+            nodes: updateNode(current.nodes, nodeId, {
+                error: endingMessage(ending),
+                errorKind: ending,
+                finishReason: "error",
+                toolCalls: undefined,
+            }),
+        }));
+        this.persistActiveConversation();
     };
 
     /**
