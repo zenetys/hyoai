@@ -18,11 +18,12 @@ import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { useMessageNode, useStreamingFor } from "@/hooks/useActiveChat";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
+import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
 import { errorText } from "@/lib/chat/errors";
 import { resolveModalityGate } from "@/lib/chat/modalities";
 import type { StreamingState } from "@/lib/stores/chat";
-import { flowSteps } from "@/lib/tools/flow";
+import { flowSteps, hasToolAncestor } from "@/lib/tools/flow";
 import type { MessageNode } from "@/types/chat";
 
 /**
@@ -103,9 +104,9 @@ function UserMessage({ node }: { node: MessageNode }) {
 
 /**
  * Assistant message row: shows the content, reasoning and the action bar with edit.
- * What follows a tool result may have been steered by it, so no remote image gets
- * loaded there. The first request of a turn has no flow yet, so its calls show
- * here while they are written.
+ * Any text written after a tool result, in this turn or a later one, may have been
+ * steered by it, so no remote image gets loaded there. The first request of a turn
+ * has no flow yet, so its calls show here while they are written.
  *
  * @param node - Assistant node
  * @param streaming - Streaming state, if any
@@ -130,7 +131,7 @@ function AssistantMessage({
     const citations = streaming ? streaming.citations : node.citations;
     const isThinking = Boolean(streaming && reasoning && !content);
     const isWaiting = Boolean(streaming && !content && !reasoning && !streaming.toolCalls);
-    const afterTool = useMessageNode(node.parent ?? "")?.role === "tool";
+    const afterTool = useStore(chat.store, (state) => hasToolAncestor(state.nodes, node.id));
     const preparing = streaming?.toolCalls
         ? flowSteps([], { agent: null, liveCalls: streaming.toolCalls })
         : undefined;
