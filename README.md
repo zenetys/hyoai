@@ -442,8 +442,6 @@ types/          shared types (chat, server, settings, api, storage)
   formulas, and `mermaid` code blocks render as diagrams with a copy button for
   the source and an SVG download
 
-    ![A Markdown answer with a sources block and per-message stats](public/images/sources.png)
-
 - Images: paste/drag-and-drop, resized client-side before sending (OpenAI
   vision format)
 
