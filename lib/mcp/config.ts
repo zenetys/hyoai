@@ -104,3 +104,39 @@ export function readModelScope(value: unknown): string[] | undefined {
     if (Array.isArray(value) && value.every((id) => typeof id === "string")) return value;
     return [];
 }
+
+// What replaces a header value where the config is shown but not meant to be read aloud.
+export const MASKED_HEADER_VALUE = "********";
+
+/**
+ * Copy of a config with the values of the MCP servers' headers masked, for showing it
+ * on screen: the tokens in them are the same secrets the form hides in a password field.
+ * Names stay readable, so the shape of the headers can still be checked.
+ *
+ * @param config - A config object as the form builds it
+ * @returns The same config with every value in mcp.servers[*].headers replaced
+ */
+export function maskMcpHeaders(config: Record<string, unknown>): Record<string, unknown> {
+    const mcp = config.mcp;
+    if (typeof mcp !== "object" || mcp === null) return config;
+    const servers = (mcp as { servers?: unknown }).servers;
+    if (!Array.isArray(servers)) return config;
+    return {
+        ...config,
+        mcp: {
+            ...mcp,
+            servers: servers.map((entry: unknown) => {
+                const headers = (entry as { headers?: unknown } | null)?.headers;
+                if (typeof headers !== "object" || headers === null || Array.isArray(headers)) {
+                    return entry;
+                }
+                return {
+                    ...(entry as object),
+                    headers: Object.fromEntries(
+                        Object.keys(headers).map((name) => [name, MASKED_HEADER_VALUE]),
+                    ),
+                };
+            }),
+        },
+    };
+}

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isMcpServerUrl, normalizeMcpServers } from "@/lib/mcp/config";
+import {
+    isMcpServerUrl,
+    MASKED_HEADER_VALUE,
+    maskMcpHeaders,
+    normalizeMcpServers,
+} from "@/lib/mcp/config";
 
 describe("isMcpServerUrl", () => {
     it("accepts http(s) urls and paths resolved against the page", () => {
@@ -124,5 +129,49 @@ describe("normalizeMcpServers", () => {
             servers: [],
             issues: ["mcp.servers: expected a list"],
         });
+    });
+});
+
+describe("maskMcpHeaders", () => {
+    it("masks the header values of every server and nothing else", () => {
+        const config = {
+            models: [{ id: "m", apiKey: "k" }],
+            mcp: {
+                servers: [
+                    {
+                        id: "a",
+                        url: "/a",
+                        headers: { Authorization: "Bearer secret", "X-Team": "t" },
+                    },
+                    { id: "b", url: "/b" },
+                ],
+            },
+        };
+        const masked = maskMcpHeaders(config);
+        expect(masked).toEqual({
+            models: config.models,
+            mcp: {
+                servers: [
+                    {
+                        id: "a",
+                        url: "/a",
+                        headers: {
+                            Authorization: MASKED_HEADER_VALUE,
+                            "X-Team": MASKED_HEADER_VALUE,
+                        },
+                    },
+                    { id: "b", url: "/b" },
+                ],
+            },
+        });
+        expect(JSON.stringify(masked)).not.toContain("secret");
+
+        // The config itself is left as it was.
+        expect(config.mcp.servers[0].headers?.Authorization).toBe("Bearer secret");
+    });
+
+    it("returns a config without servers as it is", () => {
+        const config = { models: [] };
+        expect(maskMcpHeaders(config)).toBe(config);
     });
 });
