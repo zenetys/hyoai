@@ -5,7 +5,6 @@ import type {
     CompactionState,
     MessageNode,
     MessageQuote,
-    RagData,
 } from "@/types/chat";
 import type { ChunkingStrategy } from "@/types/settings";
 
@@ -34,7 +33,6 @@ export interface StreamingState {
     status: StreamingStatus;
     content: string;
     reasoning: string;
-    rag?: RagData;
     activity?: ActivityStep[];
     citations?: Citation[];
     startedAt: number | null;

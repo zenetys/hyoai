@@ -1,5 +1,4 @@
 import { streamOpenAiCompatChat } from "@/lib/api/transports/openai";
-import { streamRagChat } from "@/lib/api/transports/rag";
 import type { ServerTypeDefinition } from "@/types/plugin";
 
 /**
@@ -22,12 +21,5 @@ export const BUILTIN_SERVER_TYPES: ServerTypeDefinition[] = [
         id: "openai",
         transport: streamOpenAiCompatChat,
         capabilities: { listModels: true, contextProbe: true },
-    },
-
-    // Temporary: moves to the plugins folder once the generic event channel exists.
-    {
-        id: "rag-sse",
-        transport: streamRagChat,
-        capabilities: { supportsThinking: true },
     },
 ];

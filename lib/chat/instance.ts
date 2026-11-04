@@ -59,7 +59,6 @@ import type {
     MessageNode,
     MessageQuote,
     MessageStats,
-    RagData,
 } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 import type { ChunkingStrategy } from "@/types/settings";
@@ -72,16 +71,6 @@ import type { ChunkingStrategy } from "@/types/settings";
  */
 const MAX_RECHUNK_ATTEMPTS = 3;
 const MAX_SYNTH_DEPTH = 6;
-
-/**
- * Whether a RAG trace carries at least one populated stage, so an empty trace
- * (non-RAG backend) is stored as undefined rather than an empty object.
- *
- * @param rag - Accumulated RAG trace
- */
-function hasRag(rag: RagData): boolean {
-    return Boolean(rag.subQueries || rag.dense || rag.sparse || rag.reranked);
-}
 
 export type { ChatModelSelection };
 
@@ -245,16 +234,11 @@ export class ChatInstance {
         const { streaming } = state;
         if (
             streaming.nodeId &&
-            (streaming.content ||
-                streaming.reasoning ||
-                streaming.rag ||
-                streaming.activity ||
-                streaming.citations)
+            (streaming.content || streaming.reasoning || streaming.activity || streaming.citations)
         ) {
             nodes = updateNode(nodes, streaming.nodeId, {
                 content: streaming.content,
                 reasoningContent: streaming.reasoning || undefined,
-                rag: streaming.rag,
                 activity: streaming.activity,
                 citations: streaming.citations,
             });
@@ -387,7 +371,6 @@ export class ChatInstance {
         let content = "";
         let reasoning = "";
 
-        const rag: RagData = {};
         let activity: ActivityStep[] = [];
         let citations: Citation[] | undefined;
         let firstTokenAt: number | null = null;
@@ -413,7 +396,6 @@ export class ChatInstance {
                     status: "streaming",
                     content,
                     reasoning,
-                    rag: hasRag(rag) ? { ...rag } : undefined,
                     activity: activity.length > 0 ? activity : undefined,
                     citations,
                     firstTokenAt,
@@ -448,18 +430,6 @@ export class ChatInstance {
                     case "reasoning":
                         if (firstTokenAt === null) firstTokenAt = Date.now();
                         reasoning += event.text;
-                        queueFlush();
-                        break;
-                    case "subQueries":
-                        rag.subQueries = event.queries;
-                        queueFlush();
-                        break;
-                    case "retrieval":
-                        rag[event.stage] = event.docs;
-                        queueFlush();
-                        break;
-                    case "pipeline":
-                        stats.pipeline = event.pipeline;
                         queueFlush();
                         break;
                     case "activity": {
@@ -578,7 +548,6 @@ export class ChatInstance {
             nodes: updateNode(current.nodes, nodeId, {
                 content,
                 reasoningContent: reasoning || undefined,
-                rag: hasRag(rag) ? rag : undefined,
                 activity: activity.length > 0 ? activity : undefined,
                 citations,
                 stats,
@@ -835,7 +804,6 @@ export class ChatInstance {
                 node.createdAt,
             );
             nodes = updateNode(appended.nodes, appended.id, {
-                rag: node.rag,
                 activity: node.activity,
                 citations: node.citations,
                 stats: node.stats,

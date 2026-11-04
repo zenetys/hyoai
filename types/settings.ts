@@ -65,7 +65,7 @@ export interface PenaltySettings {
  * @param showStats - Show the generation stats footer on messages
  * @param expandReasoningByDefault - Expand the reasoning section on new messages
  * @param expandSearchByDefault - Expand the search/sub-queries section on new messages
- * @param expandSourcesByDefault - Expand the RAG sources section on new messages
+ * @param expandSourcesByDefault - Expand the sources section on new messages
  * @param chatWidth - Column and composer width on large screens
  * @param compactInput - Use the compact composer layout
  */

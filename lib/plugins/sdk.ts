@@ -27,6 +27,13 @@ export type {
     StreamEvent,
 } from "@/types/api";
 export type {
+    ActivityKind,
+    ActivityStep,
+    Citation,
+    LocalizedText,
+    StageTiming,
+} from "@/types/chat";
+export type {
     HyoaiPlugin,
     PluginMessages,
     ServerTypeCapabilities,

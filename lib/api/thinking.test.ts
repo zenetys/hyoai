@@ -47,12 +47,6 @@ describe("shouldPreserveThinking", () => {
 
         expect(shouldPreserveThinking(model, { effort: "high" })).toBe(true);
     });
-
-    it("never applies to the retrieval transport", () => {
-        const model = entry({ type: "rag-sse" as ModelConfig["type"], thinking: { on: preserve } });
-
-        expect(shouldPreserveThinking(model, { thinking: true })).toBe(false);
-    });
 });
 
 describe("applyThinkingConfig", () => {

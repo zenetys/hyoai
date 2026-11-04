@@ -20,22 +20,6 @@ export interface Attachment {
 }
 
 /**
- * Per-stage durations (ms) of the backend RAG pipeline, decoded from the
- * latencies event. Stages the backend reports as zero (e.g. the retrieval
- * stages when RAG is not used) are dropped, so only the steps that actually
- * ran are surfaced in the footer.
- */
-export interface PipelineTimings {
-    intentDetection?: number;
-    queryDecomposition?: number;
-    embeddingGeneration?: number;
-    vectorSearch?: number;
-    reranking?: number;
-    llmGeneration?: number;
-    totalPipeline?: number;
-}
-
-/**
  * Text a backend wants shown in the UI, in a form the core can translate. "key"
  * is a full message catalog key (a plugin's strings live under "plugins.<id>");
  * the UI uses its translation when the catalog has the key and falls back to
@@ -99,37 +83,11 @@ export interface MessageStats {
     tokensPerSecond?: number;
     durationMs?: number;
     timeToFirstTokenMs?: number;
-    pipeline?: PipelineTimings;
     stages?: StageTiming[];
 }
 
 // Why an assistant generation ended.
 export type FinishReason = "stop" | "length" | "aborted" | "error" | string;
-
-/**
- * One document surfaced by the RAG pipeline (retrieval candidate or final
- * source). The wire shape from the RAG backend matches this one to one.
- */
-export interface RagDoc {
-    id: number;
-    source: string;
-    preview: string;
-    score: number;
-    url: string;
-}
-
-/**
- * Retrieval-Augmented Generation trace attached to an assistant message: the
- * reformulated sub-queries and the documents at each pipeline stage. "reranked"
- * holds the final sources kept for the answer; "dense"/"sparse" are the
- * intermediate retrieval candidates, surfaced for transparency.
- */
-export interface RagData {
-    subQueries?: string[];
-    dense?: RagDoc[];
-    sparse?: RagDoc[];
-    reranked?: RagDoc[];
-}
 
 /**
  * An excerpt the user is replying to, captured from an earlier assistant
@@ -154,7 +112,6 @@ export interface MessageNode {
     content: string;
     reasoningContent?: string;
     quote?: MessageQuote;
-    rag?: RagData;
     activity?: ActivityStep[];
     citations?: Citation[];
     attachments?: Attachment[];

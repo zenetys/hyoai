@@ -52,16 +52,13 @@ export function preservesThinking(body: Record<string, unknown>): boolean {
 /**
  * Resolve the preserve_thinking opt-in of an endpoint for one request. It runs
  * before the history is assembled and its context cost estimated, so the
- * reasoning is only counted when it will really be sent. The retrieval
- * transport never preserves it.
+ * reasoning is only counted when it will really be sent.
  *
  * @param endpoint - Config entry to read the fragments from
  * @param params - Thinking toggle and effort level chosen for this request
  * @returns True when the reasoning of earlier turns should be sent back
  */
 export function shouldPreserveThinking(endpoint: ModelConfig, params: ThinkingParams): boolean {
-    if (endpoint.type === "rag-sse") return false;
-
     const body: Record<string, unknown> = {};
 
     applyThinkingConfig(body, endpoint, params);

@@ -1,7 +1,8 @@
 import { BUILTIN_SERVER_TYPES } from "@/lib/plugins/builtin";
+import type { StreamEvent } from "@/types/api";
 import type { LocalizedText } from "@/types/chat";
 import { PLUGIN_API_VERSION } from "@/types/plugin";
-import type { HyoaiPlugin, ServerTypeDefinition } from "@/types/plugin";
+import type { HyoaiPlugin, ServerTypeDefinition, Transport } from "@/types/plugin";
 
 // A plugin id is also its folder name and a key of the message catalog.
 const PLUGIN_ID = /^[a-z][a-zA-Z0-9]*$/;
@@ -12,10 +13,7 @@ export interface PluginRegistry {
 }
 
 /**
- * Prefix the message key of a text with the plugin's catalog namespace. A plugin
- * writes its keys relative to its own catalog ("search"); the core mounts that
- * catalog under "plugins.<id>", so a plugin can never point at another plugin's
- * or the core's strings.
+ * Prefix the message key of a text with the plugin's catalog namespace.
  *
  * @param pluginId - Plugin the text comes from
  * @param text - Text whose key is relative to the plugin's catalog
@@ -23,6 +21,50 @@ export interface PluginRegistry {
  */
 export function scopeText(pluginId: string, text: LocalizedText): LocalizedText {
     return { ...text, key: `plugins.${pluginId}.${text.key}` };
+}
+
+/**
+ * Make the message keys of an event full catalog keys. A plugin writes its keys
+ * relative to its own catalog ("search"); the core mounts that catalog under
+ * "plugins.<id>", so the keys are prefixed once, here, and a plugin can never
+ * point at another plugin's or the core's strings.
+ *
+ * @param pluginId - Plugin that produced the event
+ * @param event - Event as the plugin yielded it
+ * @returns The event with scoped keys, other events unchanged
+ */
+export function scopeEvent(pluginId: string, event: StreamEvent): StreamEvent {
+    if (event.type === "activity") {
+        return {
+            type: "activity",
+            step: { ...event.step, label: scopeText(pluginId, event.step.label) },
+        };
+    }
+    if (event.type === "stages") {
+        return {
+            type: "stages",
+            stages: event.stages.map((stage) => ({
+                ...stage,
+                label: scopeText(pluginId, stage.label),
+            })),
+        };
+    }
+    return event;
+}
+
+/**
+ * Wrap a plugin transport so every event it yields goes through scopeEvent.
+ *
+ * @param pluginId - Plugin the transport belongs to
+ * @param transport - The plugin's transport
+ * @returns A transport yielding scoped events
+ */
+function scopeTransport(pluginId: string, transport: Transport): Transport {
+    return async function* (endpoint, params, signal) {
+        for await (const event of transport(endpoint, params, signal)) {
+            yield scopeEvent(pluginId, event);
+        }
+    };
 }
 
 /**
@@ -80,7 +122,10 @@ export function buildRegistry(
                         : `server type "${definition.id}" is already declared by another plugin`,
                 );
             }
-            serverTypes.set(definition.id, definition);
+            serverTypes.set(definition.id, {
+                ...definition,
+                transport: scopeTransport(plugin.id, definition.transport),
+            });
         }
         plugins.push(plugin);
     }

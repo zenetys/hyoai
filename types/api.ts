@@ -1,4 +1,4 @@
-import type { ActivityStep, Citation, PipelineTimings, RagDoc, StageTiming } from "@/types/chat";
+import type { ActivityStep, Citation, StageTiming } from "@/types/chat";
 import type { PenaltySettings, SamplingSettings } from "@/types/settings";
 
 // One part of an OpenAI multimodal content array.
@@ -84,14 +84,11 @@ export class ApiError extends Error {
 export type StreamEvent =
     | { type: "content"; text: string }
     | { type: "reasoning"; text: string }
-    | { type: "subQueries"; queries: string[] }
-    | { type: "retrieval"; stage: "dense" | "sparse" | "reranked"; docs: RagDoc[] }
     | { type: "activity"; step: ActivityStep }
     | { type: "citations"; citations: Citation[] }
     | { type: "stages"; stages: StageTiming[] }
     | { type: "usage"; usage: ApiUsage }
     | { type: "timings"; timings: ApiTimings }
-    | { type: "pipeline"; pipeline: PipelineTimings }
     | { type: "finish"; reason: string }
     | { type: "error"; error: ApiError };
 
