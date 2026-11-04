@@ -227,6 +227,23 @@ export function ModelEditor({
                             value={model.runtimeProps}
                             onChange={(value) => onChange({ runtimeProps: value })}
                         />
+                        <CapabilityField
+                            label={t("config.tools")}
+                            hint={t("config.toolsHint")}
+                            value={model.tools}
+                            onChange={(value) => onChange({ tools: value })}
+                        />
+                        <CapabilityField
+                            label={t("config.parallelToolCalls")}
+                            value={model.parallelToolCalls}
+                            onChange={(value) => onChange({ parallelToolCalls: value })}
+                        />
+                        <CapabilityField
+                            label={t("config.supportsToolChoice")}
+                            hint={t("config.supportsToolChoiceHint")}
+                            value={model.supportsToolChoice}
+                            onChange={(value) => onChange({ supportsToolChoice: value })}
+                        />
                     </div>
                 </CollapsibleContent>
             </Collapsible>
@@ -239,15 +256,18 @@ export function ModelEditor({
  * omitted (derived from the backend type), "on"/"off" force it.
  *
  * @param label - Field label
+ * @param hint - Helper text shown under the select
  * @param value - Current tri-state value
  * @param onChange - Called with the next tri-state value
  */
 function CapabilityField({
     label,
+    hint,
     value,
     onChange,
 }: {
     label: string;
+    hint?: string;
     value: Capability;
     onChange: (value: Capability) => void;
 }) {
@@ -267,6 +287,7 @@ function CapabilityField({
                     <SelectItem value="off">{t("config.capabilityOff")}</SelectItem>
                 </SelectContent>
             </Select>
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
     );
 }

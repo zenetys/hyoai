@@ -21,6 +21,7 @@ import {
     selectActiveUpstreamModel,
 } from "@/lib/stores/models";
 import { setModelInfoOpen, uiStore } from "@/lib/stores/ui";
+import { resolveToolSupport } from "@/lib/tools/support";
 
 interface InfoRowProps {
     label: string;
@@ -169,6 +170,16 @@ export function ModelInfoDialog() {
                                         value={yesNo(entry.runtimeProps)}
                                     />
                                 )}
+                                <InfoRow
+                                    label={t("toolCalling")}
+                                    value={
+                                        entry.tools === true
+                                            ? yesNo(true)
+                                            : resolveToolSupport(entry, props ?? null)
+                                              ? t("toolCallingDetected")
+                                              : yesNo(false)
+                                    }
+                                />
                             </div>
                         </div>
                     )}

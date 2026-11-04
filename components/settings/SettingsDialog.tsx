@@ -8,6 +8,7 @@ import { ConfigTab } from "@/components/settings/tabs/ConfigTab";
 import { DataTab } from "@/components/settings/tabs/DataTab";
 import { GeneralTab } from "@/components/settings/tabs/GeneralTab";
 import { GenerationTab } from "@/components/settings/tabs/GenerationTab";
+import { ToolsTab } from "@/components/settings/tabs/ToolsTab";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +21,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * Application settings dialog opened from the header through the UI store,
- * with general, generation, data and config tabs.
+ * with general, generation, tools, data and config tabs. The tools tab is
+ * hidden in embed mode because an embed never offers tools, so it has nothing
+ * to configure for them.
  */
 export function SettingsDialog() {
     const t = useTranslations("settings");
@@ -30,8 +33,13 @@ export function SettingsDialog() {
     const embedSidebar = useStore(uiStore, (state) => state.embedSidebar);
     const showData = !embed || embedSidebar;
     const showConfig = !embed;
+    const showTools = !embed;
     const active =
-        (tab === "data" && !showData) || (tab === "config" && !showConfig) ? "general" : tab;
+        (tab === "data" && !showData) ||
+        (tab === "config" && !showConfig) ||
+        (tab === "tools" && !showTools)
+            ? "general"
+            : tab;
     const hasOverride = useStore(modelsStore, (state) => state.hasOverride);
     const appliedTick = useStore(modelsStore, (state) => state.appliedTick);
     const health = useStore(modelsStore, selectConfigHealth);
@@ -86,6 +94,7 @@ export function SettingsDialog() {
                     <TabsList className="no-scrollbar w-full max-md:justify-start max-md:overflow-x-auto">
                         <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
                         <TabsTrigger value="generation">{t("tabs.generation")}</TabsTrigger>
+                        {showTools && <TabsTrigger value="tools">{t("tabs.tools")}</TabsTrigger>}
                         {showData && <TabsTrigger value="data">{t("tabs.data")}</TabsTrigger>}
                         {showConfig && <TabsTrigger value="config">{t("tabs.config")}</TabsTrigger>}
                     </TabsList>
@@ -96,6 +105,11 @@ export function SettingsDialog() {
                         <TabsContent value="generation">
                             <GenerationTab />
                         </TabsContent>
+                        {showTools && (
+                            <TabsContent value="tools">
+                                <ToolsTab />
+                            </TabsContent>
+                        )}
                         {showData && (
                             <TabsContent value="data">
                                 <DataTab />
