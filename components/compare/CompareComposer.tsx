@@ -133,6 +133,7 @@ export function CompareComposer() {
                 </Tooltip>
             </div>
             <ComposerShell
+                carryDraft
                 onSubmit={(text, attachments) => sendToPanes(target, text, attachments)}
                 onStop={() => stopPanes(liveTargets)}
                 busy={busy}

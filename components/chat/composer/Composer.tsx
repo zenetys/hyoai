@@ -72,6 +72,7 @@ export function Composer({ home = false }: { home?: boolean }) {
     return (
         <div className="px-4 pb-4">
             <ComposerShell
+                carryDraft
                 wrapperClassName={cn(
                     "mx-auto",
                     CHAT_WIDTH_CLASS[home && !embed ? "medium" : chatWidth],

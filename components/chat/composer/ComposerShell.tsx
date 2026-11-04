@@ -14,6 +14,7 @@ import { useCompactFit } from "@/hooks/useCompactFit";
 import { useFlip } from "@/hooks/useFlip";
 import { useIsNarrow } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "@/lib/chat/handoff";
 import { settingsStore } from "@/lib/stores/settings";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
@@ -38,6 +39,7 @@ interface ComposerShellProps {
     focusSignal?: number;
     replyKey?: MessageQuote | null;
     history?: string[];
+    carryDraft?: boolean;
 }
 
 /**
@@ -71,6 +73,7 @@ interface ComposerShellProps {
  * @param focusSignal - A nonce that refocuses the textarea on each change (e.g. dismissing a sidebar menu)
  * @param replyKey - The pending reply quote; refocuses the textarea when a new reply is set
  * @param history - Past user messages (newest first) for arrow-up recall
+ * @param carryDraft - Hand the unsent draft over to the composer that replaces this one when the compare opens or closes, and start from the one handed over
  */
 export function ComposerShell({
     onSubmit,
@@ -92,10 +95,13 @@ export function ComposerShell({
     focusSignal,
     replyKey,
     history,
+    carryDraft = false,
 }: ComposerShellProps) {
     const t = useTranslations("composer");
-    const [text, setText] = useState("");
-    const att = useAttachments({ visionBlocked, audioBlocked });
+    const [handoff] = useState(() => (carryDraft ? peekDraft() : null));
+    const [text, setText] = useState(handoff?.text ?? "");
+    const att = useAttachments({ visionBlocked, audioBlocked, initial: handoff?.attachments });
+    const draftRef = useRef<ComposerDraft>({ text: "", attachments: [] });
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const boxRef = useRef<HTMLDivElement>(null);
     const rowRef = useRef<HTMLDivElement>(null);
@@ -124,6 +130,19 @@ export function ComposerShell({
     useEffect(() => {
         if (autoFocus) focusInput();
     }, [autoFocus, focusInput]);
+
+    useEffect(() => {
+        if (handoff) clearDraft();
+    }, [handoff]);
+
+    useEffect(() => {
+        draftRef.current = { text, attachments: att.attachments };
+    });
+
+    useEffect(
+        () => (carryDraft ? registerDraftSource(() => draftRef.current) : undefined),
+        [carryDraft],
+    );
 
     useEffect(() => {
         if (focusKey === undefined || focusKey === lastFocusKey.current) return;
