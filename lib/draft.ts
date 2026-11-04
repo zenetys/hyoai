@@ -29,6 +29,9 @@ export interface DraftModel {
     modalities: string;
     supportsThinking: Capability;
     runtimeProps: Capability;
+    tools: Capability;
+    parallelToolCalls: Capability;
+    supportsToolChoice: Capability;
 }
 
 /**
@@ -109,6 +112,36 @@ const fromCapability = (value: Capability): boolean | undefined =>
     value === "auto" ? undefined : value === "on";
 
 /**
+ * A blank model entry for the form: a llama.cpp endpoint with every optional
+ * capability left on "auto".
+ *
+ * @returns A new draft model
+ */
+export function newDraftModel(): DraftModel {
+    return {
+        id: "",
+        name: "",
+        shortName: "",
+        baseUrl: "",
+        model: "",
+        type: "llama.cpp",
+        apiKey: "",
+        headers: "",
+        streaming: true,
+        sendContext: true,
+        disabled: false,
+        thinking: "",
+        effort: "",
+        modalities: "",
+        supportsThinking: "auto",
+        runtimeProps: "auto",
+        tools: "auto",
+        parallelToolCalls: "auto",
+        supportsToolChoice: "auto",
+    };
+}
+
+/**
  * Build an editable draft from a raw config object, coercing every field so a
  * malformed or partial config.json still loads into the form.
  *
@@ -144,6 +177,9 @@ export function rawToDraft(raw: unknown): Draft {
                 modalities: asJson(model.modalities),
                 supportsThinking: asCapability(model.supportsThinking),
                 runtimeProps: asCapability(model.runtimeProps),
+                tools: asCapability(model.tools),
+                parallelToolCalls: asCapability(model.parallelToolCalls),
+                supportsToolChoice: asCapability(model.supportsToolChoice),
             };
         }),
         thinkingOn: asJson(thinking?.on),
@@ -226,6 +262,9 @@ export function buildConfig(
         put(entry, "modalities", parse(model.modalities, `models[${index}].modalities`));
         put(entry, "supportsThinking", fromCapability(model.supportsThinking));
         put(entry, "runtimeProps", fromCapability(model.runtimeProps));
+        put(entry, "tools", fromCapability(model.tools));
+        put(entry, "parallelToolCalls", fromCapability(model.parallelToolCalls));
+        put(entry, "supportsToolChoice", fromCapability(model.supportsToolChoice));
         return entry;
     });
 

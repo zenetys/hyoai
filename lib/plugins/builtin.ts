@@ -10,16 +10,29 @@ export const BUILTIN_SERVER_TYPES: ServerTypeDefinition[] = [
     {
         id: "llama.cpp",
         transport: streamOpenAiCompatChat,
-        capabilities: { runtimeProps: true, tokenize: true, listModels: true, contextProbe: true },
+        capabilities: {
+            runtimeProps: true,
+            tokenize: true,
+            listModels: true,
+            contextProbe: true,
+            tools: true,
+            supportsToolChoice: true,
+        },
     },
     {
         id: "vllm",
         transport: streamOpenAiCompatChat,
-        capabilities: { tokenize: true, listModels: true, contextProbe: true },
+        capabilities: {
+            tokenize: true,
+            listModels: true,
+            contextProbe: true,
+            tools: true,
+            supportsToolChoice: true,
+        },
     },
     {
         id: "openai",
         transport: streamOpenAiCompatChat,
-        capabilities: { listModels: true, contextProbe: true },
+        capabilities: { listModels: true, contextProbe: true, tools: true },
     },
 ];

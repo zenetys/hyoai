@@ -53,6 +53,9 @@ const modelSchema = z.object({
     modalities: modalitiesSchema.optional(),
     supportsThinking: z.boolean().optional(),
     runtimeProps: z.boolean().optional(),
+    tools: z.boolean().optional(),
+    parallelToolCalls: z.boolean().optional(),
+    supportsToolChoice: z.boolean().optional(),
 });
 
 const integrationSchema = z.object({
@@ -105,6 +108,9 @@ function resolveCapabilities(
         modalities?: ModalityFlags;
         supportsThinking?: boolean;
         runtimeProps?: boolean;
+        tools?: boolean;
+        parallelToolCalls?: boolean;
+        supportsToolChoice?: boolean;
     },
 ): {
     modalities?: ModalityFlags;
@@ -113,6 +119,9 @@ function resolveCapabilities(
     tokenize: boolean;
     listModels: boolean;
     contextProbe: boolean;
+    tools: boolean | undefined;
+    parallelToolCalls: boolean | undefined;
+    supportsToolChoice: boolean;
     issue?: ModelIssue;
 } {
     const definition = getServerType(type);
@@ -138,6 +147,11 @@ function resolveCapabilities(
         tokenize: capabilities?.tokenize === true,
         listModels,
         contextProbe: capabilities?.contextProbe === true,
+        tools: capabilities?.tools ? entry.tools : false,
+        parallelToolCalls: capabilities?.tools ? entry.parallelToolCalls : undefined,
+        supportsToolChoice:
+            Boolean(capabilities?.tools) &&
+            (entry.supportsToolChoice ?? capabilities?.supportsToolChoice ?? false),
         issue,
     };
 }

@@ -63,6 +63,14 @@ export interface ModalityFlags {
  * when absent the endpoint's GET /v1/models is queried and every model it
  * lists becomes selectable (llama.cpp, llama-swap). The file is the single
  * source of truth: only the active choice is persisted locally.
+ *
+ * Tool calling ("tools") is authored: true turns it on, false off, and unset
+ * leaves it to the server probe; it is resolved to false when the server type
+ * cannot carry tools. The "parallelToolCalls" flag is authored and lets the
+ * model call several tools in one step. The "supportsToolChoice", "tokenize"
+ * and "listModels" flags are resolved from the server type, and the entry can
+ * override "supportsToolChoice". The "issue" field is set when the entry cannot
+ * be used as authored, the entry then being disabled.
  */
 export interface ModelConfig {
     id: string;
@@ -81,6 +89,9 @@ export interface ModelConfig {
     modalities?: ModalityFlags;
     supportsThinking?: boolean;
     runtimeProps?: boolean;
+    tools?: boolean;
+    parallelToolCalls?: boolean;
+    supportsToolChoice?: boolean;
     tokenize?: boolean;
     listModels?: boolean;
     contextProbe?: boolean;
@@ -158,6 +169,8 @@ export interface ModelListState {
 /**
  * Subset of llama.cpp GET /props surfaced in the UI: capability gating for
  * attachments, context size for the context bar and the model info dialog.
+ * The toolCalls field is set when the chat template handles tools, so the
+ * server can take tool calls.
  */
 export interface ServerProps {
     modelPath?: string;
@@ -167,6 +180,7 @@ export interface ServerProps {
     buildInfo?: string;
     chatTemplate?: string;
     modalities?: { vision?: boolean; audio?: boolean };
+    toolCalls?: boolean;
 }
 
 /**

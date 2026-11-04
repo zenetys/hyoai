@@ -29,6 +29,9 @@ export type Transport = (
  * the models an entry without a pinned model can use. The contextProbe flag says
  * the context size can be read from GET /get_model_info, /get_server_info or
  * /props on a type that has no runtimeProps; a type without it is never probed.
+ * The tools flag says the transport can offer tools to the model and read the
+ * calls it makes. The supportsToolChoice flag says the server accepts the
+ * tool_choice field of a chat request.
  */
 export interface ServerTypeCapabilities {
     supportsThinking?: boolean;
@@ -36,6 +39,8 @@ export interface ServerTypeCapabilities {
     tokenize?: boolean;
     listModels?: boolean;
     contextProbe?: boolean;
+    tools?: boolean;
+    supportsToolChoice?: boolean;
 }
 
 /**

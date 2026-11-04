@@ -30,6 +30,7 @@ import {
     type DraftIntegration,
     type DraftLevel,
     type DraftModel,
+    newDraftModel,
     rawToDraft,
 } from "@/lib/draft";
 import { describeOverride, diffConfig, pruneOverride } from "@/lib/merge";
@@ -163,27 +164,7 @@ export function ConfigTab() {
 
     const addModel = () =>
         patch({
-            models: [
-                {
-                    id: "",
-                    name: "",
-                    shortName: "",
-                    baseUrl: "",
-                    model: "",
-                    type: "llama.cpp",
-                    apiKey: "",
-                    headers: "",
-                    streaming: true,
-                    sendContext: true,
-                    disabled: false,
-                    thinking: "",
-                    effort: "",
-                    modalities: "",
-                    supportsThinking: "auto",
-                    runtimeProps: "auto",
-                },
-                ...draft.models,
-            ],
+            models: [newDraftModel(), ...draft.models],
         });
     const addLevel = () =>
         patch({ effortLevels: [...draft.effortLevels, { id: "", label: "", body: "" }] });

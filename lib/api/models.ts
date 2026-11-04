@@ -96,6 +96,17 @@ export async function listModels(
 }
 
 /**
+ * Whether a chat template renders tools and tool calls, which is how llama.cpp
+ * tells that the loaded model can take them when it reports nothing explicit.
+ *
+ * @param template - Jinja chat template, if the server exposed it
+ * @returns true when the template mentions both tools and tool calls
+ */
+function templateUsesTools(template: string | undefined): boolean {
+    return template !== undefined && /\btools\b/.test(template) && /\btool_calls?\b/.test(template);
+}
+
+/**
  * Fetch the llama.cpp server properties through GET /props: model path and
  * alias, effective context size, slots, build info, chat template and the
  * input modalities used to gate attachment types.
@@ -133,6 +144,7 @@ export async function fetchProps(
     const source = (body ?? {}) as Record<string, unknown>;
     const str = (key: string): string | undefined =>
         typeof source[key] === "string" ? (source[key] as string) : undefined;
+    const caps = source.chat_template_caps as { supports_tool_calls?: unknown } | undefined;
     const generation = source.default_generation_settings as { n_ctx?: unknown } | undefined;
     const modalities = source.modalities as { vision?: unknown; audio?: unknown } | undefined;
 
@@ -143,6 +155,12 @@ export async function fetchProps(
         totalSlots: typeof source.total_slots === "number" ? source.total_slots : undefined,
         buildInfo: str("build_info"),
         chatTemplate: str("chat_template"),
+        toolCalls:
+            typeof caps?.supports_tool_calls === "boolean"
+                ? caps.supports_tool_calls
+                : str("chat_template_tool_use")
+                  ? true
+                  : templateUsesTools(str("chat_template")),
         modalities:
             modalities !== null && typeof modalities === "object"
                 ? {
