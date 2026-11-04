@@ -19,8 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { Capability, DraftModel } from "@/lib/draft";
-import { SERVER_TYPES } from "@/types/server";
-import type { ServerType } from "@/types/server";
+import { listServerTypes } from "@/lib/plugins/registry";
 
 /**
  * DOM id of a model card, so the config tab can scroll one entry into view and
@@ -68,6 +67,7 @@ export function ModelEditor({
 }) {
     const t = useTranslations("settings");
     const title = model.id || t("config.modelUntitled");
+    const serverTypes = listServerTypes().map((definition) => definition.id);
 
     return (
         <EditableCard
@@ -139,19 +139,21 @@ export function ModelEditor({
                 <div className="space-y-1.5">
                     <Label>{t("config.serverType")}</Label>
                     <p className="text-xs text-muted-foreground">{t("config.serverTypeHint")}</p>
-                    <Select
-                        value={model.type}
-                        onValueChange={(value) => onChange({ type: value as ServerType })}
-                    >
+                    <Select value={model.type} onValueChange={(value) => onChange({ type: value })}>
                         <SelectTrigger className="w-full">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {SERVER_TYPES.map((type) => (
+                            {serverTypes.map((type) => (
                                 <SelectItem key={type} value={type}>
                                     {type}
                                 </SelectItem>
                             ))}
+                            {!serverTypes.includes(model.type) && (
+                                <SelectItem value={model.type}>
+                                    {t("config.serverTypeNotInstalled", { type: model.type })}
+                                </SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>

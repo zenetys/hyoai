@@ -28,6 +28,12 @@ export function ModelEntryList({ entries, lists }: ModelEntryListProps) {
     const { isMobile } = useResponsiveMenuSurface();
     const { activeEntryId, activeUpstream } = useModelMenu();
 
+    const disabledReason = (entry: ModelConfig): string => {
+        if (entry.issue === "unknownType") return t("modelUnknownType", { type: entry.type });
+        if (entry.issue === "modelRequiresPin") return t("modelRequiresPin");
+        return t("modelDisabled");
+    };
+
     /**
      * A disabled entry: greyed and unselectable, with the reason on hover
      * (desktop) or shown inline (mobile, no hover).
@@ -43,7 +49,9 @@ export function ModelEntryList({ entries, lists }: ModelEntryListProps) {
                 >
                     <Ban aria-hidden="true" className="shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-                    <span className="shrink-0 text-xs">{t("modelDisabled")}</span>
+                    <span className="shrink-0 text-xs">
+                        {entry.issue ? disabledReason(entry) : t("modelDisabled")}
+                    </span>
                 </div>
             );
         }
@@ -59,7 +67,7 @@ export function ModelEntryList({ entries, lists }: ModelEntryListProps) {
                             <span className="min-w-0 flex-1 truncate">{entry.name}</span>
                         </span>
                     </TooltipTrigger>
-                    <TooltipContent>{t("modelDisabled")}</TooltipContent>
+                    <TooltipContent>{disabledReason(entry)}</TooltipContent>
                 </Tooltip>
             </div>
         );

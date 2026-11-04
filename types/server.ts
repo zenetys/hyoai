@@ -13,9 +13,6 @@ export type ServerType = string;
  */
 export type ModelIssue = "unknownType" | "modelRequiresPin";
 
-// Deprecated: the settings selector still lists these until it reads the registry.
-export const SERVER_TYPES = ["llama.cpp", "vllm", "openai", "rag-sse"] as const;
-
 /**
  * Request-body fragments merged into a completion when the thinking toggle is
  * on or off. Each fragment is backend-specific so the same toggle adapts to any
