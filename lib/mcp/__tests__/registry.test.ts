@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { McpSession, OpenSession } from "@/lib/mcp/connection";
 import {
     mcpStore,
+    providerIdsOutsideScope,
     reconnectMcpServer,
     syncMcpServers,
 } from "@/lib/mcp/registry";
@@ -214,5 +215,21 @@ describe("reconnectMcpServer", () => {
 
     it("ignores an unknown server", async () => {
         await expect(reconnectMcpServer("nope")).resolves.toBeUndefined();
+    });
+});
+
+describe("providerIdsOutsideScope", () => {
+    const wiki: McpServerDefinition = { id: "my-wiki", url: "/mcp/wiki" };
+
+    it("leaves nothing out without a scope", () => {
+        syncMcpServers([docs, wiki], open);
+        expect(providerIdsOutsideScope(undefined)).toEqual([]);
+    });
+
+    it("leaves out the servers the scope does not list, by provider id", () => {
+        syncMcpServers([docs, wiki], open);
+        expect(providerIdsOutsideScope(["docs"])).toEqual(["myWiki"]);
+        expect(providerIdsOutsideScope(["docs", "my-wiki", "gone"])).toEqual([]);
+        expect(providerIdsOutsideScope([])).toEqual(["docs", "myWiki"]);
     });
 });

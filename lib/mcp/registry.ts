@@ -151,6 +151,21 @@ export function syncMcpServers(
 }
 
 /**
+ * Tool provider ids of the registered servers a model is not scoped to, to keep
+ * them out of its turns.
+ *
+ * @param scope - Server ids the model may use; undefined means every server
+ * @returns Provider ids to leave out, none when there is no scope
+ */
+export function providerIdsOutsideScope(scope: string[] | undefined): string[] {
+    if (!scope) return [];
+    const allowed = new Set(scope);
+    return [...entries.values()]
+        .filter((entry) => !allowed.has(entry.definition.id))
+        .map((entry) => entry.providerId);
+}
+
+/**
  * Drop a server's connection and tool list and connect again, for the retry
  * button of a server in error. Failures show in the server's status.
  *

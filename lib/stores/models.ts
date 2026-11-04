@@ -1,9 +1,12 @@
 import { fetchContextWindow, fetchProps, listModels } from "@/lib/api/models";
 import { loadAppConfig, loadBaseRaw, normalizeConfig } from "@/lib/config";
 import { buildConfig, rawToDraft, settleOverride } from "@/lib/draft";
+import { applyMcpServers } from "@/lib/mcp/lifecycle";
 import { type ConfigOverride, diffConfig } from "@/lib/merge";
 import { loadJson, removeKey, scheduleJson, writeJsonNow } from "@/lib/storage/persistence";
 import { createStore } from "@/lib/store";
+import { uiStore } from "@/lib/stores/ui";
+import type { McpServerConfig } from "@/types/mcp";
 import type {
     ConfigStatus,
     DiscoveredModelMeta,
@@ -27,6 +30,7 @@ interface ModelsState {
     lists: Record<string, ModelListState>;
     props: Record<string, PropsState>;
     integrations: IntegrationConfig[];
+    mcpServers: McpServerConfig[];
     appName?: string;
     configStatus: ConfigStatus;
     configError?: string;
@@ -42,6 +46,7 @@ export const modelsStore = createStore<ModelsState>({
     lists: {},
     props: {},
     integrations: [],
+    mcpServers: [],
     configStatus: "loading",
     hasOverride: false,
     appliedTick: 0,
@@ -110,7 +115,7 @@ export async function initModels(): Promise<void> {
         return;
     }
 
-    const { models, defaultModel, integrations, appName } = result.config;
+    const { models, defaultModel, integrations, mcpServers, appName } = result.config;
     const selectable = (id: string) => models.some((entry) => entry.id === id && !entry.disabled);
     const stored = persisted?.activeEntryId;
     const activeEntryId =
@@ -135,10 +140,13 @@ export async function initModels(): Promise<void> {
         lists: keep(previous.lists),
         props: keep(previous.props),
         integrations: integrations ?? [],
+        mcpServers,
         appName,
         configStatus: "ready",
         hasOverride,
     });
+
+    applyMcpServers(mcpServers, uiStore.getState().embed);
 
     void refreshAllModelLists();
     const active = models.find((entry) => entry.id === activeEntryId);

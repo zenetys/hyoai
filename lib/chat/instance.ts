@@ -30,6 +30,7 @@ import {
 } from "@/lib/conversation";
 import { resolveEffortLevel } from "@/lib/effort";
 import { getTranslator } from "@/lib/i18n";
+import { providerIdsOutsideScope } from "@/lib/mcp/registry";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
 import {
@@ -1306,7 +1307,15 @@ export class ChatInstance {
         const props = modelsStore.getState().props[entry.id]?.props ?? null;
         if (!resolveToolSupport(entry, props)) return null;
 
-        const set = await collectToolSet(settings, signal);
+        // A model scoped to some MCP servers does not see the others, whatever their policy.
+        const scoped = {
+            ...settings,
+            disabledProviders: [
+                ...settings.disabledProviders,
+                ...providerIdsOutsideScope(entry.mcpServers),
+            ],
+        };
+        const set = await collectToolSet(scoped, signal);
         if (signal.aborted) return null;
         for (const provider of set.failed) {
             toast.error(getTranslator("chat")("toolProviderFailed", { provider }));
