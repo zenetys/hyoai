@@ -29,7 +29,7 @@ import {
     stripTrailingAssistant,
 } from "@/lib/conversation";
 import { resolveEffortLevel } from "@/lib/effort";
-import { getTranslator } from "@/lib/i18n";
+import { getTranslator, translateKey } from "@/lib/i18n";
 import { providerIdsOutsideScope } from "@/lib/mcp/registry";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
@@ -48,7 +48,7 @@ import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, setToolPolicy } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
 import { uiStore } from "@/lib/stores/ui";
-import { collectToolSet, policyFor, type ToolSet } from "@/lib/tools/catalog";
+import { collectToolSet, listToolProviders, policyFor, type ToolSet } from "@/lib/tools/catalog";
 import { flowHeadOf, flowRootOf, flowStages, unansweredCalls } from "@/lib/tools/flow";
 import { MAX_CALLS_PER_STEP, parseToolArguments, runToolCall } from "@/lib/tools/runner";
 import { resolveToolSupport } from "@/lib/tools/support";
@@ -1317,7 +1317,9 @@ export class ChatInstance {
         };
         const set = await collectToolSet(scoped, signal);
         if (signal.aborted) return null;
-        for (const provider of set.failed) {
+        for (const id of set.failed) {
+            const label = listToolProviders().find((provider) => provider.id === id)?.label;
+            const provider = (label && translateKey(label.key, label.values)) || label?.text || id;
             toast.error(getTranslator("chat")("toolProviderFailed", { provider }));
         }
         return set.definitions.length > 0 ? set : null;
