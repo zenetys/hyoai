@@ -32,7 +32,9 @@
         "stopGeneration": "Stop generation",
         "generationDone": "Generation complete — click to view",
         "deleteTitle": "Delete conversation",
-        "deleteDescription": "This conversation and all its branches will be permanently deleted."
+        "deleteDescription": "This conversation and all its branches will be permanently deleted.",
+        "awaitingApproval": "Waiting for your approval",
+        "runningTool": "Running a tool…"
     },
     "header": {
         "selectModel": "Select a model",
@@ -118,7 +120,35 @@
         "errorAuth": "Authentication refused: check the server API key.",
         "errorHttp": "The server returned an error: {message}",
         "errorStream": "The stream was interrupted: {message}",
-        "errorTimeout": "The server did not start answering in time and looks unreachable."
+        "errorTimeout": "The server did not start answering in time and looks unreachable.",
+        "toolCalls": "{count, plural, one {# tool call} other {# tool calls}}",
+        "toolStatusPending": "Waiting for approval",
+        "toolStatusRunning": "Running…",
+        "toolStatusDone": "Done",
+        "toolStatusError": "Failed",
+        "toolStatusDenied": "Denied",
+        "toolStatusCancelled": "Cancelled",
+        "toolStatusNotRun": "Not run",
+        "toolArguments": "Arguments",
+        "toolResult": "Result",
+        "toolTruncated": "Truncated: {omitted} characters were not sent to the model",
+        "toolPreparing": "Preparing {name}…",
+        "toolApprovalTitle": "Allow {tool} to run?",
+        "toolNoArguments": "No arguments",
+        "toolApprovalDescription": "{provider} will receive the arguments below.",
+        "toolApprovalNoArguments": "{provider} will receive no arguments.",
+        "toolApprovalReadOnly": "Declared read-only by its provider",
+        "toolAllowOnce": "Allow once",
+        "toolAllowAlways": "Always allow",
+        "toolDeny": "Deny",
+        "toolStepLimit": "Stopped after {steps} steps.",
+        "toolInterrupted": "Some tool calls did not run.",
+        "toolContinue": "Continue",
+        "toolAnswerNow": "Answer without tools",
+        "flowStepStage": "Step {step}",
+        "imageBlocked": "Image not loaded: {url}",
+        "toolProviderFailed": "Tools from {provider} are unavailable for this answer.",
+        "errorToolsRejected": "The server rejected the tools ({message}). Start llama.cpp with --jinja or vLLM with --enable-auto-tool-choice, or set \"tools\" to false on this entry."
     },
     "composer": {
         "placeholder": "Send a message...",
@@ -141,7 +171,21 @@
         "systemMessageDescription": "Sent at the top of this conversation, overriding the global system prompt setting.",
         "systemMessagePlaceholder": "You are a helpful assistant...",
         "enterHint": "Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line",
-        "disabledNoModel": "No model available (config.json)"
+        "disabledNoModel": "No model available (config.json)",
+        "tools": "Tools",
+        "toolsEnabledState": "Enabled for this conversation",
+        "toolsDisabledState": "Disabled for this conversation",
+        "toolsMaster": "Tools for this conversation",
+        "toolsProviders": "Providers",
+        "toolsGlobal": "Global setting",
+        "toolsProviderSwitch": "Offer the tools of {provider} to models",
+        "toolsCount": "{count, plural, one {# tool} other {# tools}}",
+        "toolsListFailed": "The tools could not be listed",
+        "toolsPending": "A call is waiting for your approval in the conversation.",
+        "toolsManage": "Manage in settings",
+        "toolsUnsupported": "This model does not support tools.",
+        "toolsOffNotice": "This conversation used tools, which are off for now.",
+        "toolsOffEnable": "Enable"
     },
     "contextBar": {
         "context": "Context: {used}/{total} ({percent}%)",
@@ -183,7 +227,9 @@
         "sendingTo": "{count, plural, one {Sending to # pane of {total}} other {Sending to # panes of {total}}}",
         "skippedList": "Skipped: {names}",
         "noTarget": "No pane can receive this message right now.",
-        "closedRunning": "The answer keeps generating in the background. You will find it in the sidebar."
+        "closedRunning": "The answer keeps generating in the background. You will find it in the sidebar.",
+        "awaitingApproval": "A tool call needs your approval in this pane",
+        "closedAwaitingApproval": "This answer is waiting for your approval of a tool call. Open it from the sidebar to decide."
     },
     "availability": {
         "unavailable": "Unavailable",
@@ -228,7 +274,9 @@
         "parallelSlots": "Parallel Slots",
         "buildInfo": "Build Info",
         "chatTemplate": "Chat template",
-        "tokensUnit": "tokens"
+        "tokensUnit": "tokens",
+        "toolCalling": "Tool calling",
+        "toolCallingDetected": "Yes (detected from the chat template)"
     },
     "settings": {
         "title": "Settings",
@@ -238,7 +286,8 @@
             "general": "General",
             "generation": "Generation",
             "data": "Data",
-            "config": "Config"
+            "config": "Config",
+            "tools": "Tools"
         },
         "general": {
             "appearanceTitle": "Appearance",
@@ -257,7 +306,7 @@
             "expandGroup": "Expand after the answer",
             "expandReasoning": "Expand reasoning",
             "expandReasoningDescription": "Keep the thinking block open once the answer is done.",
-            "expandSearch": "Expand search",
+            "expandSearch": "Expand search and tool activity",
             "expandSearchDescription": "Keep the search panel open once the answer is done.",
             "expandSources": "Expand sources",
             "expandSourcesDescription": "Show the sources expanded under the answer.",
@@ -480,7 +529,33 @@
                 "added": "added",
                 "modified": "modified",
                 "removed": "removed"
-            }
+            },
+            "tools": "Tool calling",
+            "toolsHint": "Auto: on only when llama.cpp's chat template supports tools. vLLM needs --enable-auto-tool-choice --tool-call-parser.",
+            "parallelToolCalls": "Parallel tool calls",
+            "supportsToolChoice": "Send tool_choice",
+            "supportsToolChoiceHint": "Off for servers that reject the field (e.g. Ollama)."
+        },
+        "tools": {
+            "title": "Tool calling",
+            "description": "Lets models call tools while answering. Every call is shown and asks for your approval unless you allow it.",
+            "enabledByDefault": "Enable tools in new conversations",
+            "enabledByDefaultDescription": "The toggle in the composer still applies per conversation.",
+            "maxSteps": "Maximum steps per answer",
+            "maxStepsDescription": "Model requests in one answer before asking to continue (1 to 50).",
+            "defaultPolicy": "Default approval",
+            "policyAsk": "Ask each time",
+            "policyAllow": "Always allow",
+            "policyDeny": "Disabled",
+            "defaultPolicyWarning": "Tools will run without asking. A tool result can contain instructions that steer the model.",
+            "maxResultChars": "Result size limit",
+            "maxResultCharsDescription": "Characters of one result sent to the model; the rest is cut.",
+            "providers": "Tool providers",
+            "noProviders": "No tool provider is installed.",
+            "listFailed": "The tools of this provider could not be listed.",
+            "providerEnabled": "Offer the tools of {provider} to models",
+            "resetApprovals": "Reset approvals",
+            "resetApprovalsDone": "Every tool asks again."
         }
     },
     "errors": {
@@ -504,6 +579,21 @@
         "runningSummaryLabel": "Cumulative summary of the previous parts:\n\n{summary}",
         "partialAnalysisHeader": "--- Analysis of part {index} ---",
         "synthesisUserTemplate": "User request:\n{demand}\n\nPartial analyses:\n\n{body}",
-        "quoteReply": "{content}\n\nIn reply to this passage:\n\n{quoted}"
+        "quoteReply": "{content}\n\nIn reply to this passage:\n\n{quoted}",
+        "toolDenied": "The user denied this tool call. Do not retry it; continue without it.",
+        "toolCancelled": "This tool call was cancelled before it ran.",
+        "toolSkipped": "Not executed: the step limit was reached. Answer with the information you already have.",
+        "toolUnknown": "Unknown tool \"{name}\". Use only the tools provided.",
+        "toolBadArguments": "Invalid arguments: {error}. Send a JSON object matching the tool schema.",
+        "toolFailed": "The tool failed: {message}",
+        "toolTimeout": "The tool did not answer within {seconds} s.",
+        "toolTruncated": "[Result truncated: {omitted} characters omitted.]",
+        "toolTooMany": "Too many tool calls in one step; at most {max} are run.",
+        "speakerTool": "Tool {name}",
+        "toolCallLine": "[called {calls}]"
+    },
+    "tools": {
+        "clock": "Clock",
+        "clockCurrentTime": "Current time"
     }
 }
