@@ -514,7 +514,8 @@
                 "general": "Général",
                 "models": "Modèles",
                 "effort": "Effort",
-                "integrations": "Intégrations"
+                "integrations": "Intégrations",
+                "mcp": "Serveurs MCP"
             },
             "itemAppName": "Nom de l'application",
             "itemDefaultModel": "Modèle par défaut",
@@ -524,6 +525,7 @@
             "itemModel": "Modèle : {name}",
             "itemLevel": "Niveau d'effort : {name}",
             "itemIntegration": "Intégration : {name}",
+            "itemMcpServer": "Serveur MCP : {name}",
             "itemRemoved": "Restaurer : {name}",
             "mode": {
                 "added": "ajouté",
