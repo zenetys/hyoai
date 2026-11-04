@@ -9,14 +9,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStore } from "@/hooks/useStore";
 import { bootApp, bootEmbed } from "@/lib/boot";
+import { MESSAGES } from "@/lib/i18n";
 import { onQuotaError } from "@/lib/storage/persistence";
 import { localeStore } from "@/lib/stores/locale";
 import { openSettings, uiStore } from "@/lib/stores/ui";
 import { getEmbedConfig } from "@/lib/url";
-import en from "@/messages/en.json";
-import fr from "@/messages/fr.json";
-
-const MESSAGES = { fr, en } as const;
 
 /**
  * Surfaces storage quota failures as a translated toast.
