@@ -17,6 +17,8 @@ export function errorText(
     switch (node.errorKind) {
         case "network":
             return t("errorNetwork");
+        case "timeout":
+            return t("errorTimeout");
         case "auth":
             return t("errorAuth");
         case "stream":

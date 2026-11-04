@@ -33,6 +33,7 @@ import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/p
 import { createStore, type Store } from "@/lib/store";
 import { type ChatState, createChatStore, IDLE_STREAMING } from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
+import { reportRequest, watchConnection } from "@/lib/stores/health";
 import { liveStore, setGenerationDone, setLivePreview, setLiveStatus } from "@/lib/stores/live";
 import { modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
@@ -484,6 +485,14 @@ export class ChatInstance {
         let content = "";
         let reasoning = "";
 
+        // The server went silent and a probe found it down; the request is cut for that reason.
+        let serverDead = false;
+        let answered = false;
+        const connection = watchConnection(entry, settings.availability.connectCheckSeconds, () => {
+            serverDead = true;
+            controller.abort();
+        });
+
         let activity: ActivityStep[] = [];
         let citations: Citation[] | undefined;
         let firstTokenAt: number | null = null;
@@ -534,6 +543,11 @@ export class ChatInstance {
 
         try {
             for await (const event of streamChatCompletion(entry, params, controller.signal)) {
+                connection.touch();
+                if (!answered && event.type !== "error") {
+                    answered = true;
+                    reportRequest(entry, "answered");
+                }
                 switch (event.type) {
                     case "content":
                         if (firstTokenAt === null) firstTokenAt = Date.now();
@@ -595,6 +609,7 @@ export class ChatInstance {
                         nodeError = event.error.message;
                         errorKind = event.error.kind;
                         finishReason = "error";
+                        reportRequest(entry, event.error);
                         break;
                     default: {
                         // Compile-time guard: a new event type must be handled above.
@@ -604,17 +619,23 @@ export class ChatInstance {
                 }
             }
         } catch (error) {
-            if (error instanceof ApiError && error.kind === "aborted") {
+            if (error instanceof ApiError && error.kind === "aborted" && serverDead) {
+                nodeError = "timeout";
+                errorKind = "timeout";
+                finishReason = "error";
+            } else if (error instanceof ApiError && error.kind === "aborted") {
                 finishReason = "aborted";
             } else if (error instanceof ApiError) {
                 nodeError = error.message;
                 errorKind = error.kind;
                 finishReason = "error";
+                reportRequest(entry, error);
             } else {
                 nodeError = error instanceof Error ? error.message : String(error);
                 finishReason = "error";
             }
         } finally {
+            connection.stop();
             this.abortRef = null;
             const completed = finishReason !== "aborted" && finishReason !== "error";
             if (completed) setGenerationDone(liveConvId);

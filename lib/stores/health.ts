@@ -165,7 +165,7 @@ export function reportRequest(entry: ModelConfig, outcome: "answered" | ApiError
     } else {
         setHealth(entry, {
             up: false,
-            reason: "unreachable",
+            reason: outcome.kind === "timeout" ? "timeout" : "unreachable",
             expiresAt: Date.now() + PASSIVE_DOWN_MS,
         });
     }
@@ -220,5 +220,60 @@ export function watchHealth(targets: () => ModelConfig[]): () => void {
         window.removeEventListener("focus", onWake);
         window.removeEventListener("online", onWake);
         document.removeEventListener("visibilitychange", onWake);
+    };
+}
+
+/**
+ * Watch a request for silence. After the given time with no stream event the
+ * server is probed, and the request is declared dead only when the probe says the
+ * server is down. A slow server that still answers (a CPU llama.cpp working
+ * through a long prompt) is never cut, and a server that cannot be probed is
+ * never cut either.
+ *
+ * @param entry - Entry the request went to
+ * @param seconds - Silence before the server is probed; 0 turns the watch off
+ * @param onDead - Called once, when the probe finds the server down
+ * @returns touch() to call on every stream event, stop() to end the watch
+ */
+export function watchConnection(
+    entry: ModelConfig,
+    seconds: number,
+    onDead: () => void,
+): { touch: () => void; stop: () => void } {
+    if (seconds <= 0 || !canProbe(entry)) return { touch: () => {}, stop: () => {} };
+
+    const windowMs = seconds * 1000;
+    let lastEvent = Date.now();
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tick = () => {
+        if (stopped) return;
+        const idle = Date.now() - lastEvent;
+        if (idle < windowMs) {
+            timer = setTimeout(tick, windowMs - idle);
+            return;
+        }
+        void probeEntry(entry).then((result) => {
+            if (stopped) return;
+            if (result === "down") {
+                stopped = true;
+                onDead();
+                return;
+            }
+            lastEvent = Date.now();
+            timer = setTimeout(tick, windowMs);
+        });
+    };
+    timer = setTimeout(tick, windowMs);
+
+    return {
+        touch: () => {
+            lastEvent = Date.now();
+        },
+        stop: () => {
+            stopped = true;
+            clearTimeout(timer);
+        },
     };
 }

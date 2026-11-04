@@ -65,7 +65,7 @@ export interface ApiTimings {
 }
 
 // Categorized API failure, mapped to i18n error messages in the UI.
-export type ApiErrorKind = "network" | "http" | "auth" | "stream" | "aborted";
+export type ApiErrorKind = "network" | "timeout" | "http" | "auth" | "stream" | "aborted";
 
 // Error thrown or yielded by the API client.
 export class ApiError extends Error {
