@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { memo, useState } from "react";
 
 import { AttachmentThumb } from "@/components/chat/composer/ComposerAttachments";
+import { ActivityTrace } from "@/components/chat/message/ActivityTrace";
 import { ChapterMessage } from "@/components/chat/message/ChapterMessage";
 import { MessageActions } from "@/components/chat/message/MessageActions";
 import { MessageActionSheet } from "@/components/chat/message/MessageActionSheet";
@@ -11,7 +12,6 @@ import { MessageEditor } from "@/components/chat/message/MessageEditor";
 import { MessageFooter } from "@/components/chat/message/MessageFooter";
 import { MessageQuoteBlock } from "@/components/chat/message/MessageQuoteBlock";
 import { ReasoningBlock } from "@/components/chat/message/ReasoningBlock";
-import { SearchProgress } from "@/components/chat/message/SearchProgress";
 import { Sources } from "@/components/chat/message/Sources";
 import { SummaryMessage } from "@/components/chat/message/SummaryMessage";
 import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
@@ -123,7 +123,8 @@ function AssistantMessage({
 
     const content = streaming ? streaming.content : node.content;
     const reasoning = streaming ? streaming.reasoning : (node.reasoningContent ?? "");
-    const rag = streaming ? streaming.rag : node.rag;
+    const activity = streaming ? streaming.activity : node.activity;
+    const citations = streaming ? streaming.citations : node.citations;
     const isThinking = Boolean(streaming && reasoning && !content);
     const isWaiting = Boolean(streaming && !content && !reasoning);
 
@@ -146,7 +147,7 @@ function AssistantMessage({
     return (
         <div className="group/message select-none" {...longPress.handlers}>
             <ReasoningBlock reasoning={reasoning} isThinking={isThinking} />
-            <SearchProgress rag={rag} isStreaming={Boolean(streaming)} />
+            <ActivityTrace steps={activity} isStreaming={Boolean(streaming)} />
             {isWaiting && (
                 <div className="flex items-center gap-1.5 py-2" aria-hidden="true">
                     <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" />
@@ -159,7 +160,7 @@ function AssistantMessage({
                     <MarkdownRenderer content={content} />
                 </div>
             )}
-            <Sources rag={rag} content={content} />
+            <Sources citations={citations} content={content} />
             {node.error && !streaming && (
                 <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {errorText(t, node)}

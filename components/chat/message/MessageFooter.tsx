@@ -6,6 +6,7 @@ import { Fragment, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocalizedText } from "@/hooks/useLocalizedText";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
 import { formatBytes, formatRate, formatSeconds, parseModelName } from "@/lib/format";
@@ -14,38 +15,25 @@ import { settingsStore } from "@/lib/stores/settings";
 import { storageStore } from "@/lib/stores/storage";
 import { openModelInfo } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
-import type { MessageNode, MessageStats } from "@/types/chat";
+import type { LocalizedText, MessageNode, MessageStats, StageTiming } from "@/types/chat";
 
 /// Phase of the footer stats
-type Phase = "reading" | "generation" | "pipeline" | "storage";
+type Phase = "reading" | "generation" | "stages" | "storage";
 
 /**
- * Build the per-stage pipeline breakdown as labeled "stage 1.2 s" parts, in
- * pipeline order and skipping stages that did not run.
+ * Build the per-stage breakdown as labeled "stage 1.2 s" parts, in the order the
+ * backend reported them.
  *
- * @param pipeline - Per-stage durations (ms) captured from the latencies event
- * @param t - chat namespace translator
+ * @param stages - Stage durations captured at the end of the generation
+ * @param localize - Resolves a stage label in the UI locale
  * @param locale - BCP 47 locale for number formatting
  */
-function pipelineParts(
-    pipeline: NonNullable<MessageStats["pipeline"]>,
-    t: ReturnType<typeof useTranslations<"chat">>,
+function stageParts(
+    stages: StageTiming[],
+    localize: (text: LocalizedText) => string,
     locale: string,
 ): string[] {
-    const stages: [number | undefined, string][] = [
-        [pipeline.intentDetection, t("pipelineIntent")],
-        [pipeline.queryDecomposition, t("pipelineDecomposition")],
-        [pipeline.embeddingGeneration, t("pipelineEmbedding")],
-        [pipeline.vectorSearch, t("pipelineVectorSearch")],
-        [pipeline.reranking, t("pipelineReranking")],
-        [pipeline.llmGeneration, t("pipelineGeneration")],
-        [pipeline.totalPipeline, t("pipelineTotal")],
-    ];
-    const parts: string[] = [];
-    for (const [ms, label] of stages) {
-        if (ms !== undefined) parts.push(`${label} ${formatSeconds(ms, locale)}`);
-    }
-    return parts;
+    return stages.map((stage) => `${localize(stage.label)} ${formatSeconds(stage.ms, locale)}`);
 }
 
 /**
@@ -140,6 +128,7 @@ export function MessageFooter({ node }: { node: MessageNode }) {
     const t = useTranslations("chat");
     const th = useTranslations("header");
     const locale = useLocale();
+    const localize = useLocalizedText();
     const { store } = useChatInstance();
     const showStats = useStore(settingsStore, (state) => state.settings.display.showStats);
     const entries = useStore(modelsStore, (state) => state.entries);
@@ -170,17 +159,17 @@ export function MessageFooter({ node }: { node: MessageNode }) {
     const partsByPhase: Record<Phase, string[]> = {
         reading: stats ? timingParts(stats, "reading", t, locale) : [],
         generation: stats ? timingParts(stats, "generation", t, locale) : [],
-        pipeline: stats?.pipeline ? pipelineParts(stats.pipeline, t, locale) : [],
+        stages: stats?.stages ? stageParts(stats.stages, localize, locale) : [],
         storage: storageParts,
     };
-    const phases = (["reading", "generation", "pipeline", "storage"] as Phase[]).filter(
+    const phases = (["reading", "generation", "stages", "storage"] as Phase[]).filter(
         (entry) => partsByPhase[entry].length > 0,
     );
     const activePhase: Phase = phases.includes(phase) ? phase : (phases[0] ?? "generation");
     const parts = partsByPhase[activePhase];
     const hasReading = partsByPhase.reading.length > 0;
     const hasGeneration = partsByPhase.generation.length > 0;
-    const hasPipeline = partsByPhase.pipeline.length > 0;
+    const hasStages = partsByPhase.stages.length > 0;
     const hasStorage = partsByPhase.storage.length > 0;
 
     const badge = parsed && (
@@ -243,11 +232,11 @@ export function MessageFooter({ node }: { node: MessageNode }) {
                                 <Sparkles aria-hidden="true" />
                             </ToggleButton>
                         )}
-                        {hasPipeline && (
+                        {hasStages && (
                             <ToggleButton
-                                active={activePhase === "pipeline"}
-                                label={t("statsPipeline")}
-                                onClick={() => setPhase("pipeline")}
+                                active={activePhase === "stages"}
+                                label={t("statsStages")}
+                                onClick={() => setPhase("stages")}
                             >
                                 <Workflow aria-hidden="true" />
                             </ToggleButton>
