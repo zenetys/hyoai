@@ -2,13 +2,131 @@ import { errorFromResponse, mapThrownError } from "@/lib/api/error";
 import { buildHeaders, buildUrl, stripUndefined } from "@/lib/api/request";
 import { parseSseStream } from "@/lib/api/sse";
 import { applyThinkingConfig, preservesThinking } from "@/lib/api/thinking";
+import { newCallId } from "@/lib/id";
 import {
     ApiError,
     type ApiStreamChunk,
+    type ApiToolCallDelta,
     type ChatRequestParams,
     type StreamEvent,
 } from "@/types/api";
+import type { ToolCall } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
+
+/**
+ * Assembles the tool calls a model streams. Servers key the fragments by index and
+ * spread a call's arguments over many chunks; vLLM sends each call whole in one
+ * chunk, and some servers send the arguments as an object. The accumulator hides
+ * all of that: it reports each fragment for display and hands out the finished
+ * calls once.
+ */
+class ToolCallAccumulator {
+    private slots: { id?: string; name: string; arguments: string }[] = [];
+    private byIndex = new Map<number, number>();
+    private emitted = false;
+
+    /**
+     * Whether any call has started and has not been handed out yet.
+     *
+     * @returns True while calls are pending
+     */
+    get pending(): boolean {
+        return !this.emitted && this.slots.length > 0;
+    }
+
+    /**
+     * Take in the fragments of one chunk.
+     *
+     * @param deltas - tool_calls of a streamed delta
+     * @returns One display event per fragment
+     */
+    push(deltas: ApiToolCallDelta[]): StreamEvent[] {
+        const events: StreamEvent[] = [];
+        for (const delta of deltas) {
+            if (delta === null || typeof delta !== "object") continue;
+
+            const position = this.slotFor(delta);
+            const slot = this.slots[position];
+
+            const id = typeof delta.id === "string" && delta.id !== "" ? delta.id : undefined;
+            if (id && !slot.id) slot.id = id;
+
+            const name = delta.function?.name;
+            if (typeof name === "string" && name !== "" && slot.name === "") slot.name = name;
+
+            const args = delta.function?.arguments;
+            let argumentsText: string | undefined;
+            if (typeof args === "string") {
+                slot.arguments += args;
+                argumentsText = args;
+            } else if (args !== null && typeof args === "object") {
+                slot.arguments = JSON.stringify(args);
+                argumentsText = slot.arguments;
+            }
+
+            events.push({
+                type: "toolCallDelta",
+                index: position,
+                id,
+                name: typeof name === "string" && name !== "" ? name : undefined,
+                arguments: argumentsText,
+            });
+        }
+        return events;
+    }
+
+    /**
+     * Find the slot a fragment belongs to, opening one when it is new. Fragments
+     * are matched by their index; without one, a new id opens a slot and a
+     * fragment without an id continues the last one.
+     *
+     * @param delta - The fragment
+     * @returns Position of its slot
+     */
+    private slotFor(delta: ApiToolCallDelta): number {
+        const open = (): number => {
+            this.slots.push({ name: "", arguments: "" });
+            return this.slots.length - 1;
+        };
+        if (typeof delta.index === "number") {
+            const known = this.byIndex.get(delta.index);
+            if (known !== undefined) return known;
+            const position = open();
+            this.byIndex.set(delta.index, position);
+            return position;
+        }
+        const last = this.slots.length - 1;
+        if (last < 0) return open();
+        const id = typeof delta.id === "string" && delta.id !== "" ? delta.id : undefined;
+        return id && this.slots[last].id && this.slots[last].id !== id ? open() : last;
+    }
+
+    /**
+     * The finished calls, in order. A call without a name is dropped, empty
+     * arguments become an empty object, and a missing or repeated id is replaced by
+     * a generated one so each call can be answered on its own. Handing them out
+     * marks them emitted.
+     *
+     * @returns The calls the model made
+     */
+    finalize(): ToolCall[] {
+        this.emitted = true;
+        const seen = new Set<string>();
+        const calls: ToolCall[] = [];
+        for (const slot of this.slots) {
+            if (slot.name === "") continue;
+            let id = slot.id;
+            while (!id || seen.has(id)) id = newCallId();
+            seen.add(id);
+            calls.push({
+                id,
+                name: slot.name,
+                arguments: slot.arguments.trim() === "" ? "{}" : slot.arguments,
+            });
+        }
+        return calls;
+    }
+}
 
 /**
  * Build the JSON body for a /v1/chat/completions request.
@@ -47,6 +165,16 @@ function buildChatBody(endpoint: ModelConfig, params: ChatRequestParams): Record
         body.repetition_penalty = penalties.repeatPenalty;
     }
 
+    // "none" on a server that rejects tool_choice drops the tools: they are offered only when asked
+    const tools = params.tools && params.tools.length > 0 ? params.tools : undefined;
+    if (tools && !(params.toolChoice === "none" && !endpoint.supportsToolChoice)) {
+        body.tools = tools;
+        if (params.toolChoice && endpoint.supportsToolChoice) body.tool_choice = params.toolChoice;
+        if (params.parallelToolCalls !== undefined) {
+            body.parallel_tool_calls = params.parallelToolCalls;
+        }
+    }
+
     applyThinkingConfig(body, endpoint, params);
 
     // The opt-in is read from the merged body, so an effort-level override counts too
@@ -76,6 +204,11 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
                 content?: string | null;
                 reasoning?: string | null;
                 reasoning_content?: string | null;
+                tool_calls?: {
+                    id?: string;
+                    type?: string;
+                    function?: { name?: string; arguments?: string | Record<string, unknown> };
+                }[];
             };
             finish_reason?: string | null;
         }[];
@@ -114,6 +247,13 @@ async function* eventsFromJsonCompletion(response: Response): AsyncGenerator<Str
                 completionTokens: body.usage.completion_tokens ?? 0,
             },
         };
+    }
+    const toolCalls = choice?.message?.tool_calls;
+    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+        const accumulator = new ToolCallAccumulator();
+        accumulator.push(toolCalls.map((call, index) => ({ ...call, index })));
+        const calls = accumulator.finalize();
+        if (calls.length > 0) yield { type: "toolCalls", calls };
     }
     yield { type: "finish", reason: choice?.finish_reason ?? "stop" };
 }
@@ -157,6 +297,7 @@ export async function* streamOpenAiCompatChat(
     }
 
     const payloads = parseSseStream(response);
+    const accumulator = new ToolCallAccumulator();
     for (;;) {
         let result: IteratorResult<string>;
         try {
@@ -165,6 +306,11 @@ export async function* streamOpenAiCompatChat(
             throw mapThrownError(err, "stream");
         }
         if (result.done) {
+            // A stream that ends without a finish reason still delivers the calls it carried.
+            if (accumulator.pending) {
+                const calls = accumulator.finalize();
+                if (calls.length > 0) yield { type: "toolCalls", calls };
+            }
             return;
         }
 
@@ -222,7 +368,15 @@ export async function* streamOpenAiCompatChat(
         if (choice.delta?.content) {
             yield { type: "content", text: choice.delta.content };
         }
+        if (Array.isArray(choice.delta?.tool_calls)) {
+            yield* accumulator.push(choice.delta.tool_calls);
+        }
         if (choice.finish_reason != null) {
+            // The calls complete under "tool_calls", and some servers report "stop" with them.
+            if (accumulator.pending) {
+                const calls = accumulator.finalize();
+                if (calls.length > 0) yield { type: "toolCalls", calls };
+            }
             yield { type: "finish", reason: choice.finish_reason };
         }
     }
