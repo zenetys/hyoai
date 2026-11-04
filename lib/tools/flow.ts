@@ -25,6 +25,29 @@ function isFlowNode(nodes: Record<string, MessageNode>, node: MessageNode): bool
 }
 
 /**
+ * Whether a tool result sits anywhere above a node on its branch. Such a result
+ * stays in the context of every later request, so it can steer text written turns
+ * after it, not only the answer that directly follows it.
+ *
+ * @param nodes - All nodes of the conversation
+ * @param nodeId - Node whose ancestors are inspected; the node itself is not tested
+ * @returns true when at least one ancestor is a tool result
+ */
+export function hasToolAncestor(nodes: Record<string, MessageNode>, nodeId: string): boolean {
+    const seen = new Set<string>([nodeId]);
+    let parentId = nodes[nodeId]?.parent;
+
+    while (parentId && !seen.has(parentId)) {
+        seen.add(parentId);
+        const parent: MessageNode | undefined = nodes[parentId];
+        if (!parent) return false;
+        if (parent.role === "tool") return true;
+        parentId = parent.parent;
+    }
+    return false;
+}
+
+/**
  * The user message a tool flow answers. A flow hangs from it as a chain: the
  * assistant message that called tools, its results, the next assistant message,
  * and so on up to the final answer.
