@@ -1566,7 +1566,14 @@ export class ChatInstance {
             return outcome;
         const node = this.store.getState().nodes[nodeId];
         if (!node) return outcome;
-        const leaked = detectLeakedMarkupBlock(node.content, [...flow.tools.byWireName.keys()]);
+        const schemas = Object.fromEntries(
+            [...flow.tools.byWireName].map(([name, resolved]) => [name, resolved.tool.inputSchema]),
+        );
+        const leaked = detectLeakedMarkupBlock(
+            node.content,
+            [...flow.tools.byWireName.keys()],
+            schemas,
+        );
         if (!leaked) return outcome;
 
         this.store.setState((current) => ({

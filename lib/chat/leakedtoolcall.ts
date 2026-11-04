@@ -99,7 +99,8 @@ function parseArgs(body: string): string {
     }
     const text = body.trim();
     if (!text) {
-        return "";
+        // A call with no parameters at all; the caller decides if the tool takes none.
+        return "{}";
     }
     try {
         JSON.parse(text);
@@ -153,6 +154,99 @@ function parseCall(segment: string): { name: string; args: string } | null {
 }
 
 /**
+ * Narrow a value to a plain object, leaving arrays and null out.
+ *
+ * @param value - Any parsed value
+ * @returns The value as a record, or null when it is not a plain object
+ */
+function asObject(value: unknown): Record<string, unknown> | null {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+}
+
+/**
+ * Tell whether a tool's input schema lists parameters the call must carry.
+ *
+ * @param schema - Input schema of the tool, in any shape
+ * @returns True when the schema has a non-empty required list
+ */
+function requiresArguments(schema: unknown): boolean {
+    const required = asObject(schema)?.required;
+    return Array.isArray(required) && required.length > 0;
+}
+
+/**
+ * Read one text value as the type its parameter declares; the text itself when unsure.
+ *
+ * @param value - Text taken from the markup
+ * @param declared - The type or list of types the schema declares for the parameter
+ * @returns The number, boolean, null, list or object the text spells out, or the text unchanged
+ */
+function coerceValue(value: string, declared: unknown): unknown {
+    const types = (Array.isArray(declared) ? declared : [declared]).filter(
+        (type): type is string => typeof type === "string",
+    );
+    if (types.length === 0 || types.includes("string")) {
+        return value;
+    }
+    const text = value.trim();
+    if (types.includes("integer") || types.includes("number")) {
+        const number = Number(text);
+        if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(text) && Number.isFinite(number)) {
+            if (types.includes("number") || Number.isInteger(number)) {
+                return number;
+            }
+        }
+    }
+    if (types.includes("boolean") && /^(true|false)$/i.test(text)) {
+        return text.toLowerCase() === "true";
+    }
+    if (types.includes("null") && text === "null") {
+        return null;
+    }
+    if (types.includes("array") || types.includes("object")) {
+        try {
+            const parsed: unknown = JSON.parse(text);
+            const kind = Array.isArray(parsed) ? "array" : asObject(parsed) ? "object" : null;
+            if (kind && types.includes(kind)) {
+                return parsed;
+            }
+        } catch {
+            // Not JSON: the text stays as it is.
+        }
+    }
+    return value;
+}
+
+/**
+ * Give the JSON arguments of a recovered call each value in the type its schema declares.
+ *
+ * @param args - Arguments as a JSON object string whose values are all text
+ * @param schema - Input schema of the tool, read for the type of each property
+ * @returns The arguments re-encoded with typed values, or the input when it cannot be read
+ */
+function coerceArgs(args: string, schema: unknown): string {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(args);
+    } catch {
+        return args;
+    }
+    const values = asObject(parsed);
+    const properties = asObject(asObject(schema)?.properties);
+    if (!values || !properties) {
+        return args;
+    }
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(values)) {
+        out[key] =
+            typeof value === "string" ? coerceValue(value, asObject(properties[key])?.type) : value;
+    }
+    return JSON.stringify(out);
+}
+
+/**
  * Recovery guard for engines whose chat parser fails to intercept a markup encoded
  * function invocation (a stranded stop on the multi-token turn-end marker): the whole
  * block then leaks into the plain text channel instead of arriving on the structured
@@ -165,13 +259,20 @@ function parseCall(segment: string): { name: string; args: string } | null {
  * complete, every parameter must parse, and every function name must resolve against
  * the registry. Any deviation yields null and leaves the text untouched.
  *
+ * With the input schemas of the tools, the text values of a block are turned into the
+ * numbers, booleans, lists and objects the schema asks for, since markup carries only
+ * text and a strict server would refuse "5" for an integer. A call without parameters
+ * is recovered only for a tool whose schema requires none.
+ *
  * @param text - The assistant text of one agent-loop pass
  * @param knownNames - Function names of the active tool registry
+ * @param schemas - Input schema of each function, by name, when known
  * @returns The recovered calls plus the text around the block, or null
  */
 export function detectLeakedMarkupBlock(
     text: string,
     knownNames: string[],
+    schemas?: Record<string, unknown>,
 ): LeakedMarkupBlock | null {
     if (!text.includes(CALL_OPEN)) {
         return null;
@@ -207,7 +308,12 @@ export function detectLeakedMarkupBlock(
         if (!parsed || !knownNames.includes(parsed.name) || parsed.args === "") {
             return null;
         }
-        calls.push({ id: newCallId(), name: parsed.name, arguments: parsed.args });
+        const schema = schemas?.[parsed.name];
+        if (parsed.args === "{}" && (!schema || requiresArguments(schema))) {
+            return null;
+        }
+        const args = schema ? coerceArgs(parsed.args, schema) : parsed.args;
+        calls.push({ id: newCallId(), name: parsed.name, arguments: args });
     }
     return calls.length > 0 ? { calls, prefix, raw: block } : null;
 }
