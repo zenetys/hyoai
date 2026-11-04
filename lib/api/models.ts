@@ -8,6 +8,21 @@ import type {
     ServerProps,
 } from "@/types/server";
 
+// How long a model list or props request may take before the server counts as silent.
+export const PROBE_TIMEOUT_MS = 10_000;
+
+/**
+ * Combine a caller's abort signal with the probe timeout, so a host that never
+ * answers (a blackholed address) fails instead of staying "loading" forever.
+ *
+ * @param signal - Optional abort signal from the caller
+ * @returns A signal that aborts on either the caller's abort or the timeout
+ */
+function withTimeout(signal?: AbortSignal): AbortSignal {
+    const timeout = AbortSignal.timeout(PROBE_TIMEOUT_MS);
+    return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 /**
  * Map the optional "meta" object of a /v1/models entry (llama.cpp GGUF
  * metadata) to its camelCase internal shape, keeping only numbers.
@@ -49,7 +64,7 @@ export async function listModels(
         response = await fetch(buildUrl(endpoint, "/v1/models"), {
             method: "GET",
             headers: buildHeaders(endpoint),
-            signal,
+            signal: withTimeout(signal),
         });
     } catch (err) {
         throw mapThrownError(err, "network");
@@ -98,7 +113,7 @@ export async function fetchProps(
         response = await fetch(buildUrl(endpoint, "/props"), {
             method: "GET",
             headers: buildHeaders(endpoint),
-            signal,
+            signal: withTimeout(signal),
         });
     } catch (err) {
         throw mapThrownError(err, "network");
