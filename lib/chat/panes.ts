@@ -14,6 +14,7 @@ import {
     startNewForeground,
     takeFromForeground,
 } from "@/lib/chat/foreground";
+import { stashDraft } from "@/lib/chat/handoff";
 import { ChatInstance } from "@/lib/chat/instance";
 import { type ChatModelSelection, globalSelection, pickFreeSelection } from "@/lib/chat/model";
 import { parseModelName } from "@/lib/format";
@@ -386,6 +387,7 @@ export function removePane(paneId: string): void {
  * @param options - keepLayout keeps the panes for the next time compare opens
  */
 export function exitCompare(survivorPaneId: string | null, options: { keepLayout: boolean }): void {
+    stashDraft();
     const survivor = compareStore.getState().panes.find((pane) => pane.paneId === survivorPaneId);
     const instance = survivor ? detachRuntime(survivor.paneId) : null;
     if (instance) {
@@ -409,6 +411,7 @@ export function exitCompare(survivorPaneId: string | null, options: { keepLayout
  * claims what it needs when it mounts.
  */
 export function openCompare(): void {
+    stashDraft();
     const hadPanes = compareStore.getState().panes.length > 0;
     setCompareEnabled(true);
     if (hadPanes) return;
@@ -474,6 +477,7 @@ export function startNewChat(): void {
 export function compareConversation(conversationId: string): void {
     const state = compareStore.getState();
     if (!state.enabled || state.panes.length === 0) {
+        stashDraft();
         setCompareEnabled(true);
         const live = takeFromForeground(conversationId);
         const current = live
