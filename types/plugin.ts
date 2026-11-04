@@ -26,16 +26,16 @@ export type Transport = (
  * thinking config on the entry. The runtimeProps flag says GET /props reports
  * the context size and modalities of the loaded model. The tokenize flag says
  * POST /tokenize counts tokens. The listModels flag says GET /v1/models lists
- * the models an entry without a pinned model can use. The tools flag says the
- * transport can offer tools to the model and read the calls it makes. The
- * supportsToolChoice flag says the server accepts the tool_choice field of a
- * chat request.
+ * the models an entry without a pinned model can use. The contextProbe flag says
+ * the context size can be read from GET /get_model_info, /get_server_info or
+ * /props on a type that has no runtimeProps; a type without it is never probed.
  */
 export interface ServerTypeCapabilities {
     supportsThinking?: boolean;
     runtimeProps?: boolean;
     tokenize?: boolean;
     listModels?: boolean;
+    contextProbe?: boolean;
 }
 
 /**

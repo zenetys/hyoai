@@ -1,7 +1,20 @@
-// Supported server types. Single source of truth: the config schema enum and
-// the settings selector both derive from this list.
+/**
+ * Value of a model entry's "type": a built-in server type or one declared by an
+ * installed plugin. The registry in lib/plugins/registry is the source of truth.
+ */
+export type ServerType = string;
+
+/**
+ * Why a model entry cannot be used as authored. The entry is kept in the config
+ * (so it can still be edited and saved untouched) but resolved as disabled.
+ * The issue is unknownType when no built-in type or installed plugin serves
+ * the entry's type, and modelRequiresPin when the type cannot list models so
+ * the entry must set "model".
+ */
+export type ModelIssue = "unknownType" | "modelRequiresPin";
+
+// Deprecated: the settings selector still lists these until it reads the registry.
 export const SERVER_TYPES = ["llama.cpp", "vllm", "openai", "rag-sse"] as const;
-export type ServerType = (typeof SERVER_TYPES)[number];
 
 /**
  * Request-body fragments merged into a completion when the thinking toggle is
@@ -71,6 +84,10 @@ export interface ModelConfig {
     modalities?: ModalityFlags;
     supportsThinking?: boolean;
     runtimeProps?: boolean;
+    tokenize?: boolean;
+    listModels?: boolean;
+    contextProbe?: boolean;
+    issue?: ModelIssue;
 }
 
 /**

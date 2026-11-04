@@ -445,7 +445,7 @@ export function setActiveModel(entryId: string | null, model?: string): void {
  * @param force - Re-fetch even when already resolved
  */
 export async function refreshModelList(entry: ModelConfig, force = false): Promise<void> {
-    if (entry.disabled || entry.model) return;
+    if (entry.disabled || entry.model || !entry.listModels) return;
 
     const current = modelsStore.getState().lists[entry.id];
     if (current?.status === "loading") return;
@@ -486,8 +486,9 @@ export async function refreshAllModelLists(force = false): Promise<void> {
 /**
  * Fetch the /props of an entry that advertises runtimeProps; entries without
  * the flag are probed for their context window through well-known info
- * endpoints instead. Skipped while a fetch runs or when already resolved,
- * unless forced (a model switch may change the loaded model behind a proxy).
+ * endpoints instead, when their server type says those exist. Skipped while a
+ * fetch runs or when already resolved, unless forced (a model switch may
+ * change the loaded model behind a proxy).
  *
  * @param entry - Config entry from config.json
  * @param force - Re-fetch even when already resolved
@@ -495,7 +496,7 @@ export async function refreshAllModelLists(force = false): Promise<void> {
 export async function refreshProps(entry: ModelConfig, force = false): Promise<void> {
     if (entry.disabled) return;
     if (!entry.runtimeProps) {
-        await refreshContextProbe(entry, force);
+        if (entry.contextProbe) await refreshContextProbe(entry, force);
         return;
     }
 

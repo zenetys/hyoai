@@ -1,12 +1,13 @@
 import { z } from "zod";
 
 import { mergeConfig } from "@/lib/merge";
+import { getServerType } from "@/lib/plugins/registry";
 import { loadJson } from "@/lib/storage/persistence";
-import { SERVER_TYPES } from "@/types/server";
 import type {
     AppConfig,
     IntegrationConfig,
     ModalityFlags,
+    ModelIssue,
     ServerType,
     ThinkingConfig,
 } from "@/types/server";
@@ -41,7 +42,7 @@ const modelSchema = z.object({
     shortName: z.string().min(1).optional(),
     baseUrl: z.string().min(1),
     model: z.string().optional(),
-    type: z.enum(SERVER_TYPES).catch("vllm"),
+    type: z.string().min(1).catch("vllm"),
     apiKey: z.string().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     streaming: z.boolean().catch(true),
@@ -86,29 +87,59 @@ export type AppConfigResult =
 export type ConfigSource = "override" | "file" | "missing";
 
 /**
- * Resolve the capability fields of a model entry from its backend "type",
- * letting an explicit config value override the default. This is the single
- * place where "type" informs a capability: every consumer reads the resolved
- * fields, never the backend name.
+ * Resolve the capability fields of a model entry from its server type, letting
+ * an explicit config value override the default. This is the single place where
+ * "type" informs a capability: every consumer reads the resolved fields, never
+ * the backend name. A type no installed plugin serves keeps every capability off
+ * and flags the entry as unusable.
  *
- * @param type - Backend type of the entry
- * @param thinking - Already-merged thinking config of the entry, if any
- * @param overrides - Explicit capability values authored in config
- * @returns Resolved modalities, supportsThinking and runtimeProps
+ * @param type - Server type of the entry
+ * @param entry - Authored entry fields the capabilities depend on
+ * @returns Resolved capabilities and the issue that makes the entry unusable, if any
  */
 function resolveCapabilities(
     type: ServerType,
-    thinking: ThinkingConfig | undefined,
-    overrides: { modalities?: ModalityFlags; supportsThinking?: boolean; runtimeProps?: boolean },
-): { modalities?: ModalityFlags; supportsThinking: boolean; runtimeProps: boolean } {
-    const runtimeProps = overrides.runtimeProps ?? type === "llama.cpp";
+    entry: {
+        thinking: ThinkingConfig | undefined;
+        model?: string;
+        modalities?: ModalityFlags;
+        supportsThinking?: boolean;
+        runtimeProps?: boolean;
+    },
+): {
+    modalities?: ModalityFlags;
+    supportsThinking: boolean;
+    runtimeProps: boolean;
+    tokenize: boolean;
+    listModels: boolean;
+    contextProbe: boolean;
+    issue?: ModelIssue;
+} {
+    const definition = getServerType(type);
+    const capabilities = definition?.capabilities;
+    const runtimeProps = entry.runtimeProps ?? capabilities?.runtimeProps === true;
     const modalities = runtimeProps
-        ? overrides.modalities
-        : { image: false, audio: false, ...overrides.modalities };
+        ? entry.modalities
+        : { image: false, audio: false, ...entry.modalities };
     const supportsThinking =
-        overrides.supportsThinking ??
-        (Boolean(thinking?.on || thinking?.off) || type === "rag-sse");
-    return { modalities, supportsThinking, runtimeProps };
+        entry.supportsThinking ??
+        (Boolean(entry.thinking?.on || entry.thinking?.off) ||
+            capabilities?.supportsThinking === true);
+    const listModels = capabilities?.listModels === true;
+    const issue: ModelIssue | undefined = !definition
+        ? "unknownType"
+        : !listModels && !entry.model
+          ? "modelRequiresPin"
+          : undefined;
+    return {
+        modalities,
+        supportsThinking,
+        runtimeProps,
+        tokenize: capabilities?.tokenize === true,
+        listModels,
+        contextProbe: capabilities?.contextProbe === true,
+        issue,
+    };
 }
 
 /**
@@ -158,12 +189,16 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
     const config: AppConfig = {
         models: parsed.data.models.map((entry) => {
             const thinking = entry.thinking ?? parsed.data.thinking;
+            const resolved = resolveCapabilities(entry.type, { ...entry, thinking });
             return {
                 ...entry,
                 name: entry.name ?? entry.id,
                 thinking,
                 effort: entry.effort ?? parsed.data.effort,
-                ...resolveCapabilities(entry.type, thinking, entry),
+                ...resolved,
+
+                // An entry that cannot work is kept, but never offered to the user.
+                disabled: entry.disabled || resolved.issue !== undefined,
             };
         }),
         appName: parsed.data.appName,

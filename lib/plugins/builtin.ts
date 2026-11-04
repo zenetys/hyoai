@@ -11,17 +11,17 @@ export const BUILTIN_SERVER_TYPES: ServerTypeDefinition[] = [
     {
         id: "llama.cpp",
         transport: streamOpenAiCompatChat,
-        capabilities: { runtimeProps: true, tokenize: true, listModels: true },
+        capabilities: { runtimeProps: true, tokenize: true, listModels: true, contextProbe: true },
     },
     {
         id: "vllm",
         transport: streamOpenAiCompatChat,
-        capabilities: { tokenize: true, listModels: true },
+        capabilities: { tokenize: true, listModels: true, contextProbe: true },
     },
     {
         id: "openai",
         transport: streamOpenAiCompatChat,
-        capabilities: { listModels: true },
+        capabilities: { listModels: true, contextProbe: true },
     },
 
     // Temporary: moves to the plugins folder once the generic event channel exists.

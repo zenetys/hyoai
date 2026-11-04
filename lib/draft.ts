@@ -1,4 +1,3 @@
-import { SERVER_TYPES } from "@/types/server";
 import type { ServerType } from "@/types/server";
 
 /**
@@ -133,9 +132,7 @@ export function rawToDraft(raw: unknown): Draft {
                 shortName: asString(model.shortName),
                 baseUrl: asString(model.baseUrl),
                 model: asString(model.model),
-                type: (SERVER_TYPES.includes(model.type as ServerType)
-                    ? model.type
-                    : "vllm") as ServerType,
+                type: asString(model.type) || "vllm",
                 apiKey: asString(model.apiKey),
                 headers: asJson(model.headers),
                 streaming: asBool(model.streaming),
