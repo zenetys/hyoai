@@ -89,9 +89,13 @@ export function addPaneDescriptor(descriptor: PaneDescriptor): void {
 
 export function removePaneDescriptor(paneId: string): void {
     compareStore.setState((state) => {
+        const index = state.panes.findIndex((pane) => pane.paneId === paneId);
         const panes = state.panes.filter((pane) => pane.paneId !== paneId);
+
+        // Focus the pane that took the closed slot, or the previous one when the last closed.
+        const neighbour = panes[Math.min(Math.max(index, 0), panes.length - 1)];
         const focusedPaneId =
-            state.focusedPaneId === paneId ? (panes[0]?.paneId ?? null) : state.focusedPaneId;
+            state.focusedPaneId === paneId ? (neighbour?.paneId ?? null) : state.focusedPaneId;
         return { panes, focusedPaneId };
     });
     persist();
