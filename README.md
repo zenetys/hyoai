@@ -432,8 +432,22 @@ types/          shared types (chat, server, settings, api, storage)
   stats (tokens, tok/s, duration); a thinking toggle and effort level in the
   model menu when declared in `config.json` (see above), per pane in compare mode
 
-- Compare mode: run the same prompt against two models side by side, each pane
-  keeping its own reasoning choice
+- Compare mode: run the same prompt against up to four models side by side, each
+  pane keeping its own model and reasoning choice. Closing a pane keeps its
+  conversation and lets a running answer finish in the background (it stays in
+  the sidebar); closing down to one pane returns to the single chat on that
+  conversation without interrupting it. The text typed in the composer follows
+  you in and out of the compare.
+
+- Model availability: when a model's server stops answering, the model is greyed
+  out as unavailable in the menus, the single-chat composer is blocked with the
+  reason and a Retry button, and a compare pane is greyed and skipped by the
+  shared send ("Sending to 2 panes of 3"). It comes back on its own once the
+  server answers again. A server counts as down only on a network error, a
+  timeout or a gateway 502/503/504, and a slow server that still answers is never
+  cut off. The "Disable unavailable models automatically" setting turns this off:
+  the model then stays selectable and the error shows on send. A model removed or
+  disabled in the configuration is never replaced by another one.
 
 - Markdown & sources: tables, code highlighting and blockquotes render inline;
   answers can carry source citations and a trace of the backend's steps
