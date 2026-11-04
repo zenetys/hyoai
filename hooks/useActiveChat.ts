@@ -84,12 +84,16 @@ export function useStreamingFor(id: string): StreamingState | null {
 
 /**
  * Streaming status of the current instance, for the composer send/stop button.
+ * A turn that has not started streaming yet (tokenizing, compacting, fitting the
+ * context) reads as "connecting", so the stop button is there from the first step.
  *
  * @returns The streaming status
  */
 export function useStreamingStatus(): StreamingState["status"] {
     const { store } = useChatInstance();
-    return useStore(store, (state) => state.streaming.status);
+    return useStore(store, (state) =>
+        state.streaming.status === "idle" && state.running ? "connecting" : state.streaming.status,
+    );
 }
 
 /**
