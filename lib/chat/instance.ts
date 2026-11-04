@@ -484,6 +484,21 @@ export class ChatInstance {
     };
 
     /**
+     * End a generation that was stopped, or whose instance was disposed, before its request
+     * went out: the node is marked aborted and the conversation saved.
+     *
+     * @param nodeId - Assistant node that was to receive the generation
+     * @returns The outcome of a generation aborted before sending anything
+     */
+    private abortUnsent = (nodeId: string): GenerationOutcome => {
+        this.store.setState((current) => ({
+            nodes: updateNode(current.nodes, nodeId, { finishReason: "aborted" }),
+        }));
+        this.persistActiveConversation();
+        return { finishReason: "aborted", toolCalls: [], rerouted: false };
+    };
+
+    /**
      * Run one streamed generation into the given assistant placeholder node.
      * Token events accumulate in local buffers flushed to the store once per
      * animation frame, so the UI updates at display rate, not token rate.
@@ -510,6 +525,9 @@ export class ChatInstance {
             : this.resolveEntry();
         if (!entry || !model) return idle;
 
+        // Stopped before the request was prepared: compaction would send a request of its own.
+        if (this.cancelled()) return this.abortUnsent(nodeId);
+
         // Tool calls go out in the native format only when this request offers the tools.
         const nativeTools =
             flow !== undefined && !(flow.toolChoice === "none" && !entry.supportsToolChoice);
@@ -535,14 +553,7 @@ export class ChatInstance {
             });
         }
 
-        if (this.cancelled()) {
-            // Stopped (or deleted) while preparing the request: nothing was sent.
-            this.store.setState((current) => ({
-                nodes: updateNode(current.nodes, nodeId, { finishReason: "aborted" }),
-            }));
-            this.persistActiveConversation();
-            return { finishReason: "aborted", toolCalls: [], rerouted: false };
-        }
+        if (this.cancelled()) return this.abortUnsent(nodeId);
 
         if (!messagesOverride) messages = stripTrailingAssistant(messages);
         const params: ChatRequestParams = {
