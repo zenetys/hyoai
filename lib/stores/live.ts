@@ -2,13 +2,18 @@ import { createStore } from "@/lib/store";
 import type { StreamingStatus } from "@/lib/stores/chat";
 
 /**
+ * A stream status, plus the two states of a tool flow between model requests.
+ */
+export type LiveStatus = StreamingStatus | "approval" | "tool";
+
+/**
  * Cross-instance view of which conversations are generating right now. Several
  * panes can stream at once, so the sidebar needs a status keyed by conversation
  * id, independent of which conversation is in the foreground, plus a way to
  * abort the matching instance.
  */
 interface LiveState {
-    status: Record<string, StreamingStatus>;
+    status: Record<string, LiveStatus>;
     done: Record<string, "done" | "fading">;
 }
 
@@ -42,7 +47,7 @@ const stoppers = new Map<string, () => void>();
  *
  * @param conversationId - Conversation whose status to clear
  */
-function clearStatusEntry(conversationId: string): Record<string, StreamingStatus> {
+function clearStatusEntry(conversationId: string): Record<string, LiveStatus> {
     stoppers.delete(conversationId);
     clearLivePreview(conversationId);
     const next = { ...liveStore.getState().status };
@@ -62,7 +67,7 @@ function clearStatusEntry(conversationId: string): Record<string, StreamingStatu
  */
 export function setLiveStatus(
     conversationId: string | null,
-    status: StreamingStatus,
+    status: LiveStatus,
     stop?: () => void,
 ): void {
     if (!conversationId) return;

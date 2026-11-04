@@ -26,7 +26,7 @@ export interface LifecycleContext {
     followGlobalModel: boolean;
     syncUrlMaybe: (id: string | null) => void;
     stopGeneration: () => void;
-    isChunking: () => boolean;
+    isRunning: () => boolean;
 }
 
 /**
@@ -111,7 +111,7 @@ export function startNewConversation(ctx: LifecycleContext): void {
     if (outgoing && getMeta(outgoing)) {
         void flushKey(STORAGE_KEYS.conversation(outgoing)).catch(() => undefined);
     }
-    if (ctx.isChunking() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
+    if (ctx.isRunning() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
     const { meta, data } = createConversation(Date.now());
     ctx.store.setState({
         conversationId: meta.id,
@@ -121,6 +121,8 @@ export function startNewConversation(ctx: LifecycleContext): void {
         streaming: IDLE_STREAMING,
         compaction: null,
         compacting: false,
+        agent: null,
+        toolsEnabled: null,
         pendingReply: null,
     });
     ctx.syncUrlMaybe(null);
@@ -137,7 +139,7 @@ export function startNewConversation(ctx: LifecycleContext): void {
  */
 export async function openConversation(ctx: LifecycleContext, id: string): Promise<boolean> {
     if (ctx.store.getState().conversationId === id) return true;
-    if (ctx.isChunking() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
+    if (ctx.isRunning() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
     await flushAll();
 
     const raw = (await readConversation(id)) as ConversationData | null;
@@ -151,6 +153,8 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
         streaming: IDLE_STREAMING,
         compaction: raw.compaction ?? null,
         compacting: false,
+        agent: null,
+        toolsEnabled: getMeta(id)?.tools ?? null,
         pendingReply: null,
     });
     ctx.syncUrlMaybe(id);
@@ -183,7 +187,7 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
 export async function reloadConversation(ctx: LifecycleContext, id: string): Promise<void> {
     const state = ctx.store.getState();
     if (state.conversationId !== id) return;
-    if (ctx.isChunking() || state.streaming.status !== "idle" || state.compacting) return;
+    if (ctx.isRunning() || state.streaming.status !== "idle" || state.compacting) return;
 
     const raw = (await readConversation(id)) as ConversationData | null;
     if (!raw || typeof raw !== "object" || !raw.rootId || !raw.nodes) return;

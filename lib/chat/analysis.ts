@@ -28,7 +28,7 @@ function paneTranscript(instance: ChatInstance, noun: string, index: number): st
     const state = instance.store.getState();
     const path = state.currNode ? getPath(state.nodes, state.currNode) : [];
     const turns = path
-        .filter((node) => node.role === "user" || node.role === "assistant")
+        .filter((node) => (node.role === "user" || node.role === "assistant") && node.content)
         .map((node) => `${node.role === "user" ? "Q" : "A"}: ${node.content}`)
         .join("\n\n");
     const model = path.find((node) => node.role === "assistant" && node.model)?.model;

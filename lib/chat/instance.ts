@@ -32,13 +32,25 @@ import { resolveEffortLevel } from "@/lib/effort";
 import { getTranslator } from "@/lib/i18n";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
-import { type ChatState, createChatStore, IDLE_STREAMING } from "@/lib/stores/chat";
+import {
+    type AgentProgress,
+    type ChatState,
+    createChatStore,
+    IDLE_STREAMING,
+    type LiveToolCall,
+    type PendingToolCall,
+} from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
 import { reportRequest, watchConnection } from "@/lib/stores/health";
 import { liveStore, setGenerationDone, setLivePreview, setLiveStatus } from "@/lib/stores/live";
 import { modelsStore } from "@/lib/stores/models";
-import { settingsStore } from "@/lib/stores/settings";
+import { settingsStore, setToolPolicy } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
+import { uiStore } from "@/lib/stores/ui";
+import { collectToolSet, policyFor, type ToolSet } from "@/lib/tools/catalog";
+import { flowHeadOf, flowRootOf, flowStages, unansweredCalls } from "@/lib/tools/flow";
+import { MAX_CALLS_PER_STEP, parseToolArguments, runToolCall } from "@/lib/tools/runner";
+import { resolveToolSupport } from "@/lib/tools/support";
 import {
     addSibling,
     appendNode,
@@ -50,7 +62,12 @@ import {
     updateNode,
 } from "@/lib/tree";
 import { setChatIdInUrl } from "@/lib/url";
-import { ApiError, type ApiMessage, type ChatRequestParams } from "@/types/api";
+import {
+    ApiError,
+    type ApiMessage,
+    type ApiToolDefinition,
+    type ChatRequestParams,
+} from "@/types/api";
 import type {
     ActivityStep,
     Attachment,
@@ -61,6 +78,9 @@ import type {
     MessageNode,
     MessageQuote,
     MessageStats,
+    ToolApprovalKind,
+    ToolCall,
+    ToolResultMeta,
 } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 import type { ChunkingStrategy } from "@/types/settings";
@@ -75,6 +95,54 @@ const MAX_RECHUNK_ATTEMPTS = 3;
 const MAX_SYNTH_DEPTH = 6;
 
 export type { ChatModelSelection };
+
+/**
+ * What one generation produced, for the tool loop to decide on.
+ *
+ * @param finishReason - Why it stopped, null when it could not start
+ * @param toolCalls - Calls the model made
+ * @param rerouted - The turn moved to the chunk pipeline and the node no longer exists
+ */
+export interface GenerationOutcome {
+    finishReason: FinishReason | null;
+    toolCalls: ToolCall[];
+    rerouted: boolean;
+}
+
+/**
+ * What a tool flow fixes for all its requests.
+ *
+ * @param controller - Aborts the whole flow
+ * @param tools - Tools offered, listed once when the flow starts
+ * @param entry - Model entry, pinned for the whole flow
+ * @param model - Upstream model id, pinned for the whole flow
+ * @param toolChoice - "none" for the last request of "answer without tools"
+ */
+interface FlowStep {
+    controller: AbortController;
+    tools: ToolSet;
+    entry: ModelConfig;
+    model: string;
+    toolChoice?: "none";
+}
+
+/**
+ * Where to pick a flow up again after a stop, a reload or the step limit.
+ *
+ * @param calls - Calls with no result yet
+ * @param afterId - Node the results attach under
+ * @param answerNow - Skip the calls and answer without tools
+ */
+interface ToolResume {
+    calls: ToolCall[];
+    afterId: string;
+    answerNow: boolean;
+}
+
+/**
+ * How a call waiting for approval was settled.
+ */
+type ApprovalDecision = "once" | "always" | "policy" | "deny" | "cancelled";
 
 /**
  * Construction-time behavior that differs between the default chat and panes.
@@ -122,6 +190,11 @@ export class ChatInstance {
     } | null = null;
     private relaunchStrategy: ChunkingStrategy | null = null;
     private rechunkAttempts = 0;
+    private approval: {
+        callId: string;
+        policyKey: string;
+        settle: (decision: ApprovalDecision) => void;
+    } | null = null;
 
     /**
      * Build an instance over a state store (a fresh one by default).
@@ -249,6 +322,7 @@ export class ChatInstance {
             state.streaming.status !== "idle" ||
             state.compacting ||
             state.chunking !== null ||
+            state.agent !== null ||
             this.chunking
         );
     };
@@ -306,6 +380,7 @@ export class ChatInstance {
         return (
             this.store.getState().streaming.status === "idle" &&
             !this.store.getState().running &&
+            this.store.getState().agent === null &&
             !this.chunking &&
             !this.store.getState().compacting &&
             entry !== null &&
@@ -392,6 +467,7 @@ export class ChatInstance {
                 lastModified: now,
                 modelId: entry.id,
                 model: upstream,
+                tools: this.store.getState().toolsEnabled ?? undefined,
             });
             this.syncUrlMaybe(conversationId);
         } else {
@@ -412,15 +488,28 @@ export class ChatInstance {
      * @param nodeId - Assistant node receiving the generation
      * @param messagesOverride - Explicit message list, used by the chapter
      *   pipeline to drive a step with a restricted context instead of the branch
+     * @param retryOnOverflow - Recover from a context overflow by chunking or compacting
+     * @param onOverflow - Called with the token counts when the pipeline step overflowed
+     * @param flow - The tool flow this request belongs to; it pins the model, offers the
+     *   tools and leaves the live status to the loop
+     * @returns Why the generation stopped and the tool calls the model made
      */
     private runGeneration = async (
         nodeId: string,
         messagesOverride?: ApiMessage[],
         retryOnOverflow = true,
         onOverflow?: (overflow: { requested: number; available: number }) => void,
-    ): Promise<void> => {
-        const { entry, model } = this.resolveEntry();
-        if (!entry || !model) return;
+        flow?: FlowStep,
+    ): Promise<GenerationOutcome> => {
+        const idle: GenerationOutcome = { finishReason: null, toolCalls: [], rerouted: false };
+        const { entry, model } = flow
+            ? { entry: flow.entry, model: flow.model }
+            : this.resolveEntry();
+        if (!entry || !model) return idle;
+
+        // Tool calls go out in the native format only when this request offers the tools.
+        const nativeTools =
+            flow !== undefined && !(flow.toolChoice === "none" && !entry.supportsToolChoice);
 
         const settings = settingsStore.getState().settings;
         const state = this.store.getState();
@@ -432,12 +521,15 @@ export class ChatInstance {
             const path = getPath(state.nodes, nodeId);
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
             const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
-            messages = buildApiMessages(currentTurn(path), systemPrompt);
+            messages = buildApiMessages(currentTurn(path), systemPrompt, { nativeTools });
         } else {
             const path = getPath(state.nodes, nodeId);
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
             const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
-            messages = await this.compactForBudget(nodeId, path, systemPrompt, entry, model);
+            messages = await this.compactForBudget(nodeId, path, systemPrompt, entry, model, {
+                nativeTools,
+                tools: flow?.tools.definitions,
+            });
         }
 
         if (this.cancelled()) {
@@ -446,7 +538,7 @@ export class ChatInstance {
                 nodes: updateNode(current.nodes, nodeId, { finishReason: "aborted" }),
             }));
             this.persistActiveConversation();
-            return;
+            return { finishReason: "aborted", toolCalls: [], rerouted: false };
         }
 
         if (!messagesOverride) messages = stripTrailingAssistant(messages);
@@ -457,12 +549,19 @@ export class ChatInstance {
             penalties: settings.penalties,
             thinking: this.getThinking(),
             effort: this.getEffort(),
+            ...(flow
+                ? {
+                      tools: flow.tools.definitions,
+                      toolChoice: flow.toolChoice,
+                      parallelToolCalls: entry.parallelToolCalls,
+                  }
+                : {}),
         };
 
         const appliedThinking = entry.supportsThinking ? this.getThinking() : undefined;
         const appliedEffort = resolveEffortLevel(entry.effort, this.getEffort())?.label;
 
-        const controller = new AbortController();
+        const controller = flow?.controller ?? new AbortController();
         this.abortRef = controller;
 
         const startedAt = Date.now();
@@ -494,6 +593,8 @@ export class ChatInstance {
         let activity: ActivityStep[] = [];
         let citations: Citation[] | undefined;
         let firstTokenAt: number | null = null;
+        let liveCalls: LiveToolCall[] = [];
+        let toolCalls: ToolCall[] = [];
 
         const stats: MessageStats = {};
         let finishReason: FinishReason | undefined;
@@ -516,6 +617,7 @@ export class ChatInstance {
                     status: "streaming",
                     content,
                     reasoning,
+                    toolCalls: liveCalls.length > 0 ? liveCalls : undefined,
                     activity: activity.length > 0 ? activity : undefined,
                     citations,
                     firstTokenAt,
@@ -600,10 +702,30 @@ export class ChatInstance {
                         }
                         queueFlush();
                         break;
-                    case "toolCallDelta":
+                    case "toolCallDelta": {
+                        // Fragments of one call share an index; the name arrives once.
+                        const at = liveCalls.findIndex((call) => call.index === event.index);
+                        const previous =
+                            at === -1
+                                ? { index: event.index, name: "", arguments: "" }
+                                : liveCalls[at];
+                        const next: LiveToolCall = {
+                            ...previous,
+                            id: event.id ?? previous.id,
+                            name: event.name ?? previous.name,
+                            arguments: previous.arguments + (event.arguments ?? ""),
+                        };
+                        liveCalls =
+                            at === -1
+                                ? [...liveCalls, next]
+                                : liveCalls.map((c, i) => (i === at ? next : c));
+                        queueFlush();
+                        break;
+                    }
                     case "toolCalls":
-
-                        // Tool calls are run by the agentic loop, which reads these events.
+                        toolCalls = event.calls;
+                        liveCalls = [];
+                        queueFlush();
                         break;
                     case "finish":
                         finishReason = event.reason;
@@ -639,10 +761,14 @@ export class ChatInstance {
             }
         } finally {
             connection.stop();
-            this.abortRef = null;
-            const completed = finishReason !== "aborted" && finishReason !== "error";
-            if (completed) setGenerationDone(liveConvId);
-            else setLiveStatus(liveConvId, "idle");
+
+            // Inside a tool flow the loop owns the abort handle and the final live status.
+            if (!flow) {
+                this.abortRef = null;
+                const completed = finishReason !== "aborted" && finishReason !== "error";
+                if (completed) setGenerationDone(liveConvId);
+                else setLiveStatus(liveConvId, "idle");
+            }
         }
 
         if (
@@ -659,14 +785,13 @@ export class ChatInstance {
                     current.chunking.enabled &&
                     (await this.chunkOversizedTurn(nodeId, overflow, entry, model))
                 ) {
-                    return;
+                    return { finishReason: null, toolCalls: [], rerouted: true };
                 }
                 if (
                     current.compaction.enabled &&
                     (await this.runCompaction(nodeId, entry, model, overflow.available))
                 ) {
-                    await this.runGeneration(nodeId, undefined, false);
-                    return;
+                    return this.runGeneration(nodeId, undefined, false, undefined, flow);
                 }
             }
         }
@@ -700,6 +825,7 @@ export class ChatInstance {
                 model,
                 thinking: appliedThinking,
                 effort: appliedEffort,
+                toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
             }),
             streaming: IDLE_STREAMING,
         }));
@@ -712,6 +838,7 @@ export class ChatInstance {
             patchMeta(conversationId, { lastModified: Date.now() });
         }
         void refreshStorage();
+        return { finishReason: finishReason ?? "stop", toolCalls, rerouted: false };
     };
 
     /**
@@ -735,6 +862,7 @@ export class ChatInstance {
      * @param systemPrompt - Effective system prompt for the turn
      * @param entry - Resolved model entry
      * @param model - Resolved upstream model id
+     * @param request - Whether tool calls go out natively, and the tools the request carries
      * @returns Messages ready for the request
      */
     private compactForBudget = async (
@@ -743,30 +871,35 @@ export class ChatInstance {
         systemPrompt: string,
         entry: ModelConfig,
         model: string,
+        request: { nativeTools: boolean; tools?: ApiToolDefinition[] },
     ): Promise<ApiMessage[]> => {
+        const options = {
+            nativeTools: request.nativeTools,
+            preserveThinking: shouldPreserveThinking(entry, {
+                thinking: this.getThinking(),
+                effort: this.getEffort(),
+            }),
+        };
         const compaction = this.store.getState().compaction;
-        const preserveThinking = shouldPreserveThinking(entry, {
-            thinking: this.getThinking(),
-            effort: this.getEffort(),
-        });
-        const messages = buildCompactedMessages(path, systemPrompt, compaction, {
-            preserveThinking,
-        });
+        const messages = buildCompactedMessages(path, systemPrompt, compaction, options);
         const settings = settingsStore.getState().settings;
         if (!settings.compaction.enabled) return messages;
 
         const nCtx = this.contextWindow(entry);
         const reserve = settings.sampling.maxTokens ?? DEFAULT_OUTPUT_RESERVE;
         if (
-            estimateMessagesTokens(messages) + reserve <=
+            estimateMessagesTokens(messages, request.tools) + reserve <=
             nCtx * settings.compaction.thresholdFraction
         ) {
             return messages;
         }
         if (!(await this.runCompaction(nodeId, entry, model, nCtx))) return messages;
-        return buildCompactedMessages(path, systemPrompt, this.store.getState().compaction, {
-            preserveThinking,
-        });
+        return buildCompactedMessages(
+            path,
+            systemPrompt,
+            this.store.getState().compaction,
+            options,
+        );
     };
 
     /**
@@ -916,9 +1049,7 @@ export class ChatInstance {
     pruneCompactedNodes = (): void => {
         const state = this.store.getState();
         const compaction = state.compaction;
-        if (!compaction || state.compacting || state.streaming.status !== "idle" || this.chunking) {
-            return;
-        }
+        if (!compaction || this.isBusy()) return;
         if (!state.currNode) return;
         const path = getPath(state.nodes, state.currNode);
         const anchorPos = path.findIndex((node) => node.id === compaction.anchorId);
@@ -1143,7 +1274,483 @@ export class ChatInstance {
         this.store.setState({ nodes: afterAssistant.nodes, currNode: afterAssistant.id });
         this.ensureIndexed(userNode.content, entry, model);
         this.persistActiveConversation();
-        await this.runGeneration(afterAssistant.id);
+        await this.runAgenticTurn(userNodeId, afterAssistant.id);
+    };
+
+    /**
+     * Update the progress of the tool flow in progress.
+     *
+     * @param patch - Fields to change
+     */
+    private patchAgent = (patch: Partial<AgentProgress>): void =>
+        this.store.setState((state) =>
+            state.agent ? { agent: { ...state.agent, ...patch } } : {},
+        );
+
+    /**
+     * The tools to offer for a turn, or null to run it without any: in an embed,
+     * when the conversation has tools off, when the model cannot take them, or
+     * when no provider has a tool left.
+     *
+     * @param entry - Model entry the turn goes to
+     * @param signal - Aborts the listing of the tools
+     * @returns The tools, listed once for the whole turn
+     */
+    private toolsForTurn = async (
+        entry: ModelConfig,
+        signal: AbortSignal,
+    ): Promise<ToolSet | null> => {
+        if (uiStore.getState().embed) return null;
+        const settings = settingsStore.getState().settings.tools;
+        if (!(this.store.getState().toolsEnabled ?? settings.enabledByDefault)) return null;
+        const props = modelsStore.getState().props[entry.id]?.props ?? null;
+        if (!resolveToolSupport(entry, props)) return null;
+
+        const set = await collectToolSet(settings, signal);
+        for (const provider of set.failed) {
+            toast.error(getTranslator("chat")("toolProviderFailed", { provider }));
+        }
+        return set.definitions.length > 0 ? set : null;
+    };
+
+    /**
+     * Add an empty assistant message under a node and make it the current one.
+     *
+     * @param parentId - Node the message hangs from
+     * @returns Id of the new message
+     */
+    private appendAssistant = (parentId: string): string => {
+        const added = appendNode(
+            this.store.getState().nodes,
+            parentId,
+            { role: "assistant", content: "" },
+            Date.now(),
+        );
+        this.store.setState({ nodes: added.nodes, currNode: added.id });
+        this.persistActiveConversation();
+        return added.id;
+    };
+
+    /**
+     * Add a tool result node under a node and make it the current one.
+     *
+     * @param parentId - Node the result hangs from
+     * @param call - The call it answers
+     * @param content - What the model receives
+     * @param tool - What is known about the call
+     * @param citations - Sources the result draws on
+     * @returns Id of the new node
+     */
+    private appendToolResult = (
+        parentId: string,
+        call: ToolCall,
+        content: string,
+        tool: ToolResultMeta,
+        citations?: Citation[],
+    ): string => {
+        const added = appendNode(
+            this.store.getState().nodes,
+            parentId,
+            { role: "tool", content, toolCallId: call.id, tool },
+            Date.now(),
+        );
+        const nodes = citations?.length
+            ? updateNode(added.nodes, added.id, { citations })
+            : added.nodes;
+        this.store.setState({ nodes, currNode: added.id });
+        this.persistActiveConversation();
+        return added.id;
+    };
+
+    /**
+     * Give calls that will not run a "cancelled" result, so each has an answer.
+     *
+     * @param afterId - Node the results attach under
+     * @param calls - Calls to settle
+     * @param tools - Tools of the flow, to name the providers
+     * @returns Id of the last node added
+     */
+    private skipToolCalls = (afterId: string, calls: ToolCall[], tools?: ToolSet): string => {
+        let parentId = afterId;
+        for (const call of calls) {
+            const resolved = tools?.byWireName.get(call.name);
+            parentId = this.appendToolResult(
+                parentId,
+                call,
+                getTranslator("prompts")("toolSkipped"),
+                {
+                    name: call.name,
+                    providerId: resolved?.provider.id,
+                    toolName: resolved?.tool.name,
+                    title: resolved?.title,
+                    status: "cancelled",
+                },
+            );
+        }
+        return parentId;
+    };
+
+    /**
+     * Answer a user message, offering tools when they are on: the model writes,
+     * the calls it makes are approved and run, their results go back, and the
+     * model writes again until it answers without a call, a stop or the step
+     * limit. Without tools this is a plain generation. The whole flow shares one
+     * abort handle and keeps the instance busy between its requests.
+     *
+     * @param rootId - User message being answered
+     * @param nodeId - Empty assistant message that receives the first request
+     * @param resume - Calls to settle first, when a stopped or interrupted flow continues
+     */
+    private runAgenticTurn = async (
+        rootId: string,
+        nodeId: string,
+        resume?: ToolResume,
+    ): Promise<void> => {
+        const controller = new AbortController();
+        const { entry, model } = this.resolveEntry();
+        const tools = entry && model ? await this.toolsForTurn(entry, controller.signal) : null;
+        if (!entry || !model || !tools || this.cancelled()) {
+            if (resume)
+                nodeId = this.appendAssistant(this.skipToolCalls(resume.afterId, resume.calls));
+            await this.runGeneration(nodeId);
+            return;
+        }
+
+        const settings = settingsStore.getState().settings.tools;
+        const maxSteps = Math.max(1, settings.maxSteps);
+        const flow: FlowStep = { controller, tools, entry, model };
+        const liveConvId = this.store.getState().conversationId;
+        this.abortRef = controller;
+        this.store.setState({
+            agent: {
+                rootId,
+                step: 1,
+                maxSteps,
+                phase: "generating",
+                callId: null,
+                pending: null,
+                startedAt: Date.now(),
+            },
+        });
+
+        let currentId = nodeId;
+        let lastId: string | null = null;
+        let completed = false;
+        let rerouted = false;
+        try {
+            const answerNow = resume?.answerNow === true;
+            if (resume) {
+                let afterId = resume.afterId;
+                if (answerNow) {
+                    afterId = this.skipToolCalls(afterId, resume.calls, tools);
+                    flow.toolChoice = "none";
+                } else {
+                    const settled = await this.executeToolCalls(afterId, resume.calls, flow);
+                    if (settled.stopped) return;
+                    afterId = settled.lastId;
+                }
+                currentId = this.appendAssistant(afterId);
+            }
+
+            for (let step = 1; ; step += 1) {
+                this.patchAgent({ step, phase: "generating", callId: null, pending: null });
+                lastId = currentId;
+                const outcome = await this.runGeneration(
+                    currentId,
+                    undefined,
+                    true,
+                    undefined,
+                    flow,
+                );
+                if (outcome.rerouted) {
+                    rerouted = true;
+                    return;
+                }
+                const reason = outcome.finishReason;
+                if (reason === null || reason === "aborted" || reason === "error") return;
+                if (controller.signal.aborted || this.cancelled()) return;
+
+                // An answer, a cut-off one, "answer without tools" or the step limit ends the flow.
+                if (
+                    outcome.toolCalls.length === 0 ||
+                    answerNow ||
+                    reason === "length" ||
+                    step >= maxSteps
+                ) {
+                    completed = true;
+                    return;
+                }
+
+                const settled = await this.executeToolCalls(currentId, outcome.toolCalls, flow);
+                if (settled.stopped || this.cancelled()) return;
+                currentId = this.appendAssistant(settled.lastId);
+            }
+        } finally {
+            if (this.abortRef === controller) this.abortRef = null;
+            this.approval = null;
+            this.store.setState({ agent: null });
+            if (!rerouted) {
+                this.finishFlow(rootId, lastId, liveConvId);
+                if (completed) setGenerationDone(liveConvId);
+                else setLiveStatus(liveConvId, "idle");
+            }
+        }
+    };
+
+    /**
+     * Write what the whole flow adds to its last message: the sources its tools
+     * returned and the time each step took.
+     *
+     * @param rootId - User message the flow answered
+     * @param lastId - Last assistant message of the flow
+     * @param liveConvId - Conversation the flow ran in
+     */
+    private finishFlow = (
+        rootId: string,
+        lastId: string | null,
+        liveConvId: string | null,
+    ): void => {
+        const state = this.store.getState();
+        if (!lastId || state.conversationId !== liveConvId || !state.nodes[lastId]) return;
+
+        const path = getPath(state.nodes, lastId);
+        const flowNodes = path.slice(path.findIndex((node) => node.id === rootId) + 1);
+        if (!flowNodes.some((node) => node.role === "tool")) return;
+
+        const seen = new Set<string>();
+        const citations: Citation[] = [];
+        for (const node of flowNodes) {
+            for (const citation of node.citations ?? []) {
+                if (seen.has(citation.id)) continue;
+                seen.add(citation.id);
+                citations.push(citation);
+            }
+        }
+        const last = state.nodes[lastId];
+        this.store.setState({
+            nodes: updateNode(state.nodes, lastId, {
+                citations: citations.length > 0 ? citations : undefined,
+                stats: { ...last.stats, stages: flowStages(flowNodes) },
+            }),
+        });
+        this.persistActiveConversation();
+        const id = state.conversationId;
+        if (id && getMeta(id)) {
+            const data = this.snapshotData();
+            if (data) void writeConversationNow(id, data);
+        }
+    };
+
+    /**
+     * Run the calls of one model step, one after the other. A call the model got
+     * wrong (unknown tool, arguments that are not a JSON object) or the user
+     * refused gets an error result the model can read; an approved call runs
+     * under the flow's abort signal and a timeout. Stopping leaves the calls that
+     * did not start without a result, so the flow can be continued.
+     *
+     * @param afterId - Node the results attach under
+     * @param calls - Calls to run, in order
+     * @param flow - Flow whose abort controller signal bounds every call and whose pinned tool set resolves wire names
+     * @returns The last node added, and whether the flow was stopped
+     */
+    private executeToolCalls = async (
+        afterId: string,
+        calls: ToolCall[],
+        flow: FlowStep,
+    ): Promise<{ lastId: string; stopped: boolean }> => {
+        const t = getTranslator("prompts");
+        const signal = flow.controller.signal;
+        const liveConvId = this.store.getState().conversationId;
+        let parentId = afterId;
+
+        for (let i = 0; i < calls.length; i += 1) {
+            if (signal.aborted || this.cancelled()) return { lastId: parentId, stopped: true };
+            const call = calls[i];
+            const resolved = flow.tools.byWireName.get(call.name);
+            const base: ToolResultMeta = {
+                name: call.name,
+                providerId: resolved?.provider.id,
+                toolName: resolved?.tool.name,
+                title: resolved?.title,
+                status: "done",
+            };
+            const record = (
+                content: string,
+                meta: Partial<ToolResultMeta>,
+                citations?: Citation[],
+            ) => {
+                parentId = this.appendToolResult(
+                    parentId,
+                    call,
+                    content,
+                    { ...base, ...meta },
+                    citations,
+                );
+            };
+
+            if (i >= MAX_CALLS_PER_STEP) {
+                record(t("toolTooMany", { max: MAX_CALLS_PER_STEP }), { status: "error" });
+                continue;
+            }
+            if (!resolved) {
+                record(t("toolUnknown", { name: call.name }), { status: "error" });
+                continue;
+            }
+            const parsed = parseToolArguments(call.arguments);
+            if (!parsed.ok) {
+                record(t("toolBadArguments", { error: parsed.error }), { status: "error" });
+                continue;
+            }
+
+            const toolSettings = settingsStore.getState().settings.tools;
+            const policy = policyFor(toolSettings, resolved.policyKey);
+            let approval: ToolApprovalKind;
+            if (policy === "deny") {
+                record(t("toolDenied"), { status: "denied", approval: "denied" });
+                continue;
+            } else if (policy === "allow") {
+                approval = "policy";
+            } else {
+                const decision = await this.awaitApproval(
+                    {
+                        callId: call.id,
+                        title: resolved.title,
+                        provider: resolved.provider.label,
+                        readOnlyHint: resolved.tool.annotations?.readOnlyHint === true,
+                        arguments: call.arguments,
+                    },
+                    resolved.policyKey,
+                    signal,
+                    liveConvId,
+                );
+                if (decision === "cancelled") return { lastId: parentId, stopped: true };
+                if (decision === "deny") {
+                    record(t("toolDenied"), { status: "denied", approval: "denied" });
+                    continue;
+                }
+                approval = decision;
+            }
+
+            this.patchAgent({ phase: "running", callId: call.id, pending: null });
+            setLiveStatus(liveConvId, "tool", this.stopGeneration);
+            const result = await runToolCall(
+                resolved,
+                parsed.value,
+                signal,
+                toolSettings.maxResultChars,
+            );
+
+            // A call that started is recorded even after a stop: it may have had effects.
+            record(
+                result.text,
+                {
+                    status: result.status,
+                    approval,
+                    durationMs: result.durationMs,
+                    originalLength: result.originalLength,
+                },
+                result.citations,
+            );
+            if (result.status === "cancelled") return { lastId: parentId, stopped: true };
+        }
+        return { lastId: parentId, stopped: false };
+    };
+
+    /**
+     * Wait for the user to decide on a call. It also settles when the flow is
+     * stopped, or when the tool's policy changes meanwhile, so allowing a tool
+     * "always" in one pane releases the same tool waiting in another.
+     *
+     * @param pending - The call, as shown in the approval prompt
+     * @param policyKey - Policy key of the tool
+     * @param signal - Aborts the wait
+     * @param liveConvId - Conversation, for the sidebar status
+     * @returns How the call was settled
+     */
+    private awaitApproval = (
+        pending: PendingToolCall,
+        policyKey: string,
+        signal: AbortSignal,
+        liveConvId: string | null,
+    ): Promise<ApprovalDecision> =>
+        new Promise((resolve) => {
+            let settled = false;
+            let unsubscribe: () => void = () => undefined;
+            const settle = (decision: ApprovalDecision) => {
+                if (settled) return;
+                settled = true;
+                unsubscribe();
+                signal.removeEventListener("abort", onAbort);
+                this.approval = null;
+                resolve(decision);
+            };
+            const onAbort = () => settle("cancelled");
+            if (signal.aborted) {
+                settle("cancelled");
+                return;
+            }
+            signal.addEventListener("abort", onAbort, { once: true });
+            unsubscribe = settingsStore.subscribe(() => {
+                const policy = policyFor(settingsStore.getState().settings.tools, policyKey);
+                if (policy === "allow") settle("policy");
+                else if (policy === "deny") settle("deny");
+            });
+            this.approval = { callId: pending.callId, policyKey, settle };
+            this.patchAgent({ phase: "approval", callId: pending.callId, pending });
+            setLiveStatus(liveConvId, "approval", this.stopGeneration);
+        });
+
+    /**
+     * Answer the call waiting for approval. "Always" also stores the policy for
+     * that one tool, after releasing the wait so the call is recorded as approved
+     * by the user.
+     *
+     * @param callId - Call being decided; ignored when it is not the one waiting
+     * @param decision - What the user chose
+     */
+    respondToApproval = (callId: string, decision: "once" | "always" | "deny"): void => {
+        const approval = this.approval;
+        if (!approval || approval.callId !== callId) return;
+        approval.settle(decision);
+        if (decision === "always") setToolPolicy(approval.policyKey, "allow");
+    };
+
+    /**
+     * Continue a tool flow that has calls without a result: after the step limit,
+     * after a stop while waiting for approval, or after a reload in the middle.
+     * Each continuation gets a fresh step budget.
+     *
+     * @param leafId - Last node of the branch
+     * @param answerNow - Skip the open calls and answer without tools
+     */
+    continueToolFlow = async (leafId: string, answerNow = false): Promise<void> => {
+        if (!this.canGenerate()) return;
+
+        const open = unansweredCalls(this.store.getState().nodes, leafId);
+        if (!open) return;
+        const rootId = flowRootOf(this.store.getState().nodes, open.assistantId);
+        if (!rootId) return;
+
+        await this.runTurn(async () => {
+            this.store.setState({ currNode: leafId });
+            await this.runAgenticTurn(rootId, leafId, {
+                calls: open.calls,
+                afterId: leafId,
+                answerNow,
+            });
+        });
+    };
+
+    /**
+     * Turn tools on or off for this conversation. A conversation already in the
+     * index remembers the choice.
+     *
+     * @param enabled - Whether the model is offered tools
+     */
+    setToolsEnabled = (enabled: boolean): void => {
+        this.store.setState({ toolsEnabled: enabled });
+        const id = this.store.getState().conversationId;
+        if (id && getMeta(id)) patchMeta(id, { tools: enabled });
     };
 
     /**
@@ -1532,6 +2139,14 @@ export class ChatInstance {
                 return;
             }
 
+            // A step of a tool flow re-runs the whole flow as a sibling of its first message.
+            const flowRoot = flowRootOf(state.nodes, nodeId);
+            if (flowRoot && flowRoot !== node.parent) {
+                this.store.setState({ currNode: flowRoot });
+                await this.startAssistantTurn(flowRoot, entry, model);
+                return;
+            }
+
             const parent = node.parent ? state.nodes[node.parent] : null;
             if (parent?.role === "user") {
                 this.store.setState({ currNode: parent.id });
@@ -1736,11 +2351,14 @@ export class ChatInstance {
     editAssistantMessage = (nodeId: string, newContent: string): void => {
         const trimmed = newContent.trim();
         if (!trimmed) return;
-        if (this.store.getState().streaming.status !== "idle") return;
+        if (this.isBusy()) return;
 
         const state = this.store.getState();
         const node = state.nodes[nodeId];
         if (!node || node.role !== "assistant") return;
+
+        // Editing the middle of a tool flow would leave calls without their results.
+        if (flowRootOf(state.nodes, nodeId)) return;
 
         const sibling = addSibling(
             state.nodes,
@@ -1767,7 +2385,7 @@ export class ChatInstance {
         followGlobalModel: this.followGlobalModel,
         syncUrlMaybe: this.syncUrlMaybe,
         stopGeneration: this.stopGeneration,
-        isChunking: () => this.chunking,
+        isRunning: () => this.chunking || this.store.getState().agent !== null,
     });
 
     /**
@@ -1797,10 +2415,10 @@ export class ChatInstance {
      * @param direction - -1 for previous, 1 for next
      */
     switchBranch = (nodeId: string, direction: -1 | 1): void => {
-        if (this.chunking) return;
+        if (this.chunking || this.store.getState().agent !== null) return;
 
         const state = this.store.getState();
-        const sibling = navigateSibling(state.nodes, nodeId, direction);
+        const sibling = navigateSibling(state.nodes, flowHeadOf(state.nodes, nodeId), direction);
         if (!sibling) return;
 
         this.store.setState({ currNode: findLeaf(state.nodes, sibling) });
@@ -1846,12 +2464,13 @@ export class ChatInstance {
      * @param nodeId - Node to delete
      */
     deleteMessageBranch = (nodeId: string): void => {
-        if (this.store.getState().streaming.status !== "idle" || this.chunking) return;
+        if (this.isBusy()) return;
 
         const state = this.store.getState();
         if (!state.nodes[nodeId]) return;
 
-        const result = deleteBranch(state.nodes, nodeId);
+        // Deleting any step of a tool flow removes the whole flow.
+        const result = deleteBranch(state.nodes, flowHeadOf(state.nodes, nodeId));
         this.store.setState({ nodes: result.nodes, currNode: result.nextCurrNode });
         this.persistActiveConversation();
     };

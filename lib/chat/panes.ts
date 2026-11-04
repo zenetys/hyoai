@@ -88,13 +88,16 @@ export function addPane(seed: Partial<PaneDescriptor> = {}): void {
 export function removePane(paneId: string): void {
     const state = compareStore.getState();
     if (!state.panes.some((pane) => pane.paneId === paneId)) return;
-    const wasBusy = peekPaneInstance(paneId)?.isBusy() ?? false;
+    const closing = peekPaneInstance(paneId);
+    const wasBusy = closing?.isBusy() ?? false;
+    const awaitingApproval = closing?.store.getState().agent?.pending != null;
 
     const remaining = state.panes.filter((pane) => pane.paneId !== paneId);
     if (remaining.length <= 1) exitCompare(remaining[0]?.paneId ?? null, { keepLayout: false });
     else removePaneDescriptor(paneId);
 
-    if (wasBusy) toast(getTranslator("compare")("closedRunning"));
+    if (awaitingApproval) toast(getTranslator("compare")("closedAwaitingApproval"));
+    else if (wasBusy) toast(getTranslator("compare")("closedRunning"));
 }
 
 /**
