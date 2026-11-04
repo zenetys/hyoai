@@ -249,6 +249,21 @@ export function ModelEditor({
                             onChange={(value) => onChange({ supportsToolChoice: value })}
                         />
                     </div>
+                    <div className="space-y-1.5">
+                        <Label className="flex items-center gap-2 font-normal cursor-pointer">
+                            <Switch
+                                id={`${modelAnchorId(index)}-recover-tool-calls`}
+                                checked={model.recoverToolCalls}
+                                onCheckedChange={(checked) =>
+                                    onChange({ recoverToolCalls: checked })
+                                }
+                            />
+                            {t("config.recoverToolCalls")}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                            {t("config.recoverToolCallsHint")}
+                        </p>
+                    </div>
                     <McpScopeField
                         servers={mcpServers}
                         value={model.mcpServers}
