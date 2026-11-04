@@ -1,4 +1,5 @@
 import { BUILTIN_SERVER_TYPES } from "@/lib/plugins/builtin";
+import type { LocalizedText } from "@/types/chat";
 import { PLUGIN_API_VERSION } from "@/types/plugin";
 import type { HyoaiPlugin, ServerTypeDefinition } from "@/types/plugin";
 
@@ -11,10 +12,24 @@ export interface PluginRegistry {
 }
 
 /**
+ * Prefix the message key of a text with the plugin's catalog namespace. A plugin
+ * writes its keys relative to its own catalog ("search"); the core mounts that
+ * catalog under "plugins.<id>", so a plugin can never point at another plugin's
+ * or the core's strings.
+ *
+ * @param pluginId - Plugin the text comes from
+ * @param text - Text whose key is relative to the plugin's catalog
+ * @returns The text with a full catalog key
+ */
+export function scopeText(pluginId: string, text: LocalizedText): LocalizedText {
+    return { ...text, key: `plugins.${pluginId}.${text.key}` };
+}
+
+/**
  * Validate the plugin modules and build the registry. Throws on the first
  * problem so a broken plugin stops the build instead of failing in front of a
  * user: wrong apiVersion, id different from the folder, a server type declared
- * twice or hiding a built-in one.
+ * twice or hiding a built-in one, an upgradeNode that is not a function.
  *
  * @param modules - Default export of each plugin, keyed by the path of its index file
  * @param builtin - Server types shipped with the app
@@ -46,6 +61,9 @@ export function buildRegistry(
             fail(`invalid id ${JSON.stringify(plugin.id)}, expected camelCase`);
         }
         if (plugin.id !== folder) fail(`id "${plugin.id}" must match the folder name`);
+        if (plugin.upgradeNode !== undefined && typeof plugin.upgradeNode !== "function") {
+            fail("upgradeNode must be a function");
+        }
 
         for (const definition of plugin.serverTypes ?? []) {
             if (typeof definition.id !== "string" || !definition.id) {

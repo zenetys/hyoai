@@ -61,10 +61,18 @@ export interface PluginMessages {
  *
  * The id must equal the folder name. The messages are UI strings per locale,
  * mounted under "plugins.<id>" in the app catalog.
+ *
+ * The upgradeNode hook lets a plugin rewrite the messages it stored in an older
+ * layout. The core calls it with every message node of a conversation it
+ * migrates, reads or imports, and keeps what it returns. It must be pure and
+ * idempotent, return the very node it received when there is nothing to do, and
+ * leave nodes it does not recognise alone. The label keys it puts in "activity"
+ * or "stats.stages" are relative to the plugin's catalog, as in events.
  */
 export interface HyoaiPlugin {
     id: string;
     apiVersion: typeof PLUGIN_API_VERSION;
     serverTypes?: ServerTypeDefinition[];
     messages?: Partial<Record<"en" | "fr", PluginMessages>>;
+    upgradeNode?: (node: unknown) => unknown;
 }

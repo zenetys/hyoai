@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { newId } from "@/lib/id";
+import { upgradeConversation } from "@/lib/storage/upgrade";
 import type { Conversation, MessageNode } from "@/types/chat";
 import { type AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
 import type { ExportFile } from "@/types/storage";
@@ -22,12 +23,44 @@ const attachmentSchema = z.object({
     name: z.string().optional(),
 });
 
+const localizedTextSchema = z.object({
+    key: z.string(),
+    values: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+    text: z.string().catch(""),
+});
+
+const citationSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    url: z.string().optional(),
+    preview: z.string().optional(),
+    score: z.number().optional(),
+});
+
+const activityStepSchema = z.object({
+    id: z.string(),
+    kind: z.enum(["search", "step"]).catch("step"),
+    label: localizedTextSchema,
+    items: z.array(z.string()).optional(),
+    citations: z.array(citationSchema).optional(),
+});
+
+const stageTimingSchema = z.object({
+    id: z.string(),
+    label: localizedTextSchema,
+    ms: z.number(),
+});
+
 const messageStatsSchema = z.object({
     promptTokens: z.number().optional(),
+    promptMs: z.number().optional(),
+    promptPerSecond: z.number().optional(),
     completionTokens: z.number().optional(),
+    predictedMs: z.number().optional(),
     tokensPerSecond: z.number().optional(),
     durationMs: z.number().optional(),
     timeToFirstTokenMs: z.number().optional(),
+    stages: z.array(stageTimingSchema).optional(),
 });
 
 const messageNodeSchema = z.object({
@@ -38,12 +71,25 @@ const messageNodeSchema = z.object({
     content: z.string().catch(""),
     reasoningContent: z.string().optional(),
     quote: z.object({ text: z.string(), sourceId: z.string().optional() }).optional(),
+    activity: z.array(activityStepSchema).optional(),
+    citations: z.array(citationSchema).optional(),
     attachments: z.array(attachmentSchema).optional(),
     model: z.string().optional(),
+    thinking: z.boolean().optional(),
+    effort: z.string().optional(),
     stats: messageStatsSchema.optional(),
     finishReason: z.string().optional(),
     error: z.string().optional(),
     errorKind: z.string().optional(),
+    chunk: z
+        .object({
+            index: z.number(),
+            total: z.number(),
+            kind: z.enum(["chunk", "synthesis"]),
+        })
+        .optional(),
+    summary: z.boolean().optional(),
+    feedback: z.enum(["up", "down"]).optional(),
     createdAt: z.number().catch(0),
 });
 
@@ -152,6 +198,17 @@ export function parseImport(
         raw = JSON.parse(json);
     } catch {
         return { ok: false, error: "The file is not valid JSON." };
+    }
+
+    // Plugins upgrade the messages of files exported by an older version.
+    if (typeof raw === "object" && raw !== null && "conversations" in raw) {
+        const file = raw as { conversations: unknown };
+        if (Array.isArray(file.conversations)) {
+            raw = {
+                ...raw,
+                conversations: file.conversations.map((entry) => upgradeConversation(entry)),
+            };
+        }
     }
     const result = exportFileSchema.safeParse(raw);
     if (!result.success) {
