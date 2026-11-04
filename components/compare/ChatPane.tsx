@@ -8,9 +8,12 @@ import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
 import { MessageList } from "@/components/chat/message/MessageList";
 import { ContextBar } from "@/components/chat/view/ContextBar";
 import { PaneModelSelector } from "@/components/common/model/ModelSelector";
+import { PaneStatusBadge, PaneStatusBanner } from "@/components/compare/PaneStatus";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAutoDisable, usePaneAvailability } from "@/hooks/useAvailability";
 import { useStore } from "@/hooks/useStore";
+import { isEntryInactive } from "@/lib/chat/availability";
 import { ChatInstanceProvider } from "@/lib/chat/context";
 import type { ChatInstance } from "@/lib/chat/instance";
 import {
@@ -18,6 +21,7 @@ import {
     newConversationInPane,
     paneRuntimeStore,
     removePane,
+    retryPane,
 } from "@/lib/chat/panes";
 import { parseModelName } from "@/lib/format";
 import { compareStore, setFocusedPane } from "@/lib/stores/compare";
@@ -78,8 +82,9 @@ function WithInstance({
  * model.
  *
  * @param paneId - Pane id from the compare store
+ * @param className - Extra classes for the pane's grid cell
  */
-export function ChatPane({ paneId }: { paneId: string }) {
+export function ChatPane({ paneId, className }: { paneId: string; className?: string }) {
     const t = useTranslations("compare");
     const ts = useTranslations("sidebar");
     const runtime = useStore(paneRuntimeStore, (state) => state.runtimes[paneId]);
@@ -97,6 +102,10 @@ export function ChatPane({ paneId }: { paneId: string }) {
         : "";
     const generating = Boolean(conversationId && (liveStatus[conversationId] ?? "idle") !== "idle");
 
+    const availability = usePaneAvailability()[paneId];
+    const autoDisable = useAutoDisable();
+    const unavailable = availability?.state === "unavailable" ? availability : null;
+    const inactive = Boolean(availability && isEntryInactive(availability, autoDisable));
     const hasRuntime = Boolean(runtime);
     useEffect(() => {
         if (!hasRuntime) ensurePaneRuntime(paneId);
@@ -109,6 +118,8 @@ export function ChatPane({ paneId }: { paneId: string }) {
                 className={cn(
                     "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-panel border bg-card shadow-surface transition-colors",
                     focused ? "border-ring/50 ring-1 ring-ring/30" : "border-border",
+                    inactive && "bg-muted/30",
+                    className,
                 )}
             >
                 <header className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
@@ -122,6 +133,13 @@ export function ChatPane({ paneId }: { paneId: string }) {
                         </>
                     ) : (
                         <PaneModelLabel paneId={paneId} />
+                    )}
+                    {availability && (
+                        <PaneStatusBadge
+                            availability={availability}
+                            autoDisable={autoDisable}
+                            loading={!runtime}
+                        />
                     )}
                     {generating && (
                         <Tooltip>
@@ -172,8 +190,20 @@ export function ChatPane({ paneId }: { paneId: string }) {
                         <TooltipContent>{t("removePane")}</TooltipContent>
                     </Tooltip>
                 </header>
+                {unavailable && (
+                    <PaneStatusBanner
+                        availability={unavailable}
+                        autoDisable={autoDisable}
+                        onRetry={() => retryPane(paneId)}
+                    />
+                )}
                 {runtime ? (
-                    <>
+                    <div
+                        className={cn(
+                            "flex min-h-0 flex-1 flex-col",
+                            inactive && "opacity-60 grayscale",
+                        )}
+                    >
                         <MessageList />
                         <div
                             onMouseEnter={() => setHovered(true)}
@@ -182,7 +212,7 @@ export function ChatPane({ paneId }: { paneId: string }) {
                         >
                             <ContextBar forceVisible={hovered} />
                         </div>
-                    </>
+                    </div>
                 ) : (
                     <div className="min-h-0 flex-1" />
                 )}
