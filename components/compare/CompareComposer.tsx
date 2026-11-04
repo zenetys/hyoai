@@ -58,7 +58,9 @@ function TargetToggle({ value }: { value: BroadcastTarget }) {
 /**
  * Bottom bar of the compare: one composer whose target (all panes or the
  * focused one) is set by a segmented toggle, plus an Analyze action that opens
- * a new pane comparing the existing panes' conversations.
+ * a new pane comparing the existing panes' conversations. Only the panes that
+ * receive the message count as busy, so a hung skipped pane never blocks the
+ * rest.
  */
 export function CompareComposer() {
     const t = useTranslations("compare");

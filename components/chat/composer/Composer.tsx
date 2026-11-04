@@ -25,7 +25,8 @@ import { CHAT_WIDTH_CLASS } from "@/types/settings";
  * Message input for one conversation. Resolves the model from the active chat
  * instance, so it shows the global model selector for the single chat and the
  * pane selector inside a compare pane, while delegating the input mechanics
- * to the shared ComposerShell.
+ * to the shared ComposerShell. A model that cannot answer is greyed and blocked
+ * with its reason, and is never swapped for another one.
  *
  * @param home - Whether the composer is rendered on the home page, where the full
  *        app keeps a narrower centred composer under its welcome heading. A widget

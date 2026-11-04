@@ -27,7 +27,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Application frame: collapsible sidebar (sheet on mobile), header, chat
- * column, global dialogs and keyboard shortcuts.
+ * column, global dialogs and keyboard shortcuts. It keeps the reachability of
+ * the models in use fresh: the active one and the compare panes' models.
  */
 export function AppShell() {
     const t = useTranslations("common");

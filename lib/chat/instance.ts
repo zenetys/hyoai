@@ -1917,7 +1917,7 @@ export class ChatInstance {
      * Reduce analyses to one synthesis and return its text. Emits a node and generates
      * into it; when it overflows the window, drops it, splits the analyses, reduces each
      * half to text (recursively, so a half that still overflows is reduced again), then
-     * synthesizes the two texts. Only the outermost node stays on the branch — deeper
+     * synthesizes the two texts. Only the outermost node stays on the branch - deeper
      * reduce nodes are pruned once their text is captured, so one answer shows.
      *
      * @param instruction - User instruction applied to the document
@@ -2498,7 +2498,10 @@ export class ChatInstance {
     reloadConversation = (id: string): Promise<void> =>
         lifecycle.reloadConversation(this.lifecycleContext(), id);
 
-    // Tear down the instance, aborting any in-flight generation or pipeline.
+    /**
+     * Tear down the instance, aborting any in-flight generation or pipeline.
+     * A disposed instance never persists or indexes anything again.
+     */
     dispose = (): void => {
         this.disposed = true;
         this.chunkAbort = true;

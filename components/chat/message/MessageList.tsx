@@ -56,6 +56,7 @@ function makeGroup(ids: string[], nodes: Record<string, MessageNode>): GroupSegm
  *
  * @param ids - Active path node ids
  * @param nodes - Node map, for each id's chapter metadata
+ * @returns Render segments in path order
  */
 function planSegments(ids: string[], nodes: Record<string, MessageNode>): ListSegment[] {
     const segments: ListSegment[] = [];

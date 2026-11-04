@@ -62,6 +62,7 @@ const TRAILING_PUNCT = /[.,;:!?'")\]]+$/;
  * the markdown label when present, otherwise the url hostname.
  *
  * @param markdown - The assistant answer in its raw markdown form
+ * @returns Unique external links in order of appearance
  */
 function extractExternalLinks(markdown: string): LinkSource[] {
     const text = markdown

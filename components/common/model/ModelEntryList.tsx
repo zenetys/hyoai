@@ -45,6 +45,14 @@ function WithAvailability({
  * several discovered models grouped under a heading, disabled entries greyed
  * out, and the empty state when no entry is configured.
  *
+ * A disabled entry is greyed and unselectable, and says why: the config issue
+ * when the app can tell (type not served by any plugin, model to pin), else the
+ * plain disabled tag, on hover on desktop and inline on mobile where there is
+ * no hover. An entry that cannot answer is greyed the same way with its
+ * availability reason and a retry button when checking again can help. An
+ * entry that is unreachable but kept selectable (automatic disabling off) is
+ * flagged with its error rather than hidden.
+ *
  * @param entries - Configured model entries, in config order
  * @param lists - Per-entry /v1/models resolution state, keyed by entry id
  */
@@ -61,12 +69,6 @@ export function ModelEntryList({ entries, lists }: ModelEntryListProps) {
         return t("modelDisabled");
     };
 
-    /**
-     * A disabled entry: greyed and unselectable, with the reason on hover
-     * (desktop) or shown inline (mobile, no hover).
-     *
-     * @param entry - Disabled model entry
-     */
     const disabledRow = (entry: ModelConfig) => {
         if (isMobile) {
             return (

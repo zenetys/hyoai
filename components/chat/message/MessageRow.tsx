@@ -26,10 +26,9 @@ import { flowSteps } from "@/lib/tools/flow";
 import type { MessageNode } from "@/types/chat";
 
 /**
- * One row of the active branch. Memoized so untouched nodes skip re-renders;
- * only the streaming row subscribes to the live token buffers.
+ * Thumbnails of the files attached to a user message, right-aligned above its bubble.
  *
- * @param id - Node id on the active path
+ * @param node - User node whose attachments are shown
  */
 function AttachmentStrip({ node }: { node: MessageNode }) {
     if (!node.attachments?.length) return null;

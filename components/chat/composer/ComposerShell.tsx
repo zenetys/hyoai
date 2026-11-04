@@ -54,6 +54,9 @@ interface ComposerShellProps {
  * bubble, so a compact composer stays small at rest without cramping a long
  * message.
  *
+ * With carryDraft, the handed-over draft is consumed once at mount, and the
+ * latest draft is kept in a ref so the next composer can pick it up.
+ *
  * @param onSubmit - Receives the trimmed text and attachments on send
  * @param onStop - Aborts the current generation while busy
  * @param busy - A generation is in progress (shows the stop button)

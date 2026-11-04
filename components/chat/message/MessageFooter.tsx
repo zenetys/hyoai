@@ -27,6 +27,7 @@ type Phase = "reading" | "generation" | "stages" | "storage";
  * @param stages - Stage durations captured at the end of the generation
  * @param localize - Resolves a stage label in the UI locale
  * @param locale - BCP 47 locale for number formatting
+ * @returns One "label 1.2 s" string per stage, in reported order
  */
 function stageParts(
     stages: StageTiming[],
