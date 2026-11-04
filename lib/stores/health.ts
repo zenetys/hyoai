@@ -145,6 +145,19 @@ export async function probeEntry(entry: ModelConfig): Promise<"up" | "down" | "u
 }
 
 /**
+ * Check again whether an entry's server answers, after the user asked. A server
+ * that cannot be probed just forgets the failure so the next send tries it. A
+ * discovering entry also reloads its model list, which settles a "not listed" pick.
+ *
+ * @param entry - Entry to retry
+ */
+export function retryEntry(entry: ModelConfig): void {
+    void probeEntry(entry).then((result) => {
+        if (result !== "down" && !entry.model) void refreshModelList(entry, true);
+    });
+}
+
+/**
  * Record what a chat request learned about its server. An answer proves it is up.
  * A network failure or a gateway error (502/503/504) triggers a probe, or marks a
  * server that cannot be probed down for a minute. Other failures say nothing about
