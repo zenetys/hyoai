@@ -36,6 +36,56 @@ export interface PipelineTimings {
 }
 
 /**
+ * Text a backend wants shown in the UI, in a form the core can translate. "key"
+ * is a full message catalog key (a plugin's strings live under "plugins.<id>");
+ * the UI uses its translation when the catalog has the key and falls back to
+ * "text" otherwise, so a backend always renders something readable.
+ */
+export interface LocalizedText {
+    key: string;
+    values?: Record<string, string | number>;
+    text: string;
+}
+
+/**
+ * One source a backend grounded its answer on: a document, a page, a file.
+ * Only "title" is required; everything else is shown when present.
+ */
+export interface Citation {
+    id: string;
+    title: string;
+    url?: string;
+    preview?: string;
+    score?: number;
+}
+
+// What an activity step stands for; drives the icon and the trace header.
+export type ActivityKind = "search" | "step";
+
+/**
+ * One step of what happened before or while the answer was written, such as a
+ * search with its reformulated queries and the documents it found. Steps are
+ * identified by "id": a later event with the same id replaces the earlier one.
+ */
+export interface ActivityStep {
+    id: string;
+    kind: ActivityKind;
+    label: LocalizedText;
+    items?: string[];
+    citations?: Citation[];
+}
+
+/**
+ * Duration of one stage of a backend pipeline, shown in the message footer.
+ * Stages that did not run are simply absent.
+ */
+export interface StageTiming {
+    id: string;
+    label: LocalizedText;
+    ms: number;
+}
+
+/**
  * Generation statistics attached to an assistant message. The footer shows
  * either the reading (prompt processing) phase or the generation (token
  * output) phase, hence the two parallel sets of token/duration/rate fields.
@@ -50,6 +100,7 @@ export interface MessageStats {
     durationMs?: number;
     timeToFirstTokenMs?: number;
     pipeline?: PipelineTimings;
+    stages?: StageTiming[];
 }
 
 // Why an assistant generation ended.
@@ -104,6 +155,8 @@ export interface MessageNode {
     reasoningContent?: string;
     quote?: MessageQuote;
     rag?: RagData;
+    activity?: ActivityStep[];
+    citations?: Citation[];
     attachments?: Attachment[];
     model?: string;
     thinking?: boolean;

@@ -50,7 +50,9 @@ import {
 import { setChatIdInUrl } from "@/lib/url";
 import { ApiError, type ApiMessage, type ChatRequestParams } from "@/types/api";
 import type {
+    ActivityStep,
     Attachment,
+    Citation,
     CompactionState,
     ConversationData,
     FinishReason,
@@ -241,11 +243,20 @@ export class ChatInstance {
 
         let nodes = state.nodes;
         const { streaming } = state;
-        if (streaming.nodeId && (streaming.content || streaming.reasoning || streaming.rag)) {
+        if (
+            streaming.nodeId &&
+            (streaming.content ||
+                streaming.reasoning ||
+                streaming.rag ||
+                streaming.activity ||
+                streaming.citations)
+        ) {
             nodes = updateNode(nodes, streaming.nodeId, {
                 content: streaming.content,
                 reasoningContent: streaming.reasoning || undefined,
                 rag: streaming.rag,
+                activity: streaming.activity,
+                citations: streaming.citations,
             });
         }
         return {
@@ -377,6 +388,8 @@ export class ChatInstance {
         let reasoning = "";
 
         const rag: RagData = {};
+        let activity: ActivityStep[] = [];
+        let citations: Citation[] | undefined;
         let firstTokenAt: number | null = null;
 
         const stats: MessageStats = {};
@@ -401,6 +414,8 @@ export class ChatInstance {
                     content,
                     reasoning,
                     rag: hasRag(rag) ? { ...rag } : undefined,
+                    activity: activity.length > 0 ? activity : undefined,
+                    citations,
                     firstTokenAt,
                     usage: {
                         promptTokens: stats.promptTokens,
@@ -447,6 +462,23 @@ export class ChatInstance {
                         stats.pipeline = event.pipeline;
                         queueFlush();
                         break;
+                    case "activity": {
+                        const at = activity.findIndex((step) => step.id === event.step.id);
+                        activity =
+                            at === -1
+                                ? [...activity, event.step]
+                                : activity.map((step, i) => (i === at ? event.step : step));
+                        queueFlush();
+                        break;
+                    }
+                    case "citations":
+                        citations = event.citations;
+                        queueFlush();
+                        break;
+                    case "stages":
+                        stats.stages = event.stages;
+                        queueFlush();
+                        break;
                     case "usage":
                         stats.promptTokens = event.usage.promptTokens;
                         stats.completionTokens = event.usage.completionTokens;
@@ -481,6 +513,11 @@ export class ChatInstance {
                         errorKind = event.error.kind;
                         finishReason = "error";
                         break;
+                    default: {
+                        // Compile-time guard: a new event type must be handled above.
+                        const unhandled: never = event;
+                        void unhandled;
+                    }
                 }
             }
         } catch (error) {
@@ -542,6 +579,8 @@ export class ChatInstance {
                 content,
                 reasoningContent: reasoning || undefined,
                 rag: hasRag(rag) ? rag : undefined,
+                activity: activity.length > 0 ? activity : undefined,
+                citations,
                 stats,
                 finishReason: finishReason ?? "stop",
                 error: nodeError,
@@ -797,6 +836,8 @@ export class ChatInstance {
             );
             nodes = updateNode(appended.nodes, appended.id, {
                 rag: node.rag,
+                activity: node.activity,
+                citations: node.citations,
                 stats: node.stats,
                 finishReason: node.finishReason,
                 error: node.error,

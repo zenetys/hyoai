@@ -1,4 +1,4 @@
-import type { PipelineTimings, RagDoc } from "@/types/chat";
+import type { ActivityStep, Citation, PipelineTimings, RagDoc, StageTiming } from "@/types/chat";
 import type { PenaltySettings, SamplingSettings } from "@/types/settings";
 
 // One part of an OpenAI multimodal content array.
@@ -86,6 +86,9 @@ export type StreamEvent =
     | { type: "reasoning"; text: string }
     | { type: "subQueries"; queries: string[] }
     | { type: "retrieval"; stage: "dense" | "sparse" | "reranked"; docs: RagDoc[] }
+    | { type: "activity"; step: ActivityStep }
+    | { type: "citations"; citations: Citation[] }
+    | { type: "stages"; stages: StageTiming[] }
     | { type: "usage"; usage: ApiUsage }
     | { type: "timings"; timings: ApiTimings }
     | { type: "pipeline"; pipeline: PipelineTimings }

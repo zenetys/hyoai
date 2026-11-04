@@ -2,7 +2,7 @@ import { errorFromResponse, mapThrownError } from "@/lib/api/error";
 import { buildHeaders, normalizeBaseUrl } from "@/lib/api/request";
 import { parseNamedSseStream } from "@/lib/api/sse";
 import type { ApiMessage, ChatRequestParams, StreamEvent } from "@/types/api";
-import type { RagDoc } from "@/types/chat";
+import type { ActivityStep, Citation, RagDoc, StageTiming } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 
 /**
@@ -66,6 +66,106 @@ interface RagLatencies {
  */
 function stageMs(seconds: number | undefined): number | undefined {
     return seconds != null && seconds > 0 ? seconds * 1000 : undefined;
+}
+
+/**
+ * Turn a raw document excerpt into a readable one-liner. The backend prefixes
+ * every preview with a "# Document: <title>" header (redundant with the title we
+ * already show) and the body is often truncated markdown tables; this drops the
+ * header and flattens markdown/table noise into plain text.
+ *
+ * @param preview - Raw excerpt from the backend
+ * @param source - Document title, stripped when it leads the excerpt
+ * @returns The cleaned one-line excerpt
+ */
+function cleanPreview(preview: string, source: string): string {
+    let text = preview.replace(/^\s*#+\s*Document\s*:\s*/i, "");
+    if (text.startsWith(source)) text = text.slice(source.length);
+    return text
+        .replace(/#{1,6}\s+/g, "")
+        .replace(/\*\*/g, "")
+        .replace(/-{3,}/g, " ")
+        .replace(/(?:\s*\|\s*)+/g, " | ")
+        .replace(/\s+/g, " ")
+        .replace(/^(?:\s|\|)+|(?:\s|\|)+$/g, "")
+        .trim();
+}
+
+/**
+ * Map a backend document onto the app's generic citation.
+ *
+ * @param doc - Document from a retrieval event
+ * @returns The citation shown in the trace and the sources list
+ */
+function toCitation(doc: RagDoc): Citation {
+    return {
+        id: String(doc.id),
+        title: doc.source,
+        url: doc.url || undefined,
+        preview: cleanPreview(doc.preview, doc.source),
+        score: doc.score,
+    };
+}
+
+// Labels of the pipeline stages, in pipeline order, keyed like the latencies payload.
+const STAGE_LABELS: [keyof PipelineStages, string, string][] = [
+    ["intentDetection", "chat.pipelineIntent", "Intent"],
+    ["queryDecomposition", "chat.pipelineDecomposition", "Decomposition"],
+    ["embeddingGeneration", "chat.pipelineEmbedding", "Embedding"],
+    ["vectorSearch", "chat.pipelineVectorSearch", "Vector search"],
+    ["reranking", "chat.pipelineReranking", "Reranking"],
+    ["llmGeneration", "chat.pipelineGeneration", "Generation"],
+    ["totalPipeline", "chat.pipelineTotal", "Total"],
+];
+
+type PipelineStages = Partial<
+    Record<
+        | "intentDetection"
+        | "queryDecomposition"
+        | "embeddingGeneration"
+        | "vectorSearch"
+        | "reranking"
+        | "llmGeneration"
+        | "totalPipeline",
+        number
+    >
+>;
+
+/**
+ * Convert the per-stage durations into the generic stage list, skipping the
+ * stages that did not run.
+ *
+ * @param pipeline - Stage durations in milliseconds
+ * @returns Stage timings in pipeline order
+ */
+function stageTimings(pipeline: PipelineStages): StageTiming[] {
+    const stages: StageTiming[] = [];
+    for (const [id, key, text] of STAGE_LABELS) {
+        const ms = pipeline[id];
+        if (ms !== undefined) stages.push({ id, label: { key, text }, ms });
+    }
+    return stages;
+}
+
+/**
+ * Describe one retrieval stage as an activity step listing its documents.
+ *
+ * @param stage - Retrieval stage the documents come from
+ * @param docs - Documents of that stage
+ * @returns The activity step
+ */
+function retrievalStep(stage: "dense" | "sparse" | "reranked", docs: RagDoc[]): ActivityStep {
+    const label = {
+        dense: { key: "chat.retrievedDense", text: `Dense search (${docs.length})` },
+        sparse: { key: "chat.retrievedSparse", text: `Lexical search (${docs.length})` },
+        reranked: { key: "chat.rerankedDocs", text: `Reranking (${docs.length})` },
+    }[stage];
+    return {
+        id: stage,
+        kind: "search",
+        label: { ...label, values: { count: docs.length } },
+        citations: docs.map(toCitation),
+    };
 }
 
 /**
@@ -162,6 +262,8 @@ export async function* streamRagChat(
             };
             if (Object.values(pipeline).some((value) => value !== undefined)) {
                 yield { type: "pipeline", pipeline };
+                const stages = stageTimings(pipeline);
+                if (stages.length > 0) yield { type: "stages", stages };
             }
         } else if (event === "sub_queries") {
             let queries: string[];
@@ -172,6 +274,15 @@ export async function* streamRagChat(
             }
             if (Array.isArray(queries) && queries.length > 0) {
                 yield { type: "subQueries", queries };
+                yield {
+                    type: "activity",
+                    step: {
+                        id: "subQueries",
+                        kind: "search",
+                        label: { key: "chat.subQueries", text: "Sub-queries" },
+                        items: queries,
+                    },
+                };
             }
         } else if (
             event === "retrieved_dense" ||
@@ -192,6 +303,10 @@ export async function* streamRagChat(
                           ? "sparse"
                           : "reranked";
                 yield { type: "retrieval", stage, docs };
+                yield { type: "activity", step: retrievalStep(stage, docs) };
+                if (stage === "reranked") {
+                    yield { type: "citations", citations: docs.map(toCitation) };
+                }
             }
         } else if (event === "done") {
             yield { type: "finish", reason: "stop" };
