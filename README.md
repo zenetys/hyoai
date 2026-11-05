@@ -206,6 +206,7 @@ Keys of a `models` entry:
 | `supportsThinking`   | boolean                                            | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                                                                      |
 | `tools`              | boolean                                            | Tool calling for this entry; off unless the config says `true` or a llama.cpp server reports a chat template that handles tools. `false` forces it off. See [Tool calling](#tool-calling)                                                                    |
 | `parallelToolCalls`  | boolean                                            | Lets the model call several tools in one step (sent as `parallel_tool_calls`; default: not sent)                                                                                                                                                             |
+| `mcpServers`         | string[]                                           | Which servers of the [MCP catalog](#mcp-servers) this entry may use: absent means every enabled server, a list means only those, `[]` means none. Only matters when tools are on for the entry                                                               |
 | `supportsToolChoice` | boolean                                            | Whether the server accepts the `tool_choice` field. Defaults from `type` (`false` for `openai`, which covers Ollama), overridable                                                                                                                            |
 | `runtimeProps`       | boolean                                            | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                                                                        |
 
@@ -325,6 +326,123 @@ Security defaults:
 
 An export that contains tool calls imports into this app without loss. Older builds of the app, and
 the llama.cpp web interface, may drop or flatten them.
+
+### MCP servers
+
+An [MCP](https://modelcontextprotocol.io) server gives the models more tools. The app is an MCP
+client that runs in the browser and plugs the server's tools into the same loop as the others (see
+[Tool calling](#tool-calling)): the model sees them, every call shows its arguments and waits for
+your decision, and the result is capped and shown as plain text. Nothing is run without your
+approval unless you allow the tool yourself, and no MCP tool is ever offered in an embed.
+
+The catalog of servers is the `mcp.servers` list of `config.json`:
+
+```json
+{
+    "mcp": {
+        "servers": [
+            {
+                "id": "docs",
+                "label": "Product docs",
+                "url": "/mcp/docs",
+                "transport": "auto",
+                "headers": { "Authorization": "Bearer xxxxxxxx" },
+                "enabled": true
+            }
+        ]
+    }
+}
+```
+
+| Key         | Type                      | Description                                                                                                                             |
+| ----------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`        | string (required)         | 1 to 30 letters, digits, `-` or `_`; unique. It names the server in the approvals table and in a model's `mcpServers` list              |
+| `url`       | string (required)         | The MCP endpoint: an `http(s)` URL, or a path resolved against the page (`/mcp/docs`, `./mcp`), which suits a same-origin reverse proxy |
+| `label`     | string                    | Name shown in Settings (default: `id`)                                                                                                  |
+| `transport` | `auto` \| `http` \| `sse` | `http` is Streamable HTTP, `sse` the older HTTP+SSE. `auto` tries Streamable HTTP and falls back to SSE (default: `auto`)               |
+| `headers`   | object of strings         | Sent with every request, for example `Authorization`                                                                                    |
+| `enabled`   | boolean                   | `false` keeps the entry in the file but does not connect it nor offer its tools (default: `true`)                                       |
+
+A server that is not valid (bad `id`, missing or unusable `url`, headers that are not strings, an `id`
+already used) is skipped with a warning in the browser console; the other servers and the models
+are not affected. The Config tab edits the same fields as local overrides, so a server of
+`config.json` can be changed, removed and reset like a model entry.
+
+Settings → Tools shows one card per server: its state, its address, an on/off switch, and the tools
+it lists, each with its own approval (ask, allow or deny; the default is to ask). The state tells you
+what to fix: connected, authentication refused (401 or 403), address not found, no answer, server
+unreachable, blocked by CORS, or blocked by the local network permission. The server connects the
+first time its tools are needed (or when the Tools tab shows it), the tool list is kept for 30
+seconds, and **Refresh** lists again or reconnects.
+
+**Which models see which servers.** With tools on, a model gets every enabled server. Set
+`mcpServers` on a `models` entry to narrow that down (`"mcpServers": ["docs"]`, or `[]` for none);
+the Config tab has the same choice in the model's advanced options. A list that is not an array of
+strings counts as `[]`, never as "all". Tools still have to be on for the model (see
+[Tool calling](#tool-calling)).
+
+**Behaviour.** The connection is kept for the whole page life and recovers from an expired session
+by connecting again once. A connection attempt is cut after 15 seconds and listing the tools after
+10 seconds; a call is cut after 60 seconds like any tool. A tool a server announces twice, or without
+a name, is ignored. Text results are used as they are; images, audio and links become a short note
+for the model. The server's tool annotations (read-only, destructive) are shown as "not verified"
+and never relax an approval.
+
+**CORS.** The browser talks to the server directly, so a server on another origin has to allow this
+page, as for [the models](#cors). On top of the usual `Access-Control-Allow-Origin`, MCP needs:
+
+```
+Access-Control-Allow-Origin: https://chat.example.com
+Access-Control-Allow-Headers: Authorization, Content-Type, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id
+Access-Control-Expose-Headers: Mcp-Session-Id
+```
+
+Without `Access-Control-Expose-Headers: Mcp-Session-Id` the page cannot read the session id, and the
+server either refuses the next request or loses the session. A browser never says why a cross-origin
+request failed, so a server that is simply down also shows as "CORS blocked"; check the address first.
+Reaching a server on a local address from a public page may also need the browser's local network
+permission, which Settings explains when it applies.
+
+**Behind a reverse proxy.** Serving the MCP endpoint under the app's own origin avoids CORS
+altogether, and lets the proxy hold the credentials so none reaches the browser. The prefix the proxy
+removes must be the one it matched: with Caddy, `handle_path` strips the matched path, so the
+configuration below sends `/mcps/docs/mcp` to `/mcp` upstream. Turn buffering off, because the
+responses can be event streams:
+
+```
+chat.example.com {
+    handle_path /mcps/docs/* {
+        reverse_proxy https://mcp.example.com {
+            header_up Host {upstream_hostport}
+            header_up Authorization "Bearer xxxxxxxx"
+            flush_interval -1
+        }
+    }
+}
+```
+
+Set `"url": "/mcps/docs/mcp"` for it. Do not combine `handle` with `uri strip_prefix` on a different
+path: the prefix is then not removed and the server answers 404, which shows as "Not found". With
+nginx, the trailing slash of `proxy_pass` does the stripping:
+
+```
+location /mcps/docs/ {
+    proxy_pass https://mcp.example.com/;
+    proxy_set_header Host mcp.example.com;
+    proxy_ssl_server_name on;
+    proxy_buffering off;
+}
+```
+
+**Secrets.** `headers` (and the bearer token field of the form) are kept in the browser exactly like
+a model `apiKey`: they sit in `config.json`, which anyone who can open the page can fetch, and in
+the local overrides in `localStorage`. They are sent to the server on every request. Use a token
+that can only do what the tools need, or let a reverse proxy add the credential as above. Settings
+exports never contain the servers or their headers.
+
+**Not supported.** OAuth (a server that needs a browser sign-in cannot be used; give it a static
+token or put it behind a proxy), resources, prompts and sampling (only tools are used), and servers
+that need a local process (stdio): the server must be reachable over HTTP.
 
 ## Integrations
 
@@ -452,7 +570,8 @@ components/     chat/ (view, message, composer, dialogs), settings/ (tabs, field
                 editors, dialogs), layout/ (shells, header, sidebar), compare/,
                 markdown/, common/ (cross-domain), ui/ (shadcn)
 hooks/          useStore (useSyncExternalStore + selectors), useActiveChat, useConversations
-lib/            api/ (SSE, params mapping), plugins/ (registry, SDK), storage/ (compressed
+lib/            api/ (SSE, params mapping), plugins/ (registry, SDK), tools/ (catalog, runner),
+                mcp/ (MCP client and server registry), storage/ (compressed
                 localStorage, quota), stores/ (settings, models, conversations, chat),
                 messageTree, chatActions
 messages/       next-intl catalogs fr.json / en.json
@@ -501,7 +620,8 @@ types/          shared types (chat, server, settings, api, storage)
 
 - Tool calling: the model can call tools during an answer, with the arguments shown and your
   approval asked before each call (see [Tool calling](#tool-calling)); calls and their results
-  appear as cards above the answer and stay in the conversation
+  appear as cards above the answer and stay in the conversation; [MCP servers](#mcp-servers) plug
+  their tools into the same loop
 
 - Markdown & sources: tables, code highlighting and blockquotes render inline;
   answers can carry source citations and a trace of the backend's steps
