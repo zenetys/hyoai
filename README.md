@@ -397,6 +397,11 @@ first time its tools are needed (or when the Tools tab shows it), the tool list 
 seconds, and **Refresh** lists again or reconnects. A server that is connected but answers its tool
 listing wrongly (no tools support, a malformed list) says so on its card.
 
+The wrench panel in the composer lists the servers too, tagged **MCP**, with their tool count and the
+same on/off switch as the card, so there is one setting for a server. A server that failed shows its
+state and the reason, with **Retry**, and can still be switched off; one your model is not scoped to
+says so. A server that is switched off is not contacted when the panel opens.
+
 **Which models see which servers.** With tools on, a model gets every enabled server. Set
 `mcpServers` on a `models` entry to narrow that down (`"mcpServers": ["docs"]`, or `[]` for none);
 the Config tab has the same choice in the model's advanced options. A list that is not an array of
