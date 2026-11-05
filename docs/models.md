@@ -460,8 +460,8 @@ effort level used, when the model declares levels. Next to the chip come the tok
 figures, unless **Message statistics** is turned off in Settings → General.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/thinking-dark.png">
-    <img alt="An answer with its Reasoning block expanded above the text, a sources row, a HYOAI Medium chip with a brain icon and the figures 233 tokens, 4.7 s and 50 tok/s" src="images/thinking-light.png" width="770">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/thinking.png">
+    <img alt="An answer with its Reasoning block expanded above the text, a sources row, a HYOAI Medium chip with a brain icon and the figures 233 tokens, 4.7 s and 50 tok/s" src="images/light/thinking.png" width="770">
 </picture>
 
 The screenshot shows the Reasoning block expanded with the model's reasoning text, then the answer,
@@ -485,8 +485,8 @@ the button opens the model menu next to it, as a dropdown; the other case is des
 short name of the active model and the label of its active effort level.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/selection-dark.png">
-    <img alt="The model menu opened from the composer: two models with a check on the active one, and the Reasoning submenu listing Low, Medium (Default) and High, with the Thinking switch" src="images/selection-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/selection.png">
+    <img alt="The model menu opened from the composer: two models with a check on the active one, and the Reasoning submenu listing Low, Medium (Default) and High, with the Thinking switch" src="images/light/selection.png" width="830">
 </picture>
 
 - **Models.** One row per entry; a check mark marks the active one. An entry without a pinned
@@ -535,8 +535,8 @@ desktop window therefore gets the drawer too, while a touch-screen laptop whose 
 mouse keeps the dropdown.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/responsive-dark.png">
-    <img alt="The model menu as a bottom drawer on a phone, headed Select a model, with two models, the Reasoning levels Low, Medium (Default) and High, and the Thinking switch" src="images/responsive-light.png" width="426">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/responsive.png">
+    <img alt="The model menu as a bottom drawer on a phone, headed Select a model, with two models, the Reasoning levels Low, Medium (Default) and High, and the Thinking switch" src="images/light/responsive.png" width="426">
 </picture>
 
 - The drawer has a drag handle, is headed **Select a model**, and is dismissed by swiping it down.
@@ -591,8 +591,8 @@ everything else empty, off or on **Auto** (note that a `type` missing from a han
 `config.json` defaults to `vllm`, not to `llama.cpp`).
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/config-dark.png">
-    <img alt="The Config tab in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/config-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/config.png">
+    <img alt="The Config tab in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/light/config.png" width="716">
 </picture>
 
 The screenshot shows a `claude` entry modelled on the Anthropic recipe above, with a different

@@ -42,8 +42,8 @@ model menu, where a reasoning level and thinking toggle also live when the model
 declares them (see [Reasoning](#reasoning-thinking-and-effort)).
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/selection-dark.png">
-    <img alt="Picking a model and reasoning level from the composer" src="docs/images/selection-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/selection.png">
+    <img alt="Picking a model and reasoning level from the composer" src="docs/images/light/selection.png" width="830">
 </picture>
 
 ### Local model
@@ -154,8 +154,8 @@ rebuild). Each entry describes a model and the endpoint serving it. The in-app
 `localStorage` on top of the deployed file and revertable from the Reset dialog.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/config-dark.png">
-    <img alt="The Config tab in Settings, editing a model entry" src="docs/images/config-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/config.png">
+    <img alt="The Config tab in Settings, editing a model entry" src="docs/images/light/config.png" width="716">
 </picture>
 
 `public/config.json` is gitignored (it holds deployment-specific endpoints):
@@ -250,8 +250,8 @@ stopped or reloaded flow can be continued the same way. The calls show as cards 
 each with its arguments and result; regenerating, branching and deleting act on the whole flow.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/tool-approval-dark.png">
-    <img alt="A tool call waiting for approval: the tool, its full arguments, and the Allow once, Always allow and Deny buttons" src="docs/images/tool-approval-light.png" width="760">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/tool-approval.png">
+    <img alt="A tool call waiting for approval: the tool, its full arguments, and the Allow once, Always allow and Deny buttons" src="docs/images/light/tool-approval.png" width="760">
 </picture>
 
 The server has to support it, and some need a flag:
@@ -328,8 +328,8 @@ approval (Ask each time, Always allow or Disabled; the default is Ask each time)
 `mcpServers` on a model entry narrows which of them that model sees.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/mcp-servers-short-dark.png">
-    <img alt="MCP servers in Settings: one connected, one blocked by CORS with the headers to add, one refusing the credentials" src="docs/images/mcp-servers-short-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/mcp-servers-short.png">
+    <img alt="MCP servers in Settings: one connected, one blocked by CORS with the headers to add, one refusing the credentials" src="docs/images/light/mcp-servers-short.png" width="716">
 </picture>
 
 The key table, the CORS headers a server must send, the reverse-proxy recipes (Caddy, nginx), how secrets are
@@ -493,8 +493,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   OpenAI-format JSONL
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/sidebar-dark.png">
-  <img alt="Conversations sidebar with the background-generation indicator" src="docs/images/sidebar-light.png" width="596">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/sidebar.png">
+  <img alt="Conversations sidebar with the background-generation indicator" src="docs/images/light/sidebar.png" width="596">
 </picture>
 
 - Branches: editing a message or regenerating a reply creates a navigable
@@ -503,8 +503,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   the next question on it
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/reply-dark.png">
-  <img alt="Composer quoting a previous message" src="docs/images/reply-light.png" width="830">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/reply.png">
+  <img alt="Composer quoting a previous message" src="docs/images/light/reply.png" width="830">
 </picture>
 
 - Reasoning (`reasoning_content`) shown in a collapsible block, per-message
@@ -512,8 +512,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   model menu when declared in `config.json` (see above), per pane in compare mode
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/thinking-dark.png">
-  <img alt="A collapsible reasoning block above the answer, then its sources and the per-message stats" src="docs/images/thinking-light.png" width="770">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/thinking.png">
+  <img alt="A collapsible reasoning block above the answer, then its sources and the per-message stats" src="docs/images/light/thinking.png" width="770">
 </picture>
 
 - Compare mode: run the same prompt against up to four models side by side, each
@@ -524,8 +524,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   you in and out of the compare (see [docs/compare.md](docs/compare.md)).
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/compare-dark.png">
-  <img alt="Three models answering the same question side by side, each with its own reasoning level and its own stats" src="docs/images/compare-light.png" width="830">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/compare.png">
+  <img alt="Three models answering the same question side by side, each with its own reasoning level and its own stats" src="docs/images/light/compare.png" width="830">
 </picture>
 
 - Model availability: when a model's server stops answering, the model is greyed
@@ -540,8 +540,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   [docs/compare.md](docs/compare.md#model-availability)).
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/unavailable-dark.png">
-  <img alt="A model whose server does not answer: the composer shows the reason and a Retry button" src="docs/images/unavailable-light.png" width="830">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/unavailable.png">
+  <img alt="A model whose server does not answer: the composer shows the reason and a Retry button" src="docs/images/light/unavailable.png" width="830">
 </picture>
 
 - Tool calling: the model can call tools during an answer, with the arguments shown and your
@@ -560,8 +560,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   vision format)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/attachments-dark.png">
-  <img alt="Attachment menu: images, audio, text files, PDFs and a system message" src="docs/images/attachments-light.png" width="830">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/attachments.png">
+  <img alt="Attachment menu: images, audio, text files, PDFs and a system message" src="docs/images/light/attachments.png" width="830">
 </picture>
 
 - Sampling and penalty settings: an empty field is not sent (the endpoint
@@ -578,8 +578,8 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   SSR-safe, so the static export hydrates cleanly
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/responsive-dark.png">
-  <img alt="The model menu as a mobile bottom drawer with reasoning levels and a thinking toggle" src="docs/images/responsive-light.png" width="426">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/responsive.png">
+  <img alt="The model menu as a mobile bottom drawer with reasoning levels and a thinking toggle" src="docs/images/light/responsive.png" width="426">
 </picture>
 
 - Accessible: icon-only controls carry `aria-label`s and decorative glyphs are

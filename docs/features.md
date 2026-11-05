@@ -101,8 +101,8 @@ conversations come first, then everything else by last modification, most recent
 conversation the list reads **No conversations**.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/sidebar-dark.png">
-    <img alt="Conversation list split into Pinned and Recent, with a green check on a conversation whose background generation finished and its hover card reading Generation complete — click to view" src="images/sidebar-light.png" width="596">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/sidebar.png">
+    <img alt="Conversation list split into Pinned and Recent, with a green check on a conversation whose background generation finished and its hover card reading Generation complete — click to view" src="images/light/sidebar.png" width="596">
 </picture>
 
 Hovering a row for a moment opens a card to its right with the title (up to two lines) and,
@@ -134,8 +134,8 @@ Each row has a **…** button (shown on hover or focus, and always on touch devi
 the row opens the same menu). It opens:
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/compare-enter-dark.png">
-    <img alt="Conversation row menu with Rename, Pin, Copy link, Export as JSON, Compare models (highlighted) and Delete" src="images/compare-enter-light.png" width="455">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/compare-enter.png">
+    <img alt="Conversation row menu with Rename, Pin, Copy link, Export as JSON, Compare models (highlighted) and Delete" src="images/light/compare-enter.png" width="455">
 </picture>
 
 | Entry               | Effect                                                                                                                                                                                                                                                                                                                                                                     |
@@ -172,8 +172,8 @@ whole message when the exact word cannot be located. With no result the list rea
 Ctrl/Cmd+K opens a palette from anywhere in the full application.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/palette-dark.png">
-    <img alt="Command palette with the query latency: one matching conversation under Recent and one matching message under Messages with the term highlighted" src="images/palette-light.png" width="526">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/palette.png">
+    <img alt="Command palette with the query latency: one matching conversation under Recent and one matching message under Messages with the term highlighted" src="images/light/palette.png" width="526">
 </picture>
 
 With an empty field it offers two actions, **New conversation** and **Settings**, followed by every
@@ -217,8 +217,8 @@ the header checkbox shows "{count}/{total} selected"), pick a **Format**, then p
 button, which shows the number of selected conversations, for example **Export (3)**.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/export-dark.png">
-    <img alt="Export conversations dialog with the Format list open: HYOAI, OpenAI (JSONL), Markdown and llama.cpp webui, above a list of three selected conversations and the Export (3) button" src="images/export-light.png" width="598">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/export.png">
+    <img alt="Export conversations dialog with the Format list open: HYOAI, OpenAI (JSONL), Markdown and llama.cpp webui, above a list of three selected conversations and the Export (3) button" src="images/light/export.png" width="598">
 </picture>
 
 | Format              | File name                                                                             |
@@ -295,8 +295,8 @@ its most recent end, so you land on the latest state of the alternative you pick
 disabled at the first and last version.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/branches-dark.png">
-    <img alt="A user message with the branch indicator 1/2 between the previous and next arrows, followed by the edit, copy, fork and delete buttons" src="images/branches-light.png" width="820">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/branches.png">
+    <img alt="A user message with the branch indicator 1/2 between the previous and next arrows, followed by the edit, copy, fork and delete buttons" src="images/light/branches.png" width="820">
 </picture>
 
 Because a conversation is a tree, the old branch is kept whole, answers included. The tree is what
@@ -339,8 +339,8 @@ selection.
   use the action sheet.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/reply-dark.png">
-    <img alt="Composer with a Replying to strip quoting a sentence of an earlier answer, above the typed follow-up Can you show an example query?" src="images/reply-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/reply.png">
+    <img alt="Composer with a Replying to strip quoting a sentence of an earlier answer, above the typed follow-up Can you show an example query?" src="images/light/reply.png" width="830">
 </picture>
 
 The excerpt waits above the input in a strip headed **Replying to**, with a **Remove quote** button
@@ -371,8 +371,8 @@ for that answer, the model's short name (without one, the base name taken from t
 id) and the effort level used, when an effort level was sent.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/thinking-dark.png">
-    <img alt="An answer with its Reasoning block expanded above the text, a collapsed 1 source row, the HYOAI Medium chip with a brain icon, the tokens, time and speed figures and the message action buttons" src="images/thinking-light.png" width="770">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/thinking.png">
+    <img alt="An answer with its Reasoning block expanded above the text, a collapsed 1 source row, the HYOAI Medium chip with a brain icon, the tokens, time and speed figures and the message action buttons" src="images/light/thinking.png" width="770">
 </picture>
 
 ### Per-message stats
@@ -460,8 +460,8 @@ text.
 A `mermaid` code block renders as a diagram instead of being highlighted.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/math-dark.png">
-    <img alt="An answer with a rendered Bayes' theorem formula and a mermaid diagram of four boxes (Client, Proxy, Model, Answer), whose header has a download button and a copy button" src="images/math-light.png" width="820">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/math.png">
+    <img alt="An answer with a rendered Bayes' theorem formula and a mermaid diagram of four boxes (Client, Proxy, Model, Answer), whose header has a download button and a copy button" src="images/light/math.png" width="820">
 </picture>
 
 The diagram has the same frame as a code block, headed `mermaid`, with a **Copy** button for the
@@ -498,8 +498,8 @@ gives the reason, for example "No model available (config.json)". Details and sh
 The **+** button (**Add files or a system message**) opens the attachment menu above the composer.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/attachments-dark.png">
-    <img alt="Attachment menu above the composer: Images and Audio files greyed out with the reasons, then Text files, PDF files and System message" src="images/attachments-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/attachments.png">
+    <img alt="Attachment menu above the composer: Images and Audio files greyed out with the reasons, then Text files, PDF files and System message" src="images/light/attachments.png" width="830">
 </picture>
 
 You can also paste files into the field or drop them on the composer; each file is routed by its
@@ -653,8 +653,8 @@ the touch menus and controls too. The layout itself, such as the docked sidebar,
 width.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/responsive-dark.png">
-    <img alt="The model menu as a bottom drawer on a phone-width screen: the model list, the Reasoning levels Low, Medium (Default) and High, and the Thinking switch" src="images/responsive-light.png" width="426">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/responsive.png">
+    <img alt="The model menu as a bottom drawer on a phone-width screen: the model list, the Reasoning levels Low, Medium (Default) and High, and the Thinking switch" src="images/light/responsive.png" width="426">
 </picture>
 
 - **Bottom drawers.** The model menu and the conversation menu open as bottom drawers instead of

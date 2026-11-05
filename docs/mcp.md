@@ -26,8 +26,8 @@ In an [embed](embed.md#what-the-widget-leaves-out) the settings have no Tools or
 wrench is not shown, so the last three places do not exist there and no MCP tool is offered.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/mcp-servers-short-dark.png">
-    <img alt="Settings, Tools tab: three MCP server cards, Product docs (Connected), Metrics (CORS blocked, with the headers the server must send) and Tickets (Authentication, HTTP 401)" src="images/mcp-servers-short-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-servers-short.png">
+    <img alt="Settings, Tools tab: three MCP server cards, Product docs (Connected), Metrics (CORS blocked, with the headers the server must send) and Tickets (Authentication, HTTP 401)" src="images/light/mcp-servers-short.png" width="716">
 </picture>
 
 ## Declaring servers in `config.json`
@@ -94,8 +94,8 @@ no server is set up it says "No MCP server is set up." Click **Add a server**: a
 block opens with the form below.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/mcp-add-dark.png">
-    <img alt="The New server form: Name, Identifier, Address, Transport (Automatic), Bearer token revealed, with a crossed-eye icon button (Hide the token) and a copy icon button, Other headers (JSON, not masked), and the Cancel and Save buttons" src="images/mcp-add-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-add.png">
+    <img alt="The New server form: Name, Identifier, Address, Transport (Automatic), Bearer token revealed, with a crossed-eye icon button (Hide the token) and a copy icon button, Other headers (JSON, not masked), and the Cancel and Save buttons" src="images/light/mcp-add.png" width="716">
 </picture>
 
 | Field                                | What to enter                                                                                                                                                                                                                                                                                               |
@@ -171,8 +171,8 @@ in monospace. For any state other than **Connected**, a box under the address ex
 for a failure it also repeats, in monospace, the message the connection reported.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/mcp-servers-dark.png">
-    <img alt="Five MCP server cards in five states: Product docs (Connected, Tools (4)), Metrics (CORS blocked), Tickets (Authentication, HTTP 401), Wiki (Not found, HTTP 404) and Legacy search (Off, switched off)" src="images/mcp-servers-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-servers.png">
+    <img alt="Five MCP server cards in five states: Product docs (Connected, Tools (4)), Metrics (CORS blocked), Tickets (Authentication, HTTP 401), Wiki (Not found, HTTP 404) and Legacy search (Off, switched off)" src="images/light/mcp-servers.png" width="716">
 </picture>
 
 | Pill               | What it says                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -229,8 +229,8 @@ and the expanded list says "This server lists no tool."
 connection and connects from scratch. The button spins while the listing runs.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/mcp-tools-dark.png">
-    <img alt="An expanded server card listing four tools with an approval select each (Always allow, Ask each time, Ask each time, Disabled), three marked Read-only and one marked Destructive, each followed by 'declared by the server, not verified'" src="images/mcp-tools-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-tools.png">
+    <img alt="An expanded server card listing four tools with an approval select each (Always allow, Ask each time, Ask each time, Disabled), three marked Read-only and one marked Destructive, each followed by 'declared by the server, not verified'" src="images/light/mcp-tools.png" width="716">
 </picture>
 
 Each tool of the list shows:
@@ -302,8 +302,8 @@ conversation as a card marked "Waiting for approval", with the prompt inside it.
 in [tools.md](tools.md); this is what the prompt says for a server.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/mcp-approval-dark.png">
-    <img alt="A tool call card of the Product docs server waiting for approval: 'Allow Search the docs to run?', 'Tool name: search_docs', a 'Declared read-only by its provider' badge, the JSON arguments, and the buttons Allow once, Always allow and Deny" src="images/mcp-approval-light.png" width="760">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-approval.png">
+    <img alt="A tool call card of the Product docs server waiting for approval: 'Allow Search the docs to run?', 'Tool name: search_docs', a 'Declared read-only by its provider' badge, the JSON arguments, and the buttons Allow once, Always allow and Deny" src="images/light/mcp-approval.png" width="760">
 </picture>
 
 - **Allow {tool} to run?** names the tool as the server titles it. **Tool name:** gives the name the
@@ -358,8 +358,8 @@ To do the same from the browser:
    `mcpServers`, ready to copy into `config.json`.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/mcp-scope-dark.png">
-    <img alt="Advanced settings of a model in the Config tab: Tool calling set to Yes, and the MCP servers block with Every enabled server switched off, Product docs and Metrics ticked and Tickets not ticked" src="images/mcp-scope-light.png" width="690">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-scope.png">
+    <img alt="Advanced settings of a model in the Config tab: Tool calling set to Yes, and the MCP servers block with Every enabled server switched off, Product docs and Metrics ticked and Tickets not ticked" src="images/light/mcp-scope.png" width="690">
 </picture>
 
 A few details of the block:

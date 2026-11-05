@@ -101,8 +101,8 @@ of tools at a glance:
 Clicking it opens the panel.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/tool-panel-dark.png">
-    <img alt="The tools panel opened from the wrench button of the composer, with the conversation switch and the Clock and Product docs providers" src="images/tool-panel-light.png" width="692">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-panel.png">
+    <img alt="The tools panel opened from the wrench button of the composer, with the conversation switch and the Clock and Product docs providers" src="images/light/tool-panel.png" width="692">
 </picture>
 
 The panel has two levels, and the difference matters:
@@ -146,8 +146,8 @@ Unless you allowed the tool, a call stops at an approval card inside the flow, u
 concerns.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/tool-approval-dark.png">
-    <img alt="An approval card for the Current time tool showing the arguments and the Allow once, Always allow and Deny buttons" src="images/tool-approval-light.png" width="760">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-approval.png">
+    <img alt="An approval card for the Current time tool showing the arguments and the Allow once, Always allow and Deny buttons" src="images/light/tool-approval.png" width="760">
 </picture>
 
 The card shows what is sent and to whom:
@@ -195,8 +195,8 @@ calls". It opens by itself while the answer is produced, then folds once the ans
 "Expand search and tool activity" is on in Settings → General.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/tool-flow-dark.png">
-    <img alt="A finished flow with two Current time cards, their arguments and results opened, above the answer and its statistics footer" src="images/tool-flow-light.png" width="788">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-flow.png">
+    <img alt="A finished flow with two Current time cards, their arguments and results opened, above the answer and its statistics footer" src="images/light/tool-flow.png" width="788">
 </picture>
 
 In the picture, the trace and the "Arguments" and "Result" blocks of both calls were unfolded by
@@ -271,8 +271,8 @@ The Tools tab of the settings holds the global settings of the tool loop: the de
 conversations, the limits, the providers and the approval of each tool.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/tool-settings-dark.png">
-    <img alt="The Tools tab of the settings, with tools enabled for new conversations and Current time set to Always allow, which are not the defaults: Tool calling options, the Clock provider with its approval, an MCP server card and the Reset approvals button" src="images/tool-settings-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-settings.png">
+    <img alt="The Tools tab of the settings, with tools enabled for new conversations and Current time set to Always allow, which are not the defaults: Tool calling options, the Clock provider with its approval, an MCP server card and the Reset approvals button" src="images/light/tool-settings.png" width="716">
 </picture>
 
 In this picture, tools are enabled for new conversations and "Current time" is set to "Always

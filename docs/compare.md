@@ -25,8 +25,8 @@ every pane (each one using its own model, except the panes whose model cannot an
 next to each other, with each answer's own stats footer.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/compare-dark.png">
-    <img alt="Three compare panes answering the same question with HYOAI Medium, Qwen3 High and Mistral Low, each with its own stats, above the shared composer with the All and Active toggle and the Analyze button" src="images/compare-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/compare.png">
+    <img alt="Three compare panes answering the same question with HYOAI Medium, Qwen3 High and Mistral Low, each with its own stats, above the shared composer with the All and Active toggle and the Analyze button" src="images/light/compare.png" width="830">
 </picture>
 
 In the screenshot, three panes answer "What is the difference between TCP and UDP?". The model
@@ -47,8 +47,8 @@ There are three ways in.
 | A link                | A URL with a `?compare=` parameter, see [A link with `?compare=`](#a-link-with-compare).                                                                                                                                                          | The exact comparison the link describes.                                                                                                                                                                        |
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/compare-enter-dark.png">
-    <img alt="Conversation row menu with Rename, Pin, Copy link, Export as JSON, Compare models (highlighted) and Delete" src="images/compare-enter-light.png" width="455">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/compare-enter.png">
+    <img alt="Conversation row menu with Rename, Pin, Copy link, Export as JSON, Compare models (highlighted) and Delete" src="images/light/compare-enter.png" width="455">
 </picture>
 
 The row menu above is the one that opens from the "..." button of a conversation in the sidebar:
@@ -349,8 +349,8 @@ Both settings live in **Settings → General → Model availability**, under the
 app does when a model stops answering."
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/unavailable-settings-dark.png">
-    <img alt="Settings, Model availability section with the Automatically disable unavailable models switch on and the silent server delay set to 20" src="images/unavailable-settings-light.png" width="716">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/unavailable-settings.png">
+    <img alt="Settings, Model availability section with the Automatically disable unavailable models switch on and the silent server delay set to 20" src="images/light/unavailable-settings.png" width="716">
 </picture>
 
 | Setting                                      | Default | Range             | Effect                                                                                                                                                                                                                                                                               |
@@ -462,8 +462,8 @@ configuration, or the message of an unsupported entry from the table above. An e
 the configuration is not in the menu at all.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/unavailable-menu-dark.png">
-    <img alt="Model menu with Local llama.cpp greyed out, marked Unavailable and followed by a retry icon" src="images/unavailable-menu-light.png" width="784">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/unavailable-menu.png">
+    <img alt="Model menu with Local llama.cpp greyed out, marked Unavailable and followed by a retry icon" src="images/light/unavailable-menu.png" width="784">
 </picture>
 
 In the screenshot, HYOAI - Demo is the selected model and Qwen3 32B (local) can be picked, while
@@ -480,8 +480,8 @@ good (a **Retry** there only when the model list may have changed). The model is
 another one.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/unavailable-dark.png">
-    <img alt="Composer of a single chat with an amber strip saying the server does not answer, with a Retry button, above the message input" src="images/unavailable-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/unavailable.png">
+    <img alt="Composer of a single chat with an amber strip saying the server does not answer, with a Retry button, above the message input" src="images/light/unavailable.png" width="830">
 </picture>
 
 The strip in the screenshot reads "The server does not answer. The model is available again as soon
@@ -497,8 +497,8 @@ banner, not in the header). The shared send skips the pane and the composer says
 of 3". A pane comes back into the sends by itself when its server answers again.
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/compare-unavailable-dark.png">
-    <img alt="Three compare panes where the third pane, on llama.cpp, shows an Unavailable badge and a banner with Retry, and the composer says Sending to 2 panes of 3" src="images/compare-unavailable-light.png" width="830">
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/compare-unavailable.png">
+    <img alt="Three compare panes where the third pane, on llama.cpp, shows an Unavailable badge and a banner with Retry, and the composer says Sending to 2 panes of 3" src="images/light/compare-unavailable.png" width="830">
 </picture>
 
 In the screenshot, the first two panes (HYOAI Medium and Qwen3 High) answered the question, and the
