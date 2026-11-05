@@ -162,6 +162,7 @@ npm run dev                                         # http://127.0.0.1:4117
 | `npm run build`  | Production build (static export to `out/`)     |
 | `npm run start`  | Serves `out/` on port 4118                     |
 | `npm run check`  | `tsc --noEmit` + ESLint + Prettier (read-only) |
+| `npm run test`   | Unit tests (Vitest), not run by `check`        |
 | `npm run format` | Prettier + ESLint in write mode                |
 
 `npm run build` produces a fully static `out/` directory. Deploy it to any
@@ -326,8 +327,10 @@ markup (the Hermes `tool_call` format, ending the text). Set `"recoverToolCalls"
 entry to recover it: when a step made no structured call, a complete block at the very end of the
 text that names a tool of the flow is taken out of the text and run as that call. It goes through
 the same approval as every other call. A block that is incomplete, not at the end, or for an
-unknown tool is left as text. The option is off by default and, like the rest of the tool
-support, a model setting you opt into.
+unknown tool is left as text. The values of the block are text, so they are typed by the tool's
+input schema (`"5"` becomes `5` for an integer, `true` for a boolean, `["a"]` for an array), and a
+call without parameters is recovered only for a tool that requires none. The option is off by
+default and, like the rest of the tool support, a model setting you opt into.
 
 Security defaults:
 
@@ -381,15 +384,17 @@ The catalog of servers is the `mcp.servers` list of `config.json`:
 
 A server that is not valid (bad `id`, missing or unusable `url`, headers that are not strings, an `id`
 already used) is skipped with a warning in the browser console; the other servers and the models
-are not affected. The Config tab edits the same fields as local overrides, so a server of
-`config.json` can be changed, removed and reset like a model entry.
+are not affected. Settings → Tools edits the same fields as local overrides, so a server of
+`config.json` can be changed, removed and reset like a model entry; the Config tab only sets which
+servers a model uses.
 
 Settings → Tools shows one card per server: its state, its address, an on/off switch, and the tools
 it lists, each with its own approval (ask, allow or deny; the default is to ask). The state tells you
 what to fix: connected, authentication refused (401 or 403), address not found, no answer, server
 unreachable, blocked by CORS, or blocked by the local network permission. The server connects the
 first time its tools are needed (or when the Tools tab shows it), the tool list is kept for 30
-seconds, and **Refresh** lists again or reconnects.
+seconds, and **Refresh** lists again or reconnects. A server that is connected but answers its tool
+listing wrongly (no tools support, a malformed list) says so on its card.
 
 **Which models see which servers.** With tools on, a model gets every enabled server. Set
 `mcpServers` on a `models` entry to narrow that down (`"mcpServers": ["docs"]`, or `[]` for none);
@@ -400,9 +405,17 @@ strings counts as `[]`, never as "all". Tools still have to be on for the model 
 **Behaviour.** The connection is kept for the whole page life and recovers from an expired session
 by connecting again once. A connection attempt is cut after 15 seconds and listing the tools after
 10 seconds; a call is cut after 60 seconds like any tool. A tool a server announces twice, or without
-a name, is ignored. Text results are used as they are; images, audio and links become a short note
+a name, is ignored. A server that does not answer its listing is left alone for 30 seconds (Refresh
+asks again at once), so it does not slow down every message, and the "tools unavailable" notice is
+shown once. What a server may offer is bounded: the first 200 tools, names up to 128 characters,
+descriptions cut at 4,000 and titles at 200 characters, and a tool whose input schema is over
+20,000 characters is ignored. The names, descriptions and schemas of one server together stay under
+60,000 characters, and the tools that no longer fit are ignored. Text results are used as they are; images, audio and links become a short note
 for the model. The server's tool annotations (read-only, destructive) are shown as "not verified"
-and never relax an approval.
+and never relax an approval. An "always allow" is kept for the tool _and the address of the server_
+(the `url`, not the headers): if `url` changes, or another server takes over the `id`, its tools ask
+again. It is still the tool's name that is approved, not what the server says it does: a server that
+changes a tool's behaviour behind the same name keeps the approval, so only allow servers you trust.
 
 **CORS.** The browser talks to the server directly, so a server on another origin has to allow this
 page, as for [the models](#cors). On top of the usual `Access-Control-Allow-Origin`, MCP needs:
@@ -454,7 +467,9 @@ location /mcps/docs/ {
 a model `apiKey`: they sit in `config.json`, which anyone who can open the page can fetch, and in
 the local overrides in `localStorage`. They are sent to the server on every request. Use a token
 that can only do what the tools need, or let a reverse proxy add the credential as above. Settings
-exports never contain the servers or their headers.
+exports never contain the servers or their headers. The Config tab masks the header values in its
+JSON preview (Copy gives the real config) but not the "Other headers" field, where they are typed
+as they are stored.
 
 **Not supported.** OAuth (a server that needs a browser sign-in cannot be used; give it a static
 token or put it behind a proxy), resources, prompts and sampling (only tools are used), and servers

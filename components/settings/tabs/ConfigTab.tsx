@@ -52,7 +52,8 @@ const SCROLL_SETTLE_MS = 400;
 /**
  * Config tab: a full form over config.json that stores a local override
  * bypassing the deployed file (applied live), with a generated-JSON preview to
- * copy and a reset back to the deployment config.
+ * copy and a reset back to the deployment config. The preview shown hides the
+ * MCP tokens, while Copy still gives the whole config.
  */
 export function ConfigTab() {
     const t = useTranslations("settings");

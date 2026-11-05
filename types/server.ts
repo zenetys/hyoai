@@ -132,7 +132,9 @@ export interface IntegrationConfig {
 }
 
 /**
- * Shape of the public/config.json file fetched at boot.
+ * Shape of the public/config.json file fetched at boot. The "mcpServers" field is
+ * the MCP server catalog, disabled servers included, and "mcpIssues" says why
+ * catalog entries were dropped, one English line each.
  */
 export interface AppConfig {
     models: ModelConfig[];
