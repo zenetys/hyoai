@@ -33,6 +33,16 @@ export default defineConfig([
                     ],
                 },
             ],
+            // No native title: it shows the browser's own tooltip (use aria-label or Tooltip)
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector:
+                        "JSXOpeningElement[name.name=/^[a-z]/] > JSXAttribute[name.name='title']",
+                    message:
+                        "No native title attribute: use aria-label, or the Tooltip component for a visible hint.",
+                },
+            ],
             // Components in PascalCase (or a single lowercase word), hooks
             // and lib in camelCase; kebab-case is forbidden
             "check-file/filename-naming-convention": [
