@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/hooks/useStore";
 import { settingsStore } from "@/lib/stores/settings";
 import { isLinkableUrl } from "@/lib/url";
@@ -175,12 +176,19 @@ export function Sources({
                                               </span>
                                           )}
                                           {citation.score !== undefined && (
-                                              <span
-                                                  className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground/60"
-                                                  title={t("relevanceScore")}
-                                              >
-                                                  {citation.score.toFixed(2)}
-                                              </span>
+                                              <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                      <span className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground/60">
+                                                          <span className="sr-only">
+                                                              {t("relevanceScore")}{" "}
+                                                          </span>
+                                                          {citation.score.toFixed(2)}
+                                                      </span>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                      {t("relevanceScore")}
+                                                  </TooltipContent>
+                                              </Tooltip>
                                           )}
                                       </div>
                                       {citation.preview && (

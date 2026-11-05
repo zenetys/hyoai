@@ -188,7 +188,6 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                     className="ml-1 flex size-6 shrink-0 items-center justify-center text-amber-500"
                     role="img"
                     aria-label={t("awaitingApproval")}
-                    title={t("awaitingApproval")}
                 >
                     <ShieldQuestion className="size-4" aria-hidden="true" />
                 </span>

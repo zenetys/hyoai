@@ -58,11 +58,7 @@ export function HeaderTitle() {
     const label = title || t("untitled");
 
     if (!meta) {
-        return (
-            <span className="min-w-0 flex-1 truncate text-sm font-medium" title={label}>
-                {label}
-            </span>
-        );
+        return <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>;
     }
 
     return (
@@ -70,7 +66,6 @@ export function HeaderTitle() {
             <button
                 type="button"
                 className="-mx-2 inline-block max-w-full truncate rounded px-2 py-1 text-left text-sm font-medium hover:bg-muted"
-                title={label}
                 onClick={() => setRenaming(true)}
             >
                 {label}

@@ -64,14 +64,7 @@ export function ToolsProviderRow({
 
     let meta: React.ReactNode = null;
     if (detail) {
-        meta = (
-            <p
-                className="text-xs break-words text-destructive"
-                title={(error ?? listError)?.message}
-            >
-                {detail}
-            </p>
-        );
+        meta = <p className="text-xs break-words text-destructive">{detail}</p>;
     } else if (server && !enabled) {
         meta = <p className="text-xs text-muted-foreground">{tMcp("status.disabled.label")}</p>;
     } else if (outOfScope) {
