@@ -338,8 +338,9 @@ Security defaults:
   and Settings → Tools lists the decisions and can reset them. Setting the default to "always
   allow" is a deliberate choice and shows a warning. Approvals are never imported from an export.
 - A result is capped at 20,000 characters, shown as plain text (never rendered as Markdown or
-  HTML), and a call is cut after 60 seconds. What the model writes after a result loads no remote
-  image, so an injected instruction cannot send data out through an image address.
+  HTML), and a call is cut after 60 seconds. Nothing the model writes in a conversation that holds a
+  result, and no summary of it, loads a remote image, so an injected instruction cannot send data
+  out through an image address.
 - Tools are never offered in an embed. A tool provider is code running in the page: see
   [Plugins](#plugins).
 
