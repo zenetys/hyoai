@@ -206,6 +206,7 @@ Keys of a `models` entry:
 | `supportsThinking`   | boolean                                            | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                                                                      |
 | `tools`              | boolean                                            | Tool calling for this entry; off unless the config says `true` or a llama.cpp server reports a chat template that handles tools. `false` forces it off. See [Tool calling](#tool-calling)                                                                    |
 | `parallelToolCalls`  | boolean                                            | Lets the model call several tools in one step (sent as `parallel_tool_calls`; default: not sent)                                                                                                                                                             |
+| `recoverToolCalls`   | boolean                                            | Off unless `true`. Runs a tool call the model wrote as text instead of the structured channel, after your approval. See [Tool calling](#tool-calling)                                                                                                        |
 | `mcpServers`         | string[]                                           | Which servers of the [MCP catalog](#mcp-servers) this entry may use: absent means every enabled server, a list means only those, `[]` means none. Only matters when tools are on for the entry                                                               |
 | `supportsToolChoice` | boolean                                            | Whether the server accepts the `tool_choice` field. Defaults from `type` (`false` for `openai`, which covers Ollama), overridable                                                                                                                            |
 | `runtimeProps`       | boolean                                            | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                                                                        |
@@ -312,6 +313,21 @@ The server has to support it, and some need a flag:
 - A model whose chat template does not support tools keeps working: when the request offers no
   tools, the results of earlier calls stay in the context as text added to the message they
   answer, and the calls themselves are not written out, so the model does not imitate them.
+
+A step that ends in a way the app cannot use is reported as an error on the message, never left
+silent: the server closed the stream before its finish reason, the token limit cut a tool call
+while it was written (the half call is dropped, not run), the server announced a call it never
+sent, or the model wrote nothing after the tool results. Regenerate the answer to try again.
+A stream cut before its finish reason is reported the same way when no tool is involved, and a
+summary cut that way is thrown away instead of replacing the history.
+
+Some servers have a chat parser that fails to catch a call and let it leak into the answer as
+markup (the Hermes `tool_call` format, ending the text). Set `"recoverToolCalls": true` on the
+entry to recover it: when a step made no structured call, a complete block at the very end of the
+text that names a tool of the flow is taken out of the text and run as that call. It goes through
+the same approval as every other call. A block that is incomplete, not at the end, or for an
+unknown tool is left as text. The option is off by default and, like the rest of the tool
+support, a model setting you opt into.
 
 Security defaults:
 
