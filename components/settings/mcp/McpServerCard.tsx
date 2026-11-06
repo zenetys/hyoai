@@ -53,6 +53,12 @@ export function McpServerCard({ view, otherIds }: { view: McpServerView; otherId
         else done?.();
     };
 
+    const restore = async () => {
+        const error = await saveMcpServer(draft);
+        if (error) toast.error(t("saveFailed", { detail: error }));
+        else toast.success(t("restoredDone", { name }));
+    };
+
     const remove = () =>
         change(
             () => removeMcpServer(config.id),
@@ -60,7 +66,7 @@ export function McpServerCard({ view, otherIds }: { view: McpServerView; otherId
                 toast(t("removedDone", { name }), {
                     action: {
                         label: t("undo"),
-                        onClick: () => void saveMcpServer(draft),
+                        onClick: () => void restore(),
                     },
                 }),
         );
