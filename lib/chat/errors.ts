@@ -34,6 +34,8 @@ export function errorText(
             return t("errorCallMissing");
         case "emptyAnswer":
             return t("errorEmptyAnswer");
+        case "reasoningOnly":
+            return t("errorReasoningOnly");
         case "http":
             return TOOLS_REJECTED.test(node.error ?? "")
                 ? t("errorToolsRejected", { message: node.error ?? "" })

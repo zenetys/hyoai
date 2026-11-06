@@ -49,6 +49,42 @@ describe("classifyEnding", () => {
         expect(classifyEnding({ ...base, content: " \n\t", afterTools: true })).toBe("emptyAnswer");
     });
 
+    it("tells a step that only reasoned from an empty answer", () => {
+        expect(classifyEnding({ ...base, content: "", reasoned: true, afterTools: true })).toBe(
+            "reasoningOnly",
+        );
+        expect(
+            classifyEnding({
+                ...base,
+                finishReason: "length",
+                content: "",
+                reasoned: true,
+                afterTools: true,
+            }),
+        ).toBe("reasoningOnly");
+        expect(classifyEnding({ ...base, content: "", reasoned: false, afterTools: true })).toBe(
+            "emptyAnswer",
+        );
+    });
+
+    it("lets a step through that reasoned and then wrote an answer or a call", () => {
+        expect(classifyEnding({ ...base, reasoned: true, afterTools: true })).toBeNull();
+        expect(
+            classifyEnding({
+                ...base,
+                finishReason: "tool_calls",
+                toolCalls: 1,
+                content: "",
+                reasoned: true,
+                afterTools: true,
+            }),
+        ).toBeNull();
+    });
+
+    it("does not flag a first step that only reasoned", () => {
+        expect(classifyEnding({ ...base, content: "", reasoned: true })).toBeNull();
+    });
+
     it("does not flag an empty first step", () => {
         expect(classifyEnding({ ...base, content: "" })).toBeNull();
     });
@@ -63,7 +99,13 @@ describe("classifyEnding", () => {
 
 describe("endingMessage", () => {
     it("describes every kind", () => {
-        const kinds: SilentEnding[] = ["truncated", "callCutOff", "callMissing", "emptyAnswer"];
+        const kinds: SilentEnding[] = [
+            "truncated",
+            "callCutOff",
+            "callMissing",
+            "emptyAnswer",
+            "reasoningOnly",
+        ];
         const messages = kinds.map(endingMessage);
         expect(messages.every((message) => message.length > 0)).toBe(true);
         expect(new Set(messages).size).toBe(kinds.length);

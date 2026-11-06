@@ -1524,10 +1524,12 @@ export class ChatInstance {
                 // A call the model wrote as text joins the normal path, approval included.
                 if (!answerNow) outcome = this.recoverTextCalls(currentId, outcome, flow);
                 const reason = outcome.finishReason;
+                const stepNode = this.store.getState().nodes[currentId];
                 const ending = classifyEnding({
                     finishReason: reason ?? "stop",
                     toolCalls: outcome.toolCalls.length,
-                    content: this.store.getState().nodes[currentId]?.content ?? "",
+                    content: stepNode?.content ?? "",
+                    reasoned: (stepNode?.reasoningContent ?? "").trim() !== "",
                     afterTools: step > 1 || resume !== undefined,
                 });
                 if (ending) {
