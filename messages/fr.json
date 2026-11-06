@@ -124,6 +124,7 @@
         "errorCallCutOff": "La réponse a atteint la limite de tokens pendant que le modèle écrivait un appel d'outil, qui a donc été abandonné. Augmente le nombre maximal de tokens et régénère la réponse.",
         "errorCallMissing": "Le serveur a annoncé un appel d'outil sans l'envoyer. Régénère la réponse, ou vérifie le parseur d'appels d'outils du serveur.",
         "errorEmptyAnswer": "Le modèle a terminé son tour sans écrire de réponse après les résultats des outils. Régénère la réponse.",
+        "errorReasoningOnly": "Après les résultats des outils, le modèle n'a fait que raisonner sans écrire de réponse. Régénère la réponse, ou augmente le nombre maximal de tokens si le raisonnement les consomme tous.",
         "errorTimeout": "Le serveur n'a pas commencé à répondre à temps et semble injoignable.",
         "toolCalls": "{count, plural, one {# appel d'outil} other {# appels d'outils}}",
         "toolStatusPending": "En attente d'approbation",

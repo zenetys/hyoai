@@ -124,6 +124,7 @@
         "errorCallCutOff": "The answer hit the token limit while the model was writing a tool call, so the call was dropped. Raise the maximum number of tokens and regenerate the answer.",
         "errorCallMissing": "The server announced a tool call but did not send it. Regenerate the answer, or check the tool call parser of the server.",
         "errorEmptyAnswer": "The model ended its turn without writing an answer after the tool results. Regenerate the answer.",
+        "errorReasoningOnly": "After the tool results the model only reasoned and wrote no answer. Regenerate the answer, or raise the maximum number of tokens if the reasoning uses them all.",
         "errorTimeout": "The server did not start answering in time and looks unreachable.",
         "toolCalls": "{count, plural, one {# tool call} other {# tool calls}}",
         "toolStatusPending": "Waiting for approval",
