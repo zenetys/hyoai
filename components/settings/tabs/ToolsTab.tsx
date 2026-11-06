@@ -160,6 +160,7 @@ export function ToolsTab() {
 
             <div className="space-y-3">
                 <h3 className="text-sm font-medium">{t("providers")}</h3>
+                <p className="text-xs text-muted-foreground">{t("policyHint")}</p>
                 {providers.length === 0 && (
                     <p className="text-sm text-muted-foreground">{t("noProviders")}</p>
                 )}

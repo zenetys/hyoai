@@ -79,7 +79,13 @@ export function ToolsProviderRow({
     } else if (count === null) {
         meta = <p className="text-xs text-destructive">{t("toolsListFailed")}</p>;
     } else if (count !== undefined) {
-        meta = <p className="text-xs text-muted-foreground">{t("toolsCount", { count })}</p>;
+        meta = (
+            <p className="text-xs text-muted-foreground">
+                {count.hidden > 0
+                    ? t("toolsCountHidden", { count: count.count, hidden: count.hidden })
+                    : t("toolsCount", { count: count.count })}
+            </p>
+        );
     }
 
     const change = async (value: boolean) => {
