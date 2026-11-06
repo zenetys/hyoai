@@ -536,19 +536,29 @@ export class ChatInstance {
         const state = this.store.getState();
         let messages: ApiMessage[];
 
+        // The opt-in is read once, so both ways of building the history agree on it.
+        const preserveThinking = shouldPreserveThinking(entry, {
+            thinking: this.getThinking(),
+            effort: this.getEffort(),
+        });
+
         if (messagesOverride) {
             messages = messagesOverride;
         } else if (!entry.sendContext) {
             const path = getPath(state.nodes, nodeId);
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
             const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
-            messages = buildApiMessages(currentTurn(path), systemPrompt, { nativeTools });
+            messages = buildApiMessages(currentTurn(path), systemPrompt, {
+                nativeTools,
+                preserveThinking,
+            });
         } else {
             const path = getPath(state.nodes, nodeId);
             const meta = state.conversationId ? getMeta(state.conversationId) : null;
             const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
             messages = await this.compactForBudget(nodeId, path, systemPrompt, entry, model, {
                 nativeTools,
+                preserveThinking,
                 tools: flow?.tools.definitions,
             });
         }
@@ -883,7 +893,8 @@ export class ChatInstance {
      * @param systemPrompt - Effective system prompt for the turn
      * @param entry - Resolved model entry
      * @param model - Resolved upstream model id
-     * @param request - Whether tool calls go out natively, and the tools the request carries
+     * @param request - Whether tool calls go out natively, whether the saved reasoning is
+     *   sent back, and the tools the request carries
      * @returns Messages ready for the request
      */
     private compactForBudget = async (
@@ -892,14 +903,11 @@ export class ChatInstance {
         systemPrompt: string,
         entry: ModelConfig,
         model: string,
-        request: { nativeTools: boolean; tools?: ApiToolDefinition[] },
+        request: { nativeTools: boolean; preserveThinking: boolean; tools?: ApiToolDefinition[] },
     ): Promise<ApiMessage[]> => {
         const options = {
             nativeTools: request.nativeTools,
-            preserveThinking: shouldPreserveThinking(entry, {
-                thinking: this.getThinking(),
-                effort: this.getEffort(),
-            }),
+            preserveThinking: request.preserveThinking,
         };
         const compaction = this.store.getState().compaction;
         const messages = buildCompactedMessages(path, systemPrompt, compaction, options);
