@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { MessageNode } from "@/types/chat";
 
-import { buildApiMessages } from "../conversation";
+import { buildApiMessages, currentTurn } from "../conversation";
 
 let counter = 0;
 
@@ -94,5 +94,95 @@ describe("buildApiMessages with native tools", () => {
             "assistant",
             "user",
         ]);
+    });
+});
+
+describe("buildApiMessages with the saved reasoning of a tool flow", () => {
+    function reasoningFlow(): MessageNode[] {
+        const path = toolFlow();
+        path[1] = node({
+            role: "assistant",
+            reasoningContent: "I need the clock.",
+            toolCalls: [clock],
+        });
+        path[3] = node({
+            role: "assistant",
+            content: "Il est 14h59.",
+            reasoningContent: "The result says 14:59.",
+        });
+        return path;
+    }
+
+    it("sends the reasoning with the call and with the answer in the native format", () => {
+        const messages = buildApiMessages(reasoningFlow(), "", {
+            nativeTools: true,
+            preserveThinking: true,
+        });
+        expect(messages[1]).toMatchObject({
+            role: "assistant",
+            content: "",
+            reasoning_content: "I need the clock.",
+            tool_calls: [{ id: "call1" }],
+        });
+        expect(messages[3]).toMatchObject({
+            role: "assistant",
+            reasoning_content: "The result says 14:59.",
+        });
+    });
+
+    it("sends no reasoning unless the entry opted in", () => {
+        for (const nativeTools of [true, false]) {
+            const messages = buildApiMessages(reasoningFlow(), "", { nativeTools });
+            expect(JSON.stringify(messages)).not.toContain("reasoning_content");
+        }
+    });
+
+    it("keeps the reasoning of a call that wrote no text when the calls are flattened", () => {
+        const messages = buildApiMessages(reasoningFlow(), "", {
+            nativeTools: false,
+            preserveThinking: true,
+        });
+        expect(messages.map((message) => message.role)).toEqual([
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+            "user",
+        ]);
+        expect(messages[1]).toEqual({
+            role: "assistant",
+            content: "",
+            reasoning_content: "I need the clock.",
+        });
+        expect(messages[2].content).toContain("2026-11-04T13:59:05Z");
+        expect(JSON.stringify(messages)).not.toContain("tool_calls");
+    });
+
+    it("still drops a call that wrote neither text nor reasoning when flattened", () => {
+        const messages = buildApiMessages(toolFlow(), "", {
+            nativeTools: false,
+            preserveThinking: true,
+        });
+        expect(messages.map((message) => message.role)).toEqual(["user", "assistant", "user"]);
+    });
+
+    it("sends the reasoning of the current turn when earlier turns are not sent", () => {
+        const earlier = [
+            node({ role: "user", content: "Avant" }),
+            node({ role: "assistant", content: "Réponse", reasoningContent: "old thoughts" }),
+        ];
+        const path = [...earlier, ...reasoningFlow().slice(0, 4)];
+        const messages = buildApiMessages(currentTurn(path), "", {
+            nativeTools: true,
+            preserveThinking: true,
+        });
+        expect(JSON.stringify(messages)).not.toContain("old thoughts");
+        expect(messages.map((message) => message.role)).toEqual([
+            "user",
+            "assistant",
+            "tool",
+            "assistant",
+        ]);
+        expect(messages[1]).toMatchObject({ reasoning_content: "I need the clock." });
     });
 });

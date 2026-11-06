@@ -379,8 +379,8 @@ export function buildApiMessages(
                     ...reasoning,
                     tool_calls: calls.map(toApiToolCall),
                 });
-            } else if (node.content.length > 0) {
-                // A call shown back as text makes the model write one instead of answering.
+            } else if (node.content.length > 0 || reasoning.reasoning_content) {
+                // A call shown as text gets imitated, so it is not written out; its reasoning is.
                 messages.push({ role: "assistant", content: node.content, ...reasoning });
             }
             continue;
