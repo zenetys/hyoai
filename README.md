@@ -243,7 +243,7 @@ button to switch them back on, when the current model can take tools.
 
 For each step the model asks for a call, the app shows the tool and its full arguments, waits for
 your decision (allow once, always allow this tool, or deny) unless the tool is already set to
-Always allow (it runs at once) or Disabled (the tool is not offered to the model), runs it, and
+Always allow (it runs at once) or Hidden from the model (the tool is not offered to the model), runs it, and
 sends the result back so the model can answer or call again. Calls run one after the other, an
 answer stops after 10 steps by default (then **Continue** or **Answer without tools**), and a
 stopped or reloaded flow can be continued the same way. The calls show as cards above the answer,
@@ -324,7 +324,7 @@ A server that is not valid is skipped with a warning in the browser console; the
 are not affected. Settings → Tools shows one card per server: its state (off, not connected, connecting, connected,
 authentication refused (401 or 403), address not found, no answer, unreachable, blocked by CORS or by the local
 network permission, or a protocol error), its address, an on/off switch, and the tools it lists, each with its own
-approval (Ask each time, Always allow or Disabled; the default is Ask each time). The wrench panel in the composer lists the servers too, and
+approval (Ask each time, Always allow or Hidden from the model; the default is Ask each time). The wrench panel in the composer lists the servers too, and
 `mcpServers` on a model entry narrows which of them that model sees.
 
 <picture>

@@ -29,7 +29,7 @@ act on the whole flow.
 In more detail, one answer goes like this:
 
 1. When the answer starts, the app lists the tools of every enabled provider once and sends them
-   with the request. A tool whose approval is set to "Disabled" is not offered. A provider that
+   with the request. A tool whose approval is set to "Hidden from the model" is not offered. A provider that
    fails to list its tools, or does not within 10 seconds, is left out of that answer and reported
    with a notification ("Tools from {provider} are unavailable for this answer."). For an MCP
    server, the app remembers a failed listing for 30 seconds and does not report the same failure
@@ -127,7 +127,8 @@ The panel has two levels, and the difference matters:
   follows Settings → Tools, "Enable tools in new conversations"; once you flip the switch, the
   conversation remembers its own choice.
 - **The providers below, tagged "Global setting"**, are not per conversation. Each row shows the
-  provider, how many tools it offers ("1 tool", "4 tools"), or why it cannot ("The tools could not
+  provider, how many tools it lists ("1 tool", "4 tools", followed by "· 1 hidden" when some are set to
+  "Hidden from the model" and so are not offered), or why it cannot ("The tools could not
   be listed"), and a switch, which is the same setting as "Offer the tools of {provider} to models"
   in Settings → Tools and applies to every conversation. An MCP server is tagged "MCP" and carries
   its connection state. The line under its name is the first of these that applies: the reason of a
@@ -184,7 +185,7 @@ Then three buttons:
 
 Nothing in the card is focused on its own, so a keystroke meant for the composer never approves a
 call. If you change the approval of that tool in Settings while the card is waiting, the card
-settles by itself ("Always allow" runs it, "Disabled" denies it); allowing a tool "Always allow" in
+settles by itself ("Always allow" runs it, "Hidden from the model" denies it); allowing a tool "Always allow" in
 one compare pane likewise releases the same tool waiting in another pane.
 
 A call waiting for you is signalled in several places, so a flow running in the background can be
@@ -306,13 +307,15 @@ same global setting as in the panel of the wrench) and, for each of its tools, a
 - "Ask each time": the tool asks before every call;
 - "Always allow": the tool runs without asking, which is what the Always allow button of a card
   sets;
-- "Disabled": the tool is not offered to the models at all.
+- "Hidden from the model": the tool is not offered to the models at all, so they cannot ask for it.
+  This is not the same as "Deny" on an approval card, which refuses a call the model already asked
+  for.
 
 The built-in `clock` provider is always in the list. A provider that fails to list its tools reads
 "The tools of this provider could not be listed." The MCP servers have their own section further
 down the same tab, covered in [mcp.md](mcp.md).
 
-"Reset approvals" at the bottom clears every per-tool decision, "Always allow" and "Disabled" alike,
+"Reset approvals" at the bottom clears every per-tool decision, "Always allow" and "Hidden from the model" alike,
 so each tool follows "Default approval" again. The button confirms with "Every tool asks again."
 
 ## Errors on a step

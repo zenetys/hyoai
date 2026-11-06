@@ -156,7 +156,7 @@ is kept in this browser only.
 ## Reading a server card
 
 Settings → Tools shows one card per server: its state, its address, an on/off switch, and the tools
-it lists, each with its own approval (Ask each time, Always allow or Disabled; the default is Ask
+it lists, each with its own approval (Ask each time, Always allow or Hidden from the model; the default is Ask
 each time). The state tells you what to fix: connected, authentication refused (401 or 403), address
 not found, no answer, server unreachable, blocked by CORS, or blocked by the local network
 permission. The server connects the first time its tools are needed (or when the Tools tab shows
@@ -238,9 +238,10 @@ Each tool of the list shows:
 - Its name, or the display name the server gave it, in monospace. The display name is the title of
   the tool or, failing that, the title in its annotations, cut at 200 characters.
 - Its **approval**, a select named "Approval for {tool}" with three values: **Ask each time**,
-  **Always allow** and **Disabled**. A tool without an entry of its own follows **Default approval**
-  of the Tools tab, which is **Ask each time** unless you changed it. A tool set to **Disabled** is
-  not offered to the model at all.
+  **Always allow** and **Hidden from the model**. A tool without an entry of its own follows
+  **Default approval** of the Tools tab, which is **Ask each time** unless you changed it. A tool
+  set to **Hidden from the model** is not offered to the model at all; the wrench panel still lists
+  it in the tool count, followed by "· 1 hidden".
 - Its description, cut after three lines.
 - The hints the server declared about it, as badges: **Read-only**, **Destructive** and **Reaches
   outside**, always followed by the italic note "declared by the server, not verified". The hints
@@ -249,7 +250,7 @@ Each tool of the list shows:
   the server is the only one that claims it.
 
 In the screenshot, the first tool is set to **Always allow**, two ask each time, and the last,
-marked **Destructive**, is **Disabled**. **Reset approvals**, at the bottom of the Tools tab, clears
+marked **Destructive**, is **Hidden from the model**. **Reset approvals**, at the bottom of the Tools tab, clears
 every per-tool approval, so each tool follows **Default approval** again.
 
 An **Always allow** is kept for the tool _and the address of the server_ (see
