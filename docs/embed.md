@@ -96,6 +96,7 @@ an embed, except where noted.
 - **Tools and MCP servers**: the wrench button is not shown, every turn is sent
   without tools and no MCP server is registered or contacted. See
   [Tool calling](tools.md) and [MCP servers](mcp.md).
+- **The deployment notice**: the `notice` strip of the config is never shown.
 - **Settings tabs**: the Settings dialog has no **Tools** and no **Config** tab.
   **Data** is there only in the sidebar variant.
 - **Compare models**: the conversation menu of the sidebar variant does not offer

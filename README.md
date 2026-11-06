@@ -166,7 +166,7 @@ behind a reverse proxy.
 
 An optional root `appName` key sets the deployment name shown on the empty chat
 screen (`Chat with <appName> models`); when omitted it falls back to a generic
-localized word (`AI` / `IA`). The other root keys (`defaultModel`, `embedOrigins`, `mcp`,
+localized word (`AI` / `IA`). The other root keys (`defaultModel`, `notice`, `placeholders`, `embedOrigins`, `mcp`,
 `integrations` and the top-level `thinking` and `effort`) are in
 [docs/models.md](docs/models.md#root-keys).
 
