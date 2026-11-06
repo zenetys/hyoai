@@ -98,7 +98,7 @@ export function SettingsDialog() {
                         {showData && <TabsTrigger value="data">{t("tabs.data")}</TabsTrigger>}
                         {showConfig && <TabsTrigger value="config">{t("tabs.config")}</TabsTrigger>}
                     </TabsList>
-                    <div className="-mx-1 min-h-0 overflow-x-hidden overflow-y-auto pt-2 pr-3 pl-1 max-md:flex-1 md:max-h-[60vh]">
+                    <div className="-mx-1 min-h-0 overflow-x-hidden overflow-y-auto pt-2 pr-3 pb-2 pl-1 max-md:flex-1 md:max-h-[60vh]">
                         <TabsContent value="general">
                             <GeneralTab />
                         </TabsContent>
