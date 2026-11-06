@@ -47,6 +47,21 @@ In more detail, one answer goes like this:
    call (or its answer is cut by the token limit), you press Stop, the step limit is reached, or a
    step fails (see [Errors on a step](#errors-on-a-step)).
 
+### Reasoning during a flow
+
+A model that reasons between steps has the reasoning of each step saved on that step's message, and
+it shows in the folded "Reasoning" row. It is not sent back to the model by default. With the
+`preserve_thinking` opt-in of [models.md](models.md#keeping-the-reasoning-of-earlier-turns), the
+reasoning of every earlier step goes back with its call, so the model finds its own thoughts after
+each result. This holds in three situations:
+
+- when the calls are sent natively, the reasoning travels on the same message as the call;
+- when **Send context** is off for the model, only the current turn is sent and it includes the
+  reasoning of the steps of the flow;
+- when the calls are shown to the model as text (tools switched off, or a model that cannot take
+  them), a step that wrote no text but did reason is still sent, as an assistant message with its
+  reasoning and no text. A step with neither is left out, as before.
+
 ## Turning tools on for a model
 
 The server has to support it, and some need a flag:
@@ -305,18 +320,20 @@ so each tool follows "Default approval" again. The button confirms with "Every t
 A step that ends in a way the app cannot use is reported as an error on the message, never left
 silent: the server closed the stream before its finish reason, the token limit cut a tool call while
 it was written (the half call is dropped, not run), the server announced a call it never sent, or
-the model wrote nothing after the tool results. Regenerate the answer to try again. A stream cut
+the model wrote nothing after the tool results, or only reasoned. Regenerate the answer to try
+again. A stream cut
 before its finish reason is reported the same way when no tool is involved, and a summary cut that
 way is thrown away instead of replacing the history.
 
 The message on the answer says which case it is:
 
-| Case                                                 | Message                                                                                                                                                          |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The stream closed before its finish reason           | "The server closed the connection before the answer was complete. Regenerate the answer."                                                                        |
-| The token limit cut a tool call while it was written | "The answer hit the token limit while the model was writing a tool call, so the call was dropped. Raise the maximum number of tokens and regenerate the answer." |
-| The server announced a call it never sent            | "The server announced a tool call but did not send it. Regenerate the answer, or check the tool call parser of the server."                                      |
-| The model wrote nothing after the tool results       | "The model ended its turn without writing an answer after the tool results. Regenerate the answer."                                                              |
+| Case                                                 | Message                                                                                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The stream closed before its finish reason           | "The server closed the connection before the answer was complete. Regenerate the answer."                                                                          |
+| The token limit cut a tool call while it was written | "The answer hit the token limit while the model was writing a tool call, so the call was dropped. Raise the maximum number of tokens and regenerate the answer."   |
+| The server announced a call it never sent            | "The server announced a tool call but did not send it. Regenerate the answer, or check the tool call parser of the server."                                        |
+| The model wrote nothing after the tool results       | "The model ended its turn without writing an answer after the tool results. Regenerate the answer."                                                                |
+| The model only reasoned after the tool results       | "After the tool results the model only reasoned and wrote no answer. Regenerate the answer, or raise the maximum number of tokens if the reasoning uses them all." |
 
 When the server rejects the tools themselves (an HTTP error whose message points at the tools), the
 error reads "The server rejected the tools ({message}). Start llama.cpp with --jinja or vLLM with

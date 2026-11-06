@@ -448,6 +448,10 @@ Only an explicit boolean `true` counts as the opt-in, and it is read from the me
 so it applies when the Thinking state is on (for an `on` fragment) or when the matching effort level
 is active.
 
+The opt-in also applies when **Send context** is off. Only the current turn is sent then, which in a
+tool flow means the question and every step that followed it, and the reasoning of those steps goes
+along with them. See [tools.md](tools.md#reasoning-during-a-flow) for how it behaves between steps.
+
 ### What an answer shows
 
 While the model is reasoning and has not written any answer text yet, the block above the answer
