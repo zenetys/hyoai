@@ -2,7 +2,7 @@ import { ApiError, type ApiErrorKind } from "@/types/api";
 
 /**
  * Map an error thrown by fetch or by a stream read into a typed ApiError.
- * AbortError becomes "aborted" and TypeError becomes "network" (the UI turns
+ * AbortError becomes "aborted", TimeoutError becomes "timeout" and TypeError becomes "network" (the UI turns
  * network failures into a CORS hint); anything else uses the fallback kind.
  *
  * @param err - Value caught from fetch or reader.read()
@@ -12,6 +12,9 @@ import { ApiError, type ApiErrorKind } from "@/types/api";
 export function mapThrownError(err: unknown, fallbackKind: ApiErrorKind): ApiError {
     if (err instanceof ApiError) {
         return err;
+    }
+    if (err instanceof Error && err.name === "TimeoutError") {
+        return new ApiError("timeout", "timeout");
     }
     if (err instanceof Error && err.name === "AbortError") {
         return new ApiError("aborted", "aborted");

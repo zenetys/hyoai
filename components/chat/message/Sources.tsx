@@ -5,55 +5,38 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/hooks/useStore";
 import { settingsStore } from "@/lib/stores/settings";
 import { isLinkableUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
-import type { RagData, RagDoc } from "@/types/chat";
+import type { Citation } from "@/types/chat";
 
 /**
- * Turn a raw document excerpt into a readable one-liner. The backend prefixes
- * every preview with a "# Document: <title>" header (redundant with the source
- * label we already show) and the body is often truncated markdown tables; this
- * drops the header and flattens markdown/table noise into plain text.
+ * Dedupe citations by url, keeping the first (highest-ranked) occurrence. A
+ * backend can return the same page twice (e.g. two revisions), which would
+ * otherwise list the same source twice. Citations without a url are keyed by
+ * their title instead, so they don't all collapse into one.
  *
- * @param preview - Raw excerpt from the backend
- * @param source - Document title, stripped when it leads the excerpt
+ * @param citations - Citations in rank order
+ * @returns Citations without duplicates, rank order preserved
  */
-function cleanPreview(preview: string, source: string): string {
-    let text = preview.replace(/^\s*#+\s*Document\s*:\s*/i, "");
-    if (text.startsWith(source)) text = text.slice(source.length);
-    return text
-        .replace(/#{1,6}\s+/g, "")
-        .replace(/\*\*/g, "")
-        .replace(/-{3,}/g, " ")
-        .replace(/(?:\s*\|\s*)+/g, " | ")
-        .replace(/\s+/g, " ")
-        .replace(/^(?:\s|\|)+|(?:\s|\|)+$/g, "")
-        .trim();
-}
-
-/**
- * Dedupe reranked documents by url, keeping the first (highest-ranked)
- * occurrence. The backend can return the same page twice (e.g. two revisions),
- * which would otherwise list the same source twice. Documents without a url
- * are keyed by their source title instead, so they don't all collapse into one.
- *
- * @param docs - Reranked documents in rank order
- */
-function dedupeDocs(docs: RagDoc[]): RagDoc[] {
+function dedupeCitations(citations: Citation[]): Citation[] {
     const seen = new Set<string>();
-    const out: RagDoc[] = [];
-    for (const doc of docs) {
-        const key = doc.url || doc.source;
+    const out: Citation[] = [];
+    for (const citation of citations) {
+        const key = citation.url || citation.title;
         if (seen.has(key)) continue;
         seen.add(key);
-        out.push(doc);
+        out.push(citation);
     }
     return out;
 }
 
-// External link extracted from a non-RAG answer; the fallback for the sources list.
+/**
+ * An external link extracted from an answer without citations, used as the
+ * fallback for the sources list.
+ */
 interface LinkSource {
     source: string;
     url: string;
@@ -80,6 +63,7 @@ const TRAILING_PUNCT = /[.,;:!?'")\]]+$/;
  * the markdown label when present, otherwise the url hostname.
  *
  * @param markdown - The assistant answer in its raw markdown form
+ * @returns Unique external links in order of appearance
  */
 function extractExternalLinks(markdown: string): LinkSource[] {
     const text = markdown
@@ -117,15 +101,21 @@ function hostOf(url: string): string {
 }
 
 /**
- * Collapsible "sources" recap shown below the answer. With a RAG trace it lists
- * the final reranked documents the model was grounded on (clickable title,
- * excerpt and relevance score). Otherwise it falls back to the external links
- * the answer itself cites, so non-RAG models still surface their sources.
+ * Collapsible "sources" recap shown below the answer. When the backend sent
+ * citations it lists them (clickable title, excerpt and relevance score when
+ * known). Otherwise it falls back to the external links the answer itself cites,
+ * so models without citations still surface their sources.
  *
- * @param rag - RAG trace of the assistant node (or live streaming state)
- * @param content - Assistant answer markdown, mined for links when no RAG trace
+ * @param citations - Citations of the assistant node (or live streaming state)
+ * @param content - Assistant answer markdown, mined for links when there are no citations
  */
-export function Sources({ rag, content }: { rag: RagData | undefined; content?: string }) {
+export function Sources({
+    citations,
+    content,
+}: {
+    citations: Citation[] | undefined;
+    content?: string;
+}) {
     const t = useTranslations("chat");
     const expandDefault = useStore(
         settingsStore,
@@ -140,8 +130,7 @@ export function Sources({ rag, content }: { rag: RagData | undefined; content?: 
 
     const open = manualOpen ?? expandDefault;
 
-    const reranked = rag?.reranked;
-    const sources = reranked && reranked.length > 0 ? dedupeDocs(reranked) : [];
+    const sources = citations && citations.length > 0 ? dedupeCitations(citations) : [];
     const links = useMemo(
         () => (sources.length > 0 || !content ? [] : extractExternalLinks(content)),
         [sources.length, content],
@@ -165,37 +154,48 @@ export function Sources({ rag, content }: { rag: RagData | undefined; content?: 
             <CollapsibleContent>
                 <ol className="mt-2 space-y-2 border-l-2 border-border pl-3 text-sm">
                     {sources.length > 0
-                        ? sources.map((doc, i) => (
-                              <li key={`${doc.id}-${i}`} className="flex gap-2">
+                        ? sources.map((citation, i) => (
+                              <li key={`${citation.id}-${i}`} className="flex gap-2">
                                   <span className="tabular-nums text-muted-foreground/60">
                                       {i + 1}.
                                   </span>
                                   <div className="min-w-0 flex-1">
                                       <div className="flex items-baseline gap-2">
-                                          {isLinkableUrl(doc.url) ? (
+                                          {citation.url && isLinkableUrl(citation.url) ? (
                                               <a
-                                                  href={doc.url}
+                                                  href={citation.url}
                                                   target="_blank"
                                                   rel="noopener noreferrer"
                                                   className="font-medium text-foreground hover:underline"
                                               >
-                                                  {doc.source}
+                                                  {citation.title}
                                               </a>
                                           ) : (
                                               <span className="font-medium text-foreground">
-                                                  {doc.source}
+                                                  {citation.title}
                                               </span>
                                           )}
-                                          <span
-                                              className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground/60"
-                                              title={t("relevanceScore")}
-                                          >
-                                              {doc.score.toFixed(2)}
-                                          </span>
+                                          {citation.score !== undefined && (
+                                              <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                      <span className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground/60">
+                                                          <span className="sr-only">
+                                                              {t("relevanceScore")}{" "}
+                                                          </span>
+                                                          {citation.score.toFixed(2)}
+                                                      </span>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                      {t("relevanceScore")}
+                                                  </TooltipContent>
+                                              </Tooltip>
+                                          )}
                                       </div>
-                                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                                          {cleanPreview(doc.preview, doc.source)}
-                                      </p>
+                                      {citation.preview && (
+                                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                                              {citation.preview}
+                                          </p>
+                                      )}
                                   </div>
                               </li>
                           ))

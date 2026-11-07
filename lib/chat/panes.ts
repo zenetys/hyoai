@@ -1,12 +1,17 @@
+import { toast } from "sonner";
+
 import {
     activeInstance,
-    releaseFromForeground,
+    adoptInstance,
     setActiveConversation,
     startNewForeground,
+    takeFromForeground,
 } from "@/lib/chat/foreground";
-import { ChatInstance } from "@/lib/chat/instance";
-import { reconcileSelection } from "@/lib/chat/model";
-import { parseModelName } from "@/lib/format";
+import { stashDraft } from "@/lib/chat/handoff";
+import { type ChatModelSelection, globalSelection, pickFreeSelection } from "@/lib/chat/model";
+import { openConversationInPane } from "@/lib/chat/occupants";
+import { attachRuntime, detachRuntime, paneHolding, peekPaneInstance } from "@/lib/chat/slots";
+import { getTranslator } from "@/lib/i18n";
 import {
     addPaneDescriptor,
     compareStore,
@@ -17,130 +22,48 @@ import {
     setCompareEnabled,
     setFocusedPane,
     setPanes,
-    updatePaneDescriptor,
 } from "@/lib/stores/compare";
+import { getMeta } from "@/lib/stores/conversations";
 import { modelsStore } from "@/lib/stores/models";
-import { getPath } from "@/lib/tree";
 import { setCompareInUrl } from "@/lib/url";
-import type { Attachment } from "@/types/chat";
-import type { BroadcastTarget } from "@/types/storage";
-
-// A pane's live instance plus the teardown of its descriptor mirror listeners.
-interface PaneRuntime {
-    instance: ChatInstance;
-    teardown: () => void;
-}
-
-// Live chat instances keyed by pane id; descriptors persist, instances do not.
-const runtimes = new Map<string, PaneRuntime>();
 
 /**
- * Get (or lazily create) the chat instance backing a pane. On creation it is
- * wired to mirror its runtime conversation and model back into the persisted
- * descriptor, so reloads restore exactly what each pane was showing.
+ * Model fields for a pane created without an explicit model: the first model no
+ * other pane uses, so a fresh comparison is not model X against model X. The pane
+ * starts pinned, so a later change of the global model never moves it.
  *
- * @param paneId - Pane id from the compare store
- * @returns The pane's chat instance
+ * @param seed - Descriptor fields the caller already chose
+ * @returns The seed completed with a pinned model
  */
-export function getPaneInstance(paneId: string): ChatInstance {
-    const existing = runtimes.get(paneId);
-    if (existing) return existing.instance;
-    const instance = new ChatInstance(undefined, { syncUrl: false, followGlobalModel: false });
-
-    let lastConversation = instance.store.getState().conversationId;
-    const unsubStore = instance.store.subscribe(() => {
-        const conversationId = instance.store.getState().conversationId;
-        if (conversationId === lastConversation) return;
-        lastConversation = conversationId;
-        updatePaneDescriptor(paneId, { conversationId });
-    });
-
-    let lastModel = "";
-    const unsubModel = instance.model.subscribe(() => {
-        reconcileSelection(instance.model);
-        const { entryId, upstreamModel, thinking, effort } = instance.model.getState();
-        const key = `${entryId}:${upstreamModel}:${thinking}:${effort}`;
-        if (key === lastModel) return;
-        lastModel = key;
-        updatePaneDescriptor(paneId, { modelEntryId: entryId, upstreamModel, thinking, effort });
-    });
-
-    const unsubConfig = modelsStore.subscribe(() => reconcileSelection(instance.model));
-
-    runtimes.set(paneId, {
-        instance,
-        teardown: () => {
-            unsubStore();
-            unsubModel();
-            unsubConfig();
-            instance.dispose();
-        },
-    });
-    return instance;
+function withFreeModel(seed: Partial<PaneDescriptor>): Partial<PaneDescriptor> {
+    if (seed.modelEntryId) return seed;
+    const { entryId, upstreamModel } = pickFreeSelection(
+        compareStore.getState().panes.map((pane) => ({
+            entryId: pane.modelEntryId ?? null,
+            upstreamModel: pane.upstreamModel ?? null,
+        })),
+    );
+    return { ...seed, modelEntryId: entryId, upstreamModel };
 }
 
 /**
- * Tear down a pane's instance: detach its mirror listeners and abort its stream.
+ * Model a stored conversation was last answered with, when that model is still
+ * offered by the config.
  *
- * @param paneId - Pane whose instance to dispose
+ * @param conversationId - Conversation to read
+ * @returns The selection, or null when there is none to reuse
  */
-function disposePane(paneId: string): void {
-    const runtime = runtimes.get(paneId);
-    if (!runtime) return;
-    runtime.teardown();
-    runtimes.delete(paneId);
-}
-
-/**
- * Pane currently holding a conversation, other than the excluded one. Used to
- * keep a conversation open in a single live instance at a time, so two panes
- * never edit or persist the same conversation key concurrently.
- *
- * @param conversationId - Conversation to look for
- * @param exceptPaneId - Pane to ignore (the one being assigned)
- * @returns The owning pane id, or undefined when none
- */
-function paneHolding(conversationId: string, exceptPaneId?: string): string | undefined {
-    return compareStore
-        .getState()
-        .panes.find(
-            (pane) => pane.paneId !== exceptPaneId && pane.conversationId === conversationId,
-        )?.paneId;
-}
-
-/**
- * Release a conversation from the foreground single chat so a pane can take
- * ownership, without a background foreground instance later persisting a stale
- * copy over the pane's edits.
- *
- * @param conversationId - Conversation a pane is about to own
- */
-function releaseFromDefaultChat(conversationId: string): void {
-    releaseFromForeground(conversationId);
-}
-
-/**
- * Initialize a pane's instance from its descriptor: restore the model override,
- * then open the saved conversation or start a fresh one. Releases the
- * conversation from the default chat first so they never alias.
- *
- * @param descriptor - Persisted pane descriptor
- */
-export async function initPane(descriptor: PaneDescriptor): Promise<void> {
-    const instance = getPaneInstance(descriptor.paneId);
-    instance.model.setState({
-        entryId: descriptor.modelEntryId ?? null,
-        upstreamModel: descriptor.upstreamModel ?? null,
-        thinking: descriptor.thinking ?? null,
-        effort: descriptor.effort ?? null,
-    });
-    if (descriptor.conversationId) {
-        releaseFromDefaultChat(descriptor.conversationId);
-        const ok = await instance.openConversation(descriptor.conversationId);
-        if (!ok && !instance.store.getState().conversationId) instance.startNewConversation();
-    } else if (!instance.store.getState().conversationId) {
-        instance.startNewConversation();
-    }
+function selectionFromMeta(conversationId: string): ChatModelSelection | null {
+    const meta = getMeta(conversationId);
+    if (!meta?.modelId) return null;
+    const entry = modelsStore.getState().entries.find((candidate) => candidate.id === meta.modelId);
+    if (!entry || entry.disabled) return null;
+    return {
+        entryId: meta.modelId,
+        upstreamModel: meta.model ?? null,
+        thinking: null,
+        effort: null,
+    };
 }
 
 /**
@@ -150,66 +73,117 @@ export async function initPane(descriptor: PaneDescriptor): Promise<void> {
  */
 export function addPane(seed: Partial<PaneDescriptor> = {}): void {
     if (compareStore.getState().panes.length >= MAX_PANES) return;
-    const descriptor = createPaneDescriptor(seed);
+    const descriptor = createPaneDescriptor(withFreeModel(seed));
     addPaneDescriptor(descriptor);
     setFocusedPane(descriptor.paneId);
 }
 
 /**
- * Remove a pane, disposing its instance so any generation is aborted.
+ * Remove a pane. Its conversation is kept and a running generation carries on in
+ * the background. With one pane left the compare ends on that pane, without
+ * interrupting it.
  *
  * @param paneId - Pane to remove
  */
 export function removePane(paneId: string): void {
-    disposePane(paneId);
-    removePaneDescriptor(paneId);
+    const state = compareStore.getState();
+    if (!state.panes.some((pane) => pane.paneId === paneId)) return;
+    const closing = peekPaneInstance(paneId);
+    const wasBusy = closing?.isBusy() ?? false;
+    const awaitingApproval = closing?.store.getState().agent?.pending != null;
 
-    const remaining = compareStore.getState().panes;
-    if (remaining.length <= 1) {
-        const survivor = remaining[0];
-        const conversationId = survivor?.conversationId ?? null;
-        if (survivor) disposePane(survivor.paneId);
-        setPanes([]);
-        closeCompare();
-        if (conversationId) void setActiveConversation(conversationId);
-        else startNewForeground();
-    }
+    const remaining = state.panes.filter((pane) => pane.paneId !== paneId);
+    if (remaining.length <= 1) exitCompare(remaining[0]?.paneId ?? null, { keepLayout: false });
+    else removePaneDescriptor(paneId);
+
+    if (awaitingApproval) toast(getTranslator("compare")("closedAwaitingApproval"));
+    else if (wasBusy) toast(getTranslator("compare")("closedRunning"));
 }
 
 /**
- * Open the compare, seeding a first pane from the current single-chat
- * conversation (transferring ownership away from the default chat) plus a second
- * empty pane to compare against, when no panes exist yet.
+ * Leave the compare and show a pane's conversation in the single chat, with no
+ * reload and no abort: the live instance is handed over with its model, thinking
+ * and effort. The other panes are released by the sweep.
+ *
+ * @param survivorPaneId - Pane whose conversation carries on, or null for none
+ * @param options - keepLayout keeps the panes for the next time compare opens
  */
-export function openCompare(): void {
-    if (compareStore.getState().panes.length === 0) {
-        const currentId = activeInstance().store.getState().conversationId;
-        if (currentId) releaseFromDefaultChat(currentId);
-        addPaneDescriptor(createPaneDescriptor({ conversationId: currentId ?? null }));
-        const second = createPaneDescriptor();
-        addPaneDescriptor(second);
-        setFocusedPane(compareStore.getState().panes[0]?.paneId ?? second.paneId);
+export function exitCompare(survivorPaneId: string | null, options: { keepLayout: boolean }): void {
+    stashDraft();
+    const survivor = compareStore.getState().panes.find((pane) => pane.paneId === survivorPaneId);
+    const instance = survivor ? detachRuntime(survivor.paneId) : null;
+    if (instance) {
+        adoptInstance(instance);
+    } else if (survivor?.conversationId && getMeta(survivor.conversationId)) {
+        void setActiveConversation(survivor.conversationId);
+    } else if (!options.keepLayout) {
+        startNewForeground();
     }
-    setCompareEnabled(true);
+    if (!options.keepLayout) {
+        setPanes([]);
+        setFocusedPane(null);
+    }
+    setCompareEnabled(false);
 }
 
+/**
+ * Open the compare. With no panes yet, the first one takes over the live
+ * single-chat conversation (a stream in progress keeps running in it) and a
+ * second empty pane is added to compare against. With existing panes, each one
+ * claims what it needs when it mounts.
+ */
+export function openCompare(): void {
+    stashDraft();
+    const hadPanes = compareStore.getState().panes.length > 0;
+    setCompareEnabled(true);
+    if (hadPanes) return;
+
+    const active = activeInstance();
+    const currentId = active.store.getState().conversationId;
+    const worthKeeping = Boolean(currentId && (getMeta(currentId) || active.isBusy()));
+    const live = currentId && worthKeeping ? takeFromForeground(currentId) : null;
+
+    const current = live ? live.model.getState() : globalSelection();
+    const first = createPaneDescriptor({
+        conversationId: live ? currentId : null,
+        modelEntryId: current.entryId,
+        upstreamModel: current.upstreamModel,
+        thinking: current.thinking,
+        effort: current.effort,
+    });
+    const free = pickFreeSelection([
+        { entryId: first.modelEntryId, upstreamModel: first.upstreamModel },
+    ]);
+    const second = createPaneDescriptor({
+        modelEntryId: free.entryId,
+        upstreamModel: free.upstreamModel,
+    });
+    setPanes([first, second]);
+    setFocusedPane(first.paneId);
+    if (live) attachRuntime(first.paneId, live);
+}
+
+/**
+ * Close the compare, keeping its panes for the next time. The focused pane's
+ * conversation carries on in the single chat.
+ */
 export function closeCompare(): void {
-    setCompareEnabled(false);
+    const { panes, focusedPaneId } = compareStore.getState();
+    exitCompare(focusedPaneId ?? panes[0]?.paneId ?? null, { keepLayout: true });
 }
 
 /**
  * Start a fresh single conversation, leaving the compare if it was open. This
  * is the user-facing "new chat" action: it clears the ?compare= URL (by
  * disabling the compare) and the ?chat= URL (via startNewConversation), so a
- * new chat always lands on a clean slate. Internal callers keep using the raw
- * startNewConversation so they do not toggle the compare.
+ * new chat always lands on a clean slate. Running panes carry on in the
+ * background. Internal callers keep using the raw startNewConversation so they
+ * do not toggle the compare.
  */
 export function startNewChat(): void {
-    const { panes } = compareStore.getState();
-    for (const pane of panes) disposePane(pane.paneId);
     setPanes([]);
     setFocusedPane(null);
-    closeCompare();
+    setCompareEnabled(false);
     setCompareInUrl(null);
     startNewForeground();
 }
@@ -225,158 +199,42 @@ export function startNewChat(): void {
 export function compareConversation(conversationId: string): void {
     const state = compareStore.getState();
     if (!state.enabled || state.panes.length === 0) {
-        for (const pane of state.panes) disposePane(pane.paneId);
-        releaseFromDefaultChat(conversationId);
-        const second = createPaneDescriptor();
-        setPanes([createPaneDescriptor({ conversationId }), second]);
+        stashDraft();
+        setCompareEnabled(true);
+        const live = takeFromForeground(conversationId);
+        const current = live
+            ? live.model.getState()
+            : (selectionFromMeta(conversationId) ?? globalSelection());
+        const first = createPaneDescriptor({
+            conversationId,
+            modelEntryId: current.entryId,
+            upstreamModel: current.upstreamModel,
+            thinking: current.thinking,
+            effort: current.effort,
+        });
+        const free = pickFreeSelection([
+            { entryId: first.modelEntryId, upstreamModel: first.upstreamModel },
+        ]);
+        const second = createPaneDescriptor({
+            modelEntryId: free.entryId,
+            upstreamModel: free.upstreamModel,
+        });
+        setPanes([first, second]);
         setFocusedPane(second.paneId);
-    } else {
-        const existing = paneHolding(conversationId);
-        if (existing) {
-            setFocusedPane(existing);
-        } else if (state.panes.length < MAX_PANES) {
-            releaseFromDefaultChat(conversationId);
-            addPane({ conversationId });
-        } else if (state.focusedPaneId) {
-            void openConversationInPane(state.focusedPaneId, conversationId);
-        }
+        if (live) attachRuntime(first.paneId, live);
+        return;
     }
-    setCompareEnabled(true);
-}
 
-/**
- * Load an existing conversation into a specific pane. If another pane already
- * shows it, that pane is focused instead so the conversation stays in one live
- * instance; otherwise it is released from the default chat and opened here.
- *
- * @param paneId - Target pane
- * @param conversationId - Conversation to open
- */
-export async function openConversationInPane(
-    paneId: string,
-    conversationId: string,
-): Promise<void> {
-    const existing = paneHolding(conversationId, paneId);
+    const existing = paneHolding(conversationId);
     if (existing) {
         setFocusedPane(existing);
-        return;
-    }
-    releaseFromDefaultChat(conversationId);
-    updatePaneDescriptor(paneId, { conversationId });
-    await getPaneInstance(paneId).openConversation(conversationId);
-}
-
-/**
- * Start a fresh conversation in a pane.
- *
- * @param paneId - Pane to start a new conversation in
- */
-export function newConversationInPane(paneId: string): void {
-    getPaneInstance(paneId).startNewConversation();
-}
-
-/**
- * Send a prompt from the bottom composer to its target: every pane at once
- * (each using its own model) or only the focused pane.
- *
- * @param target - Whether to reach all panes or the focused one
- * @param text - User message text
- * @param attachments - Optional attachments
- */
-export function sendToPanes(
-    target: BroadcastTarget,
-    text: string,
-    attachments: Attachment[],
-): void {
-    const state = compareStore.getState();
-    if (target === "active") {
-        const paneId = state.focusedPaneId ?? state.panes[0]?.paneId;
-        if (paneId) void getPaneInstance(paneId).sendMessage(text, attachments);
-        return;
-    }
-    for (const pane of state.panes) {
-        void getPaneInstance(pane.paneId).sendMessage(text, attachments);
-    }
-}
-
-/**
- * Render the active branch of a pane as a plain transcript, for feeding the
- * cross-pane analysis prompt.
- *
- * @param paneId - Pane whose conversation to read
- * @param noun - Localized word for "pane", used in the heading
- * @param index - Zero-based pane position, shown one-based in the heading
- * @returns A heading line plus the question/answer transcript
- */
-function paneTranscript(paneId: string, noun: string, index: number): string {
-    const state = getPaneInstance(paneId).store.getState();
-    const path = state.currNode ? getPath(state.nodes, state.currNode) : [];
-    const turns = path
-        .filter((node) => node.role === "user" || node.role === "assistant")
-        .map((node) => `${node.role === "user" ? "Q" : "A"}: ${node.content}`)
-        .join("\n\n");
-    const model = path.find((node) => node.role === "assistant" && node.model)?.model;
-    const label = model
-        ? `${noun} ${index + 1} (${parseModelName(model).base})`
-        : `${noun} ${index + 1}`;
-    return `## ${label}\n${turns}`;
-}
-
-/**
- * Whether a pane's active branch holds at least one non-empty assistant answer.
- *
- * @param paneId - Pane to inspect
- * @returns true when the active branch has a non-empty assistant answer
- */
-function paneHasAnswer(paneId: string): boolean {
-    const state = getPaneInstance(paneId).store.getState();
-    if (!state.currNode) return false;
-    return getPath(state.nodes, state.currNode).some(
-        (node) => node.role === "assistant" && node.content.length > 0,
-    );
-}
-
-/**
- * Open a new pane that asks a model to compare the other panes' conversations.
- * Only panes that actually have an answer are included, and the analysis pane
- * adopts the focused pane's model (falling back to the first compared pane).
- *
- * @param instruction - Localized comparison instruction
- * @param paneNoun - Localized word for "pane", used in transcript headings
- */
-export function analyzePanes(instruction: string, paneNoun: string): void {
-    const state = compareStore.getState();
-    if (state.panes.length >= MAX_PANES) return;
-    const sources = state.panes.filter((pane) => paneHasAnswer(pane.paneId));
-    if (sources.length < 2) return;
-    const blocks = sources.map((pane, index) => paneTranscript(pane.paneId, paneNoun, index));
-    const prompt = `${instruction}\n\n${blocks.join("\n\n---\n\n")}`;
-
-    const focused = state.panes.find((pane) => pane.paneId === state.focusedPaneId) ?? sources[0];
-    const descriptor = createPaneDescriptor({
-        modelEntryId: focused.modelEntryId,
-        upstreamModel: focused.upstreamModel,
-        thinking: focused.thinking,
-        effort: focused.effort,
-    });
-    addPaneDescriptor(descriptor);
-    setFocusedPane(descriptor.paneId);
-    const instance = getPaneInstance(descriptor.paneId);
-    instance.model.setState({
-        entryId: descriptor.modelEntryId ?? null,
-        upstreamModel: descriptor.upstreamModel ?? null,
-        thinking: descriptor.thinking ?? null,
-        effort: descriptor.effort ?? null,
-    });
-    instance.startNewConversation();
-    void instance.sendMessage(prompt);
-}
-
-/**
- * Abort every pane's in-flight generation.
- */
-export function stopAllPanes(): void {
-    for (const pane of compareStore.getState().panes) {
-        getPaneInstance(pane.paneId).stopGeneration();
+    } else if (state.panes.length < MAX_PANES) {
+        const seed = selectionFromMeta(conversationId);
+        addPane({
+            conversationId,
+            ...(seed ? { modelEntryId: seed.entryId, upstreamModel: seed.upstreamModel } : {}),
+        });
+    } else if (state.focusedPaneId) {
+        void openConversationInPane(state.focusedPaneId, conversationId);
     }
 }

@@ -8,6 +8,21 @@ import type {
     ServerProps,
 } from "@/types/server";
 
+// How long a model list or props request may take before the server counts as silent.
+export const PROBE_TIMEOUT_MS = 10_000;
+
+/**
+ * Combine a caller's abort signal with the probe timeout, so a host that never
+ * answers (a blackholed address) fails instead of staying "loading" forever.
+ *
+ * @param signal - Optional abort signal from the caller
+ * @returns A signal that aborts on either the caller's abort or the timeout
+ */
+function withTimeout(signal?: AbortSignal): AbortSignal {
+    const timeout = AbortSignal.timeout(PROBE_TIMEOUT_MS);
+    return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 /**
  * Map the optional "meta" object of a /v1/models entry (llama.cpp GGUF
  * metadata) to its camelCase internal shape, keeping only numbers.
@@ -49,7 +64,7 @@ export async function listModels(
         response = await fetch(buildUrl(endpoint, "/v1/models"), {
             method: "GET",
             headers: buildHeaders(endpoint),
-            signal,
+            signal: withTimeout(signal),
         });
     } catch (err) {
         throw mapThrownError(err, "network");
@@ -81,6 +96,17 @@ export async function listModels(
 }
 
 /**
+ * Whether a chat template renders tools and tool calls, which is how llama.cpp
+ * tells that the loaded model can take them when it reports nothing explicit.
+ *
+ * @param template - Jinja chat template, if the server exposed it
+ * @returns true when the template mentions both tools and tool calls
+ */
+function templateUsesTools(template: string | undefined): boolean {
+    return template !== undefined && /\btools\b/.test(template) && /\btool_calls?\b/.test(template);
+}
+
+/**
  * Fetch the llama.cpp server properties through GET /props: model path and
  * alias, effective context size, slots, build info, chat template and the
  * input modalities used to gate attachment types.
@@ -98,7 +124,7 @@ export async function fetchProps(
         response = await fetch(buildUrl(endpoint, "/props"), {
             method: "GET",
             headers: buildHeaders(endpoint),
-            signal,
+            signal: withTimeout(signal),
         });
     } catch (err) {
         throw mapThrownError(err, "network");
@@ -118,6 +144,7 @@ export async function fetchProps(
     const source = (body ?? {}) as Record<string, unknown>;
     const str = (key: string): string | undefined =>
         typeof source[key] === "string" ? (source[key] as string) : undefined;
+    const caps = source.chat_template_caps as { supports_tool_calls?: unknown } | undefined;
     const generation = source.default_generation_settings as { n_ctx?: unknown } | undefined;
     const modalities = source.modalities as { vision?: unknown; audio?: unknown } | undefined;
 
@@ -128,6 +155,12 @@ export async function fetchProps(
         totalSlots: typeof source.total_slots === "number" ? source.total_slots : undefined,
         buildInfo: str("build_info"),
         chatTemplate: str("chat_template"),
+        toolCalls:
+            typeof caps?.supports_tool_calls === "boolean"
+                ? caps.supports_tool_calls
+                : str("chat_template_tool_use")
+                  ? true
+                  : templateUsesTools(str("chat_template")),
         modalities:
             modalities !== null && typeof modalities === "object"
                 ? {
@@ -137,4 +170,132 @@ export async function fetchProps(
                   }
                 : undefined,
     };
+}
+
+// Info endpoints carrying the context window, tried in order per backend family
+const CONTEXT_WINDOW_ENDPOINTS = ["/get_model_info", "/get_server_info", "/props"];
+
+// Per-request limit of the context window probes, so a silent server cannot hang them
+const CONTEXT_PROBE_TIMEOUT_MS = 5000;
+
+/**
+ * Extract the effective context length from a backend info response. Covers
+ * vLLM's /get_model_info (max_model_len), SGLang's /get_server_info
+ * (context_length, sometimes nested in server_args) and llama.cpp's /props
+ * (default_generation_settings.n_ctx).
+ *
+ * @param body - Parsed JSON body of an info endpoint
+ * @returns The context window size, or undefined when the body holds none
+ */
+export function parseContextLength(body: unknown): number | undefined {
+    if (body === null || typeof body !== "object") return undefined;
+
+    const source = body as Record<string, unknown>;
+    const serverArgs =
+        source.server_args !== null && typeof source.server_args === "object"
+            ? (source.server_args as Record<string, unknown>)
+            : undefined;
+    const generation = source.default_generation_settings as { n_ctx?: unknown } | undefined;
+    const candidates: unknown[] = [
+        source.max_model_len,
+        source.context_length,
+        source.context_len,
+        serverArgs?.context_length,
+        serverArgs?.context_len,
+        generation?.n_ctx,
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "number" && Number.isFinite(candidate) && candidate > 0) {
+            return candidate;
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Discover the context window from the well-known info endpoints, probing
+ * each until one yields a usable value. For backends without the llama.cpp
+ * /props contract; probes that error or 404 are skipped silently, and each
+ * probe is capped by CONTEXT_PROBE_TIMEOUT_MS.
+ *
+ * @param endpoint - Config entry whose endpoint to probe
+ * @param signal - Optional abort signal to cancel the request
+ * @returns The context window size, or undefined when no endpoint answered with one
+ */
+export async function fetchContextWindow(
+    endpoint: ModelConfig,
+    signal?: AbortSignal,
+): Promise<number | undefined> {
+    for (const path of CONTEXT_WINDOW_ENDPOINTS) {
+        const timeout = AbortSignal.timeout(CONTEXT_PROBE_TIMEOUT_MS);
+
+        try {
+            const response = await fetch(buildUrl(endpoint, path), {
+                method: "GET",
+                headers: buildHeaders(endpoint),
+                signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+            });
+
+            if (!response.ok) continue;
+
+            const body: unknown = await response.json();
+            const nCtx = parseContextLength(body);
+
+            if (nCtx !== undefined) return nCtx;
+        } catch (error) {
+            // A timeout is skipped like any failed probe; only an abort from the caller stops the loop
+            if (signal?.aborted || (error instanceof ApiError && error.kind === "aborted")) {
+                throw error;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Outcome of a reachability probe: up, or down because the host did not answer
+ * at all (unreachable) or not in time (timeout).
+ */
+export type ProbeResult = { up: true } | { up: false; reason: "unreachable" | "timeout" };
+
+/**
+ * Whether the entry's server type answers the OpenAI-compatible GET /v1/models
+ * probe. Types that do not are never probed, so they are never marked down by a
+ * check, only by what an actual request reports.
+ *
+ * @param endpoint - Config entry
+ * @returns true when the entry can be probed
+ */
+export function canProbe(endpoint: ModelConfig): boolean {
+    return endpoint.listModels === true;
+}
+
+/**
+ * Check that a server answers, through GET /v1/models. Conservative on purpose:
+ * the server counts as down only on a network error, a timeout or an HTTP
+ * 502/503/504 from a gateway in front of it. Any other answer, errors and
+ * authorization failures included, proves something is listening.
+ *
+ * @param endpoint - Config entry with the endpoint to call
+ * @returns Whether the server answered
+ */
+export async function probeEndpoint(endpoint: ModelConfig): Promise<ProbeResult> {
+    try {
+        const response = await fetch(buildUrl(endpoint, "/v1/models"), {
+            method: "GET",
+            headers: buildHeaders(endpoint),
+            signal: withTimeout(),
+        });
+        void response.body?.cancel();
+        if (response.status === 502 || response.status === 503 || response.status === 504) {
+            return { up: false, reason: "unreachable" };
+        }
+        return { up: true };
+    } catch (err) {
+        const timedOut = err instanceof Error && err.name === "TimeoutError";
+        return { up: false, reason: timedOut ? "timeout" : "unreachable" };
+    }
 }

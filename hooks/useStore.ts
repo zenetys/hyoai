@@ -9,6 +9,10 @@ import { shallowEqual, type Store } from "@/lib/store";
  * across renders as long as it is shallowly equal, so memoized components
  * skip re-renders when their data did not change.
  *
+ * The slice is read again when the selector changes, not only when the state does: a selector
+ * that closes over props or other hooks (an id list, say) would otherwise keep the slice it
+ * computed with the old values until the next store write.
+ *
  * The cache ref is only touched inside getSnapshot (an event-time callback
  * from useSyncExternalStore), never in the render body itself.
  *
@@ -22,19 +26,19 @@ import { shallowEqual, type Store } from "@/lib/store";
  * @returns Current slice value
  */
 export function useStore<T extends object, S>(store: Store<T>, selector: (state: T) => S): S {
-    const cacheRef = useRef<{ state: T; slice: S } | null>(null);
+    const cacheRef = useRef<{ state: T; selector: (state: T) => S; slice: S } | null>(null);
     const serverCacheRef = useRef<{ slice: S } | null>(null);
 
     const getSnapshot = () => {
         const state = store.getState();
         const cache = cacheRef.current;
-        if (cache && cache.state === state) return cache.slice;
+        if (cache && cache.state === state && cache.selector === selector) return cache.slice;
         const next = selector(state);
         if (cache && shallowEqual(cache.slice, next)) {
-            cacheRef.current = { state, slice: cache.slice };
+            cacheRef.current = { state, selector, slice: cache.slice };
             return cache.slice;
         }
-        cacheRef.current = { state, slice: next };
+        cacheRef.current = { state, selector, slice: next };
         return next;
     };
 

@@ -54,6 +54,10 @@
             "baseUrl": "http://127.0.0.1:8000/v1",
             "type": "vllm",
             "model": "Qwen/Qwen2.5-7B-Instruct",
+            "tools": true,
+            "parallelToolCalls": true,
+            "recoverToolCalls": true,
+            "mcpServers": ["docs"],
             "disabled": true
         },
         {
@@ -67,6 +71,18 @@
     "thinking": {
         "on": { "chat_template_kwargs": { "enable_thinking": true } },
         "off": { "chat_template_kwargs": { "enable_thinking": false } }
+    },
+    "mcp": {
+        "servers": [
+            {
+                "id": "docs",
+                "label": "Product docs",
+                "url": "/mcp/docs",
+                "transport": "auto",
+                "headers": { "Authorization": "Bearer xxxxxxxx" },
+                "enabled": false
+            }
+        ]
     },
     "integrations": [
         {

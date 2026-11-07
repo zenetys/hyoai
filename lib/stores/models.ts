@@ -1,9 +1,12 @@
-import { fetchProps, listModels } from "@/lib/api/models";
+import { fetchContextWindow, fetchProps, listModels } from "@/lib/api/models";
 import { loadAppConfig, loadBaseRaw, normalizeConfig } from "@/lib/config";
-import { buildConfig, rawToDraft } from "@/lib/draft";
+import { buildConfig, rawToDraft, settleOverride } from "@/lib/draft";
+import { applyMcpServers } from "@/lib/mcp/lifecycle";
 import { type ConfigOverride, diffConfig } from "@/lib/merge";
 import { loadJson, removeKey, scheduleJson, writeJsonNow } from "@/lib/storage/persistence";
 import { createStore } from "@/lib/store";
+import { uiStore } from "@/lib/stores/ui";
+import type { McpServerConfig } from "@/types/mcp";
 import type {
     ConfigStatus,
     DiscoveredModelMeta,
@@ -27,6 +30,7 @@ interface ModelsState {
     lists: Record<string, ModelListState>;
     props: Record<string, PropsState>;
     integrations: IntegrationConfig[];
+    mcpServers: McpServerConfig[];
     appName?: string;
     configStatus: ConfigStatus;
     configError?: string;
@@ -42,6 +46,7 @@ export const modelsStore = createStore<ModelsState>({
     lists: {},
     props: {},
     integrations: [],
+    mcpServers: [],
     configStatus: "loading",
     hasOverride: false,
     appliedTick: 0,
@@ -65,7 +70,7 @@ function persistSelection(): void {
  * @param entry - Config entry
  * @returns A comparable key over the endpoint fields
  */
-function endpointKey(entry: ModelConfig): string {
+export function endpointKey(entry: ModelConfig): string {
     return JSON.stringify([
         entry.baseUrl,
         entry.type,
@@ -110,7 +115,7 @@ export async function initModels(): Promise<void> {
         return;
     }
 
-    const { models, defaultModel, integrations, appName } = result.config;
+    const { models, defaultModel, integrations, mcpServers, appName } = result.config;
     const selectable = (id: string) => models.some((entry) => entry.id === id && !entry.disabled);
     const stored = persisted?.activeEntryId;
     const activeEntryId =
@@ -135,10 +140,13 @@ export async function initModels(): Promise<void> {
         lists: keep(previous.lists),
         props: keep(previous.props),
         integrations: integrations ?? [],
+        mcpServers,
         appName,
         configStatus: "ready",
         hasOverride,
     });
+
+    applyMcpServers(mcpServers, uiStore.getState().embed);
 
     void refreshAllModelLists();
     const active = models.find((entry) => entry.id === activeEntryId);
@@ -165,6 +173,26 @@ export async function saveConfigOverride(raw: unknown): Promise<string | null> {
 
     await setConfigOverride(override);
     return null;
+}
+
+/**
+ * Drop from the stored override what the deployed config.json now says as well,
+ * so the badge and the reset list agree after the file was edited. Nothing is
+ * written when the override already holds only differences, and nothing is
+ * touched while the file cannot be read.
+ */
+export async function pruneStaleOverride(): Promise<void> {
+    const [override, baseRaw] = await Promise.all([
+        loadJson<unknown>(STORAGE_KEYS.configOverride),
+        loadBaseRaw(),
+    ]);
+    if (override === null || baseRaw === null) return;
+
+    const settled = settleOverride(baseRaw, override);
+    if (settled === null || JSON.stringify(settled) === JSON.stringify(override)) return;
+
+    if (Object.keys(settled).length === 0) await removeKey(STORAGE_KEYS.configOverride);
+    else await writeJsonNow(STORAGE_KEYS.configOverride, settled);
 }
 
 /**
@@ -328,8 +356,9 @@ export function resolveUpstreamModelFor(
 /**
  * Resolve the upstream model a per-instance selection (a compare pane) sends:
  * the pinned one, else the instance's own pick while the discovered list still
- * offers it (or cannot confirm it yet), else the entry's default. A pick dropped
- * from the config, or carried by an old ?compare= link, never reaches requests.
+ * offers it (or cannot confirm it yet), else the entry's default when no pick was
+ * made. A pick the server no longer lists resolves to null instead of another
+ * model, so a pane never answers with a model the user did not choose.
  *
  * @param state - Models store state
  * @param entry - Config entry the instance is pinned to
@@ -342,11 +371,9 @@ export function resolveSelectionUpstream(
 ): string | null {
     if (entry.model) return entry.model;
     if (!upstreamModel) return resolveUpstreamModelFor(state, entry);
-    if (!state.lists[entry.id]?.models.length) return upstreamModel;
-    return resolveUpstreamModelFor(
-        { lists: state.lists, chosenModels: { ...state.chosenModels, [entry.id]: upstreamModel } },
-        entry,
-    );
+    const models = state.lists[entry.id]?.models;
+    if (!models?.length) return upstreamModel;
+    return models.some((model) => model.id === upstreamModel) ? upstreamModel : null;
 }
 
 /**
@@ -446,7 +473,7 @@ export function setActiveModel(entryId: string | null, model?: string): void {
  * @param force - Re-fetch even when already resolved
  */
 export async function refreshModelList(entry: ModelConfig, force = false): Promise<void> {
-    if (entry.disabled || entry.model) return;
+    if (entry.disabled || entry.model || !entry.listModels) return;
 
     const current = modelsStore.getState().lists[entry.id];
     if (current?.status === "loading") return;
@@ -485,15 +512,21 @@ export async function refreshAllModelLists(force = false): Promise<void> {
 }
 
 /**
- * Fetch the /props of an entry that advertises runtimeProps; other entries do
- * not expose the endpoint. Skipped while a fetch runs or when already resolved,
- * unless forced (a model switch may change the loaded model behind a proxy).
+ * Fetch the /props of an entry that advertises runtimeProps; entries without
+ * the flag are probed for their context window through well-known info
+ * endpoints instead, when their server type says those exist. Skipped while a
+ * fetch runs or when already resolved, unless forced (a model switch may
+ * change the loaded model behind a proxy).
  *
  * @param entry - Config entry from config.json
  * @param force - Re-fetch even when already resolved
  */
 export async function refreshProps(entry: ModelConfig, force = false): Promise<void> {
-    if (entry.disabled || !entry.runtimeProps) return;
+    if (entry.disabled) return;
+    if (!entry.runtimeProps) {
+        if (entry.contextProbe) await refreshContextProbe(entry, force);
+        return;
+    }
 
     const current = modelsStore.getState().props[entry.id];
     if (current?.status === "loading") return;
@@ -514,5 +547,43 @@ export async function refreshProps(entry: ModelConfig, force = false): Promise<v
             props: current?.props,
             error: error instanceof Error ? error.message : String(error),
         });
+    }
+}
+
+/**
+ * Probe the context window of an entry without the llama.cpp /props contract
+ * (vLLM, SGLang, generic OpenAI-compatible servers) and store it as the
+ * entry's nCtx, so the context bar can measure against the real window
+ * instead of reporting it unknown. A resolved probe counts as ready and is
+ * skipped until forced again; a failed one is retried on the next call.
+ *
+ * @param entry - Config entry from config.json
+ * @param force - Re-probe even when already resolved
+ */
+async function refreshContextProbe(entry: ModelConfig, force = false): Promise<void> {
+    const current = modelsStore.getState().props[entry.id];
+    if (current?.status === "loading") return;
+    if (!force && current?.status === "ready") return;
+
+    const setProps = (value: PropsState) => {
+        modelsStore.setState((state) =>
+            isLive(state.entries, entry) ? { props: { ...state.props, [entry.id]: value } } : {},
+        );
+    };
+
+    setProps({ status: "loading", props: current?.props });
+
+    try {
+        const nCtx = await fetchContextWindow(entry);
+
+        if (nCtx === undefined) {
+            setProps({ status: "error", props: current?.props });
+
+            return;
+        }
+
+        setProps({ status: "ready", props: { ...current?.props, nCtx } });
+    } catch {
+        setProps({ status: "error", props: current?.props });
     }
 }

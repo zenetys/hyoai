@@ -1,4 +1,5 @@
 import { streamChatCompletion } from "@/lib/api/chat";
+import { endingMessage } from "@/lib/chat/endings";
 import { getActiveEntry, getUpstreamModel, modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
 import type { ApiMessage, ChatRequestParams } from "@/types/api";
@@ -127,7 +128,8 @@ export async function runHeadless(
                 text += event.text;
                 cb.onChunk(event.text);
             } else if (event.type === "finish") {
-                done();
+                if (event.reason === "truncated") fail(endingMessage("truncated"));
+                else done();
                 return;
             } else if (event.type === "error") {
                 fail(event.error.message);

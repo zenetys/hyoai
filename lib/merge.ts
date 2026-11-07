@@ -6,6 +6,7 @@ interface RemovedIds {
     models?: string[];
     levels?: string[];
     integrations?: string[];
+    mcpServers?: string[];
 }
 
 /**
@@ -21,6 +22,7 @@ export interface ConfigOverride {
     effort?: { default?: string; levels?: unknown[] };
     models?: unknown[];
     integrations?: unknown[];
+    mcp?: { servers?: unknown[] };
     removed?: RemovedIds;
     order?: string[];
 }
@@ -187,6 +189,17 @@ export function mergeConfig(base: unknown, override: unknown): RawConfig {
             removed.integrations ?? [],
         );
     }
+    if (ov.mcp?.servers || removed.mcpServers) {
+        const baseMcp = isObj(b.mcp) ? b.mcp : {};
+        result.mcp = {
+            ...baseMcp,
+            servers: mergeList(
+                asArr(baseMcp.servers),
+                asArr(ov.mcp?.servers),
+                removed.mcpServers ?? [],
+            ),
+        };
+    }
     if (ov.effort || removed.levels) {
         const baseEffort = isObj(b.effort) ? b.effort : {};
         const overEffort = ov.effort ?? {};
@@ -242,6 +255,13 @@ export function diffConfig(base: unknown, built: unknown): ConfigOverride {
     if (integrations.changed.length) ov.integrations = integrations.changed;
     if (integrations.removed.length) removed.integrations = integrations.removed;
 
+    const mcp = diffList(
+        asArr(isObj(b.mcp) ? b.mcp.servers : undefined),
+        asArr(isObj(built2.mcp) ? built2.mcp.servers : undefined),
+    );
+    if (mcp.changed.length) ov.mcp = { servers: mcp.changed };
+    if (mcp.removed.length) removed.mcpServers = mcp.removed;
+
     const baseEffort = isObj(b.effort) ? b.effort : {};
     const builtEffort = isObj(built2.effort) ? built2.effort : {};
     const effort: { default?: string; levels?: unknown[] } = {};
@@ -264,7 +284,7 @@ export function diffConfig(base: unknown, built: unknown): ConfigOverride {
  */
 export interface OverrideItem {
     key: string;
-    category: "general" | "models" | "effort" | "integrations";
+    category: "general" | "models" | "effort" | "integrations" | "mcp";
     type:
         | "appName"
         | "defaultModel"
@@ -274,9 +294,10 @@ export interface OverrideItem {
         | "model"
         | "level"
         | "integration"
+        | "mcpServer"
         | "removed";
     id?: string;
-    section?: "models" | "levels" | "integrations";
+    section?: "models" | "levels" | "integrations" | "mcpServers";
     mode?: "added" | "modified" | "removed";
     label: string;
 }
@@ -304,6 +325,7 @@ export function describeOverride(override: unknown, base: unknown): OverrideItem
     const baseIntegIds = idSet(b.integrations);
     const baseEffort = isObj(b.effort) ? b.effort : {};
     const baseLevelIds = idSet(baseEffort.levels);
+    const baseMcpIds = idSet(isObj(b.mcp) ? b.mcp.servers : undefined);
     const items: OverrideItem[] = [];
 
     if ("appName" in ov) {
@@ -379,11 +401,26 @@ export function describeOverride(override: unknown, base: unknown): OverrideItem
         });
     }
 
+    for (const entry of asArr(isObj(ov.mcp) ? ov.mcp.servers : undefined)) {
+        const id = idOf(entry);
+        if (!id) continue;
+        const label = isObj(entry) && typeof entry.label === "string" ? entry.label : "";
+        items.push({
+            key: `mcpServer:${id}`,
+            category: "mcp",
+            type: "mcpServer",
+            id,
+            mode: baseMcpIds.has(id) ? "modified" : "added",
+            label: label || id,
+        });
+    }
+
     const removed = isObj(ov.removed) ? (ov.removed as RemovedIds) : {};
     const sections: [keyof RemovedIds, OverrideItem["category"]][] = [
         ["models", "models"],
         ["levels", "effort"],
         ["integrations", "integrations"],
+        ["mcpServers", "mcp"],
     ];
     for (const [section, category] of sections) {
         for (const id of removed[section] ?? []) {
@@ -429,6 +466,11 @@ export function pruneOverride(override: unknown, keys: Set<string>): ConfigOverr
         );
         if (!result.integrations.length) delete result.integrations;
     }
+    if (result.mcp?.servers) {
+        const servers = result.mcp.servers.filter((entry) => !keys.has(`mcpServer:${idOf(entry)}`));
+        if (servers.length) result.mcp = { ...result.mcp, servers };
+        else delete result.mcp;
+    }
     if (result.effort) {
         const effort = { ...result.effort };
         if (keys.has("effortDefault")) delete effort.default;
@@ -441,7 +483,7 @@ export function pruneOverride(override: unknown, keys: Set<string>): ConfigOverr
     }
     if (result.removed) {
         const removed: RemovedIds = { ...result.removed };
-        for (const section of ["models", "levels", "integrations"] as const) {
+        for (const section of ["models", "levels", "integrations", "mcpServers"] as const) {
             const ids = removed[section];
             if (!ids) continue;
             const kept = ids.filter((id) => !keys.has(`removed:${section}:${id}`));

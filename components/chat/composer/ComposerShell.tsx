@@ -15,6 +15,7 @@ import { useCompactFit } from "@/hooks/useCompactFit";
 import { useFlip } from "@/hooks/useFlip";
 import { useIsNarrow } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "@/lib/chat/handoff";
 import { settingsStore } from "@/lib/stores/settings";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
@@ -30,6 +31,7 @@ interface ComposerShellProps {
     imageMode?: boolean;
     onSystemMessage?: () => void;
     banner?: React.ReactNode;
+    notice?: React.ReactNode;
     reply?: React.ReactNode;
     rightControls?: React.ReactNode;
     placeholder?: string;
@@ -39,6 +41,7 @@ interface ComposerShellProps {
     focusSignal?: number;
     replyKey?: MessageQuote | null;
     history?: string[];
+    carryDraft?: boolean;
 }
 
 /**
@@ -53,6 +56,9 @@ interface ComposerShellProps {
  * bubble, so a compact composer stays small at rest without cramping a long
  * message.
  *
+ * With carryDraft, the handed-over draft is consumed once at mount, and the
+ * latest draft is kept in a ref so the next composer can pick it up.
+ *
  * @param onSubmit - Receives the trimmed text and attachments on send
  * @param onStop - Aborts the current generation while busy
  * @param busy - A generation is in progress (shows the stop button)
@@ -63,6 +69,7 @@ interface ComposerShellProps {
  * @param imageMode - The active model generates images, so hide chat-only attachments and reasoning
  * @param onSystemMessage - Opens the system message dialog when provided
  * @param banner - Indicator rendered above the input, e.g. the system chip
+ * @param notice - Strip at the top of the input card, e.g. why the model cannot answer
  * @param reply - Quoted excerpt chip rendered just above the input
  * @param rightControls - Controls rendered left of the send button
  * @param placeholder - Textarea placeholder override
@@ -72,6 +79,7 @@ interface ComposerShellProps {
  * @param focusSignal - A nonce that refocuses the textarea on each change (e.g. dismissing a sidebar menu)
  * @param replyKey - The pending reply quote; refocuses the textarea when a new reply is set
  * @param history - Past user messages (newest first) for arrow-up recall
+ * @param carryDraft - Hand the unsent draft over to the composer that replaces this one when the compare opens or closes, and start from the one handed over
  */
 export function ComposerShell({
     onSubmit,
@@ -84,6 +92,7 @@ export function ComposerShell({
     imageMode = false,
     onSystemMessage,
     banner,
+    notice,
     reply,
     rightControls,
     placeholder,
@@ -93,10 +102,13 @@ export function ComposerShell({
     focusSignal,
     replyKey,
     history,
+    carryDraft = false,
 }: ComposerShellProps) {
     const t = useTranslations("composer");
-    const [text, setText] = useState("");
-    const att = useAttachments({ visionBlocked, audioBlocked });
+    const [handoff] = useState(() => (carryDraft ? peekDraft() : null));
+    const [text, setText] = useState(handoff?.text ?? "");
+    const att = useAttachments({ visionBlocked, audioBlocked, initial: handoff?.attachments });
+    const draftRef = useRef<ComposerDraft>({ text: "", attachments: [] });
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const boxRef = useRef<HTMLDivElement>(null);
     const rowRef = useRef<HTMLDivElement>(null);
@@ -125,6 +137,19 @@ export function ComposerShell({
     useEffect(() => {
         if (autoFocus) focusInput();
     }, [autoFocus, focusInput]);
+
+    useEffect(() => {
+        if (handoff) clearDraft();
+    }, [handoff]);
+
+    useEffect(() => {
+        draftRef.current = { text, attachments: att.attachments };
+    });
+
+    useEffect(
+        () => (carryDraft ? registerDraftSource(() => draftRef.current) : undefined),
+        [carryDraft],
+    );
 
     useEffect(() => {
         if (focusKey === undefined || focusKey === lastFocusKey.current) return;
@@ -302,6 +327,16 @@ export function ComposerShell({
                     compact ? "p-1.5" : "p-2",
                 )}
             >
+                {!imageMode && notice && (
+                    <div
+                        className={cn(
+                            "overflow-hidden border-b border-input/60",
+                            compact ? "-mx-1.5 -mt-1.5 mb-1.5" : "-mx-2 -mt-2 mb-2",
+                        )}
+                    >
+                        {notice}
+                    </div>
+                )}
                 {!imageMode && reply}
                 <div
                     ref={rowRef}

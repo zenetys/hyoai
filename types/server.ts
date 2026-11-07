@@ -1,7 +1,19 @@
-// Supported server types. Single source of truth: the config schema enum and
-// the settings selector both derive from this list.
-export const SERVER_TYPES = ["llama.cpp", "vllm", "openai", "rag-sse"] as const;
-export type ServerType = (typeof SERVER_TYPES)[number];
+import type { McpServerConfig } from "@/types/mcp";
+
+/**
+ * Value of a model entry's "type": a built-in server type or one declared by an
+ * installed plugin. The registry in lib/plugins/registry is the source of truth.
+ */
+export type ServerType = string;
+
+/**
+ * Why a model entry cannot be used as authored. The entry is kept in the config
+ * (so it can still be edited and saved untouched) but resolved as disabled.
+ * The issue is unknownType when no built-in type or installed plugin serves
+ * the entry's type, and modelRequiresPin when the type cannot list models so
+ * the entry must set "model".
+ */
+export type ModelIssue = "unknownType" | "modelRequiresPin";
 
 /**
  * Request-body fragments merged into a completion when the thinking toggle is
@@ -53,6 +65,21 @@ export interface ModalityFlags {
  * when absent the endpoint's GET /v1/models is queried and every model it
  * lists becomes selectable (llama.cpp, llama-swap). The file is the single
  * source of truth: only the active choice is persisted locally.
+ *
+ * Tool calling ("tools") is authored: true turns it on, false off, and unset
+ * leaves it to the server probe; it is resolved to false when the server type
+ * cannot carry tools. The "parallelToolCalls" flag is authored and lets the
+ * model call several tools in one step. The "supportsToolChoice", "tokenize"
+ * and "listModels" flags are resolved from the server type, and the entry can
+ * override "supportsToolChoice". The "issue" field is set when the entry cannot
+ * be used as authored, the entry then being disabled. The "recoverToolCalls"
+ * flag is authored and off unless true: when a step ends without a structured
+ * tool call but its text ends with a complete call written as markup, that call
+ * runs through the usual approval, for servers whose chat parser lets a call
+ * leak into the text. The "mcpServers" field is
+ * authored and lists the ids of the MCP servers the model may use: unset offers
+ * every enabled server, a list only those, an empty list none, and it is ignored
+ * while tools are off.
  */
 export interface ModelConfig {
     id: string;
@@ -71,6 +98,15 @@ export interface ModelConfig {
     modalities?: ModalityFlags;
     supportsThinking?: boolean;
     runtimeProps?: boolean;
+    tools?: boolean;
+    parallelToolCalls?: boolean;
+    recoverToolCalls?: boolean;
+    mcpServers?: string[];
+    supportsToolChoice?: boolean;
+    tokenize?: boolean;
+    listModels?: boolean;
+    contextProbe?: boolean;
+    issue?: ModelIssue;
 }
 
 /**
@@ -96,7 +132,9 @@ export interface IntegrationConfig {
 }
 
 /**
- * Shape of the public/config.json file fetched at boot.
+ * Shape of the public/config.json file fetched at boot. The "mcpServers" field is
+ * the MCP server catalog, disabled servers included, and "mcpIssues" says why
+ * catalog entries were dropped, one English line each.
  */
 export interface AppConfig {
     models: ModelConfig[];
@@ -104,6 +142,8 @@ export interface AppConfig {
     defaultModel?: string;
     embedOrigins: string[];
     integrations?: IntegrationConfig[];
+    mcpServers: McpServerConfig[];
+    mcpIssues: string[];
     thinking?: ThinkingConfig;
     effort?: EffortConfig;
 }
@@ -144,6 +184,8 @@ export interface ModelListState {
 /**
  * Subset of llama.cpp GET /props surfaced in the UI: capability gating for
  * attachments, context size for the context bar and the model info dialog.
+ * The toolCalls field is set when the chat template handles tools, so the
+ * server can take tool calls.
  */
 export interface ServerProps {
     modelPath?: string;
@@ -153,6 +195,7 @@ export interface ServerProps {
     buildInfo?: string;
     chatTemplate?: string;
     modalities?: { vision?: boolean; audio?: boolean };
+    toolCalls?: boolean;
 }
 
 /**

@@ -22,7 +22,13 @@ const HEALTH_CLASS: Record<ConfigHealth["level"], string> = {
 };
 
 // Display order of the override categories in the summary.
-const CATEGORIES: OverrideItem["category"][] = ["general", "models", "effort", "integrations"];
+const CATEGORIES: OverrideItem["category"][] = [
+    "general",
+    "models",
+    "effort",
+    "integrations",
+    "mcp",
+];
 
 // Badge variant per entry mode.
 const MODE_VARIANT = {
@@ -102,6 +108,8 @@ export function OverrideBadge({ tick, health }: { tick: number; health: ConfigHe
                 return t("config.itemLevel", { name: item.label });
             case "integration":
                 return t("config.itemIntegration", { name: item.label });
+            case "mcpServer":
+                return t("config.itemMcpServer", { name: item.label });
             case "removed":
                 return t("config.itemRemoved", { name: item.label });
         }

@@ -1,13 +1,15 @@
 import { z } from "zod";
 
+import { normalizeMcpServers } from "@/lib/mcp/config";
 import { mergeConfig } from "@/lib/merge";
+import { getServerType } from "@/lib/plugins/registry";
 import { loadJson } from "@/lib/storage/persistence";
-import { SERVER_TYPES } from "@/types/server";
 import type {
     AppConfig,
     EffortConfig,
     IntegrationConfig,
     ModalityFlags,
+    ModelIssue,
     ServerType,
     ThinkingConfig,
 } from "@/types/server";
@@ -42,7 +44,7 @@ const modelSchema = z.object({
     shortName: z.string().min(1).optional(),
     baseUrl: z.string().min(1),
     model: z.string().optional(),
-    type: z.enum(SERVER_TYPES).catch("vllm"),
+    type: z.string().min(1).catch("vllm"),
     apiKey: z.string().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     streaming: z.boolean().catch(true),
@@ -53,6 +55,13 @@ const modelSchema = z.object({
     modalities: modalitiesSchema.optional(),
     supportsThinking: z.boolean().optional(),
     runtimeProps: z.boolean().optional(),
+    tools: z.boolean().optional(),
+    parallelToolCalls: z.boolean().optional(),
+    recoverToolCalls: z.boolean().optional(),
+    supportsToolChoice: z.boolean().optional(),
+
+    // A malformed scope offers no server, never all of them.
+    mcpServers: z.array(z.string()).optional().catch([]),
 });
 
 const integrationSchema = z.object({
@@ -70,6 +79,9 @@ const configSchema = z.object({
     defaultModel: z.string().optional(),
     embedOrigins: z.array(z.string().min(1)).default([]),
     integrations: z.array(z.unknown()).optional(),
+
+    // Validated per server by normalizeMcpServers, so a bad entry cannot fail the config.
+    mcp: z.unknown().optional(),
     thinking: thinkingSchema.optional(),
     effort: effortSchema.optional(),
 });
@@ -87,31 +99,74 @@ export type AppConfigResult =
 export type ConfigSource = "override" | "file" | "missing";
 
 /**
- * Resolve the capability fields of a model entry from its backend "type",
- * letting an explicit config value override the default. This is the single
- * place where "type" informs a capability: every consumer reads the resolved
- * fields, never the backend name.
+ * Resolve the capability fields of a model entry from its server type, letting
+ * an explicit config value override the default. This is the single place where
+ * "type" informs a capability: every consumer reads the resolved fields, never
+ * the backend name. A type no installed plugin serves keeps every capability off
+ * and flags the entry as unusable.
  *
- * @param type - Backend type of the entry
- * @param thinking - Already-merged thinking config of the entry, if any
- * @param overrides - Explicit capability values authored in config
- * @returns Resolved modalities, supportsThinking and runtimeProps
+ * @param type - Server type of the entry
+ * @param entry - Authored entry fields the capabilities depend on
+ * @returns Resolved capabilities and the issue that makes the entry unusable, if any
  */
 function resolveCapabilities(
     type: ServerType,
-    thinking: ThinkingConfig | undefined,
-    overrides: { modalities?: ModalityFlags; supportsThinking?: boolean; runtimeProps?: boolean },
-): { modalities?: ModalityFlags; supportsThinking: boolean; runtimeProps: boolean } {
-    const runtimeProps = overrides.runtimeProps ?? type === "llama.cpp";
-    // Attachment kinds are enabled unless the entry explicitly disables them:
+    entry: {
+        thinking: ThinkingConfig | undefined;
+        model?: string;
+        modalities?: ModalityFlags;
+        supportsThinking?: boolean;
+        runtimeProps?: boolean;
+        tools?: boolean;
+        parallelToolCalls?: boolean;
+        supportsToolChoice?: boolean;
+    },
+): {
+    modalities?: ModalityFlags;
+    supportsThinking: boolean;
+    runtimeProps: boolean;
+    tokenize: boolean;
+    listModels: boolean;
+    contextProbe: boolean;
+    tools: boolean | undefined;
+    parallelToolCalls: boolean | undefined;
+    supportsToolChoice: boolean;
+    issue?: ModelIssue;
+} {
+    const definition = getServerType(type);
+    const capabilities = definition?.capabilities;
+    const runtimeProps = entry.runtimeProps ?? capabilities?.runtimeProps === true;
+    // Attachment kinds stay enabled unless the entry explicitly disables them:
     // OpenAI-compatible endpoints rarely advertise capabilities, and blocking a
     // capable vision/audio model is worse than letting the server reject a
     // request from a model that lacks the capability.
-    const modalities = { image: true, audio: true, ...overrides.modalities };
+    const modalities = runtimeProps
+        ? entry.modalities
+        : { image: true, audio: true, ...entry.modalities };
     const supportsThinking =
-        overrides.supportsThinking ??
-        (Boolean(thinking?.on || thinking?.off) || type === "rag-sse");
-    return { modalities, supportsThinking, runtimeProps };
+        entry.supportsThinking ??
+        (Boolean(entry.thinking?.on || entry.thinking?.off) ||
+            capabilities?.supportsThinking === true);
+    const listModels = capabilities?.listModels === true;
+    const issue: ModelIssue | undefined = !definition
+        ? "unknownType"
+        : !listModels && !entry.model
+          ? "modelRequiresPin"
+          : undefined;
+    return {
+        modalities,
+        supportsThinking,
+        runtimeProps,
+        tokenize: capabilities?.tokenize === true,
+        listModels,
+        contextProbe: capabilities?.contextProbe === true,
+        tools: capabilities?.tools ? entry.tools : false,
+        parallelToolCalls: capabilities?.tools ? entry.parallelToolCalls : undefined,
+        supportsToolChoice:
+            Boolean(capabilities?.tools) &&
+            (entry.supportsToolChoice ?? capabilities?.supportsToolChoice ?? false),
+        issue,
+    };
 }
 
 /**
@@ -166,7 +221,7 @@ function defaultEffort(type: ServerType): EffortConfig | undefined {
 /**
  * Validate and normalize a raw config object (from the deployed file or the
  * local override) into an AppConfig: defaults model names, drops invalid
- * integrations, folds the global thinking/effort into each model and resolves
+ * integrations and MCP servers, folds the global thinking/effort into each model and resolves
  * each entry's capabilities from its type.
  *
  * @param raw - Parsed JSON config object
@@ -183,21 +238,29 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         .filter((result) => result.success)
         .map((result) => result.data);
 
+    const mcp = normalizeMcpServers(parsed.data.mcp);
+
     const config: AppConfig = {
         models: parsed.data.models.map((entry) => {
             const thinking = entry.thinking ?? parsed.data.thinking;
+            const resolved = resolveCapabilities(entry.type, { ...entry, thinking });
             return {
                 ...entry,
                 name: entry.name ?? entry.id,
                 thinking,
                 effort: entry.effort ?? parsed.data.effort ?? defaultEffort(entry.type),
-                ...resolveCapabilities(entry.type, thinking, entry),
+                ...resolved,
+
+                // An entry that cannot work is kept, but never offered to the user.
+                disabled: entry.disabled || resolved.issue !== undefined,
             };
         }),
         appName: parsed.data.appName,
         defaultModel: parsed.data.defaultModel,
         embedOrigins: normalizeEmbedOrigins(parsed.data.embedOrigins),
         integrations,
+        mcpServers: mcp.servers,
+        mcpIssues: mcp.issues,
         thinking: parsed.data.thinking,
         effort: parsed.data.effort,
     };
@@ -310,7 +373,12 @@ export async function loadAppConfig(): Promise<AppConfigResult> {
         const base = file.status === "ready" ? file.raw : { models: [] };
         result = normalizeConfig(mergeConfig(base, override));
     }
-    if (result.status === "ready") embedOrigins = result.config.embedOrigins;
+    if (result.status === "ready") {
+        embedOrigins = result.config.embedOrigins;
+
+        // Reported here, not in normalizeConfig, which also runs on every edit of the config form.
+        for (const issue of result.config.mcpIssues) console.warn(`hyoai: config: ${issue}`);
+    }
     return result;
 }
 

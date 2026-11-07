@@ -1,5 +1,12 @@
 import { createStore, type Store } from "@/lib/store";
-import type { CompactionState, MessageNode, MessageQuote, RagData } from "@/types/chat";
+import type {
+    ActivityStep,
+    Citation,
+    CompactionState,
+    LocalizedText,
+    MessageNode,
+    MessageQuote,
+} from "@/types/chat";
 import type { ChunkingStrategy } from "@/types/settings";
 
 // Generation lifecycle of the active conversation.
@@ -19,6 +26,63 @@ export interface StreamingUsage {
 }
 
 /**
+ * A tool call being streamed, shown on the "preparing" line before it is complete.
+ *
+ * @param index - Position of the call in the response
+ * @param arguments - Arguments received so far, as raw JSON text
+ */
+export interface LiveToolCall {
+    index: number;
+    id?: string;
+    name: string;
+    arguments: string;
+}
+
+/**
+ * Where a tool flow stands: the model is writing, a call waits for approval, or a tool runs.
+ */
+export type AgentPhase = "generating" | "approval" | "running";
+
+/**
+ * The call shown in the approval prompt. The loop resolves it, so the UI needs no lookup.
+ *
+ * @param callId - Id of the call
+ * @param title - Tool label
+ * @param provider - Provider label
+ * @param toolName - The provider's own name for the tool, which a title may not show
+ * @param readOnlyHint - The provider declared the tool read-only (shown, never trusted)
+ * @param arguments - Raw JSON text of the arguments
+ */
+export interface PendingToolCall {
+    callId: string;
+    title: LocalizedText;
+    provider: LocalizedText;
+    toolName?: string;
+    readOnlyHint: boolean;
+    arguments: string;
+}
+
+/**
+ * Progress of a tool flow. Between two steps the stream is idle, so this keeps
+ * the instance busy and tells the UI what the flow is waiting for.
+ *
+ * @param rootId - User message the flow answers
+ * @param step - Model request in progress, from 1
+ * @param maxSteps - Requests allowed before the flow asks to continue
+ * @param callId - Call being approved or run
+ * @param pending - Call waiting for approval
+ */
+export interface AgentProgress {
+    rootId: string;
+    step: number;
+    maxSteps: number;
+    phase: AgentPhase;
+    callId: string | null;
+    pending: PendingToolCall | null;
+    startedAt: number;
+}
+
+/**
  * Live buffers of the in-flight generation, separate from the node so the
  * rest of the tree keeps reference identity while tokens arrive.
  */
@@ -27,7 +91,9 @@ export interface StreamingState {
     status: StreamingStatus;
     content: string;
     reasoning: string;
-    rag?: RagData;
+    toolCalls?: LiveToolCall[];
+    activity?: ActivityStep[];
+    citations?: Citation[];
     startedAt: number | null;
     firstTokenAt: number | null;
     usage: StreamingUsage;
@@ -68,6 +134,9 @@ export interface RevealTarget {
  * @param chunking - Over-context chunking progress, or null when inactive
  * @param compaction - Pending compaction state, or null when none
  * @param compacting - Whether a compaction is currently running
+ * @param running - Whether a user-initiated turn is in progress, from its first step to its final write
+ * @param agent - Progress of the tool flow in progress, or null
+ * @param toolsEnabled - Tools switch of the conversation, null to follow the setting
  * @param pendingReply - Quote staged for the next reply, or null when none
  * @param revealTarget - Node and term to jump to, or null when none
  */
@@ -80,6 +149,9 @@ export interface ChatState {
     chunking: ChunkingProgress | null;
     compaction: CompactionState | null;
     compacting: boolean;
+    running: boolean;
+    agent: AgentProgress | null;
+    toolsEnabled: boolean | null;
     pendingReply: MessageQuote | null;
     revealTarget: RevealTarget | null;
 }
@@ -110,6 +182,9 @@ export function createChatStore(): Store<ChatState> {
         chunking: null,
         compaction: null,
         compacting: false,
+        running: false,
+        agent: null,
+        toolsEnabled: null,
         pendingReply: null,
         revealTarget: null,
     });

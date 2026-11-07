@@ -9,6 +9,7 @@ import {
     Pencil,
     Pin,
     PinOff,
+    ShieldQuestion,
     Square,
     Trash2,
 } from "lucide-react";
@@ -39,8 +40,8 @@ import { useActiveConversationId } from "@/hooks/useConversations";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
-import { deleteConversationById, openConversation } from "@/lib/actions";
-import { compareConversation, openConversationInPane } from "@/lib/chat/panes";
+import { deleteConversationById, openConversationInView } from "@/lib/actions";
+import { compareConversation } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
 import { patchMeta } from "@/lib/stores/conversations";
 import {
@@ -49,7 +50,7 @@ import {
     liveStore,
     stopConversation,
 } from "@/lib/stores/live";
-import { focusComposer, setMobileSidebarOpen } from "@/lib/stores/ui";
+import { focusComposer, setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
 import { downloadJson, exportOneConversation } from "@/lib/transfer";
 import { conversationShareUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,10 @@ import type { ConversationMeta } from "@/types/chat";
  * Sidebar row of one conversation: opens it on click, with inline rename,
  * pin, JSON export and confirmed deletion behind a hover menu. While the
  * conversation is the one being generated, a stop button is shown inline.
- * Shift-clicking the delete entry skips the confirmation dialog.
+ * Shift-clicking the delete entry skips the confirmation dialog. The finished mark pops in
+ * only on the render where the row finishes: playing the animation from the class alone would
+ * restart it whenever React moves the row, for instance when another row finishes and the list
+ * is reordered.
  *
  * @param meta - Conversation metadata from the index
  */
@@ -68,8 +72,10 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const tc = useTranslations("common");
     const locale = useLocale();
     const activeId = useActiveConversationId();
-    const generating = useStore(liveStore, (state) => (state.status[meta.id] ?? "idle") !== "idle");
+    const liveState = useStore(liveStore, (state) => state.status[meta.id] ?? "idle");
+    const generating = liveState !== "idle";
     const done = useStore(liveStore, (state) => state.done?.[meta.id]);
+    const embed = useStore(uiStore, (state) => state.embed);
     const compare = useStore(compareStore, (state) => ({
         enabled: state.enabled,
         focusedPaneId: state.focusedPaneId,
@@ -78,6 +84,12 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const [renaming, setRenaming] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [popping, setPopping] = useState(false);
+    const [seenDone, setSeenDone] = useState(done);
+    if (done !== seenDone) {
+        setSeenDone(done);
+        setPopping(done === "done");
+    }
     const coarse = useIsCoarsePointer();
     const longPress = useLongPress({ onLongPress: () => setMenuOpen(true) });
     const active = compare.enabled ? compare.inPane : activeId === meta.id;
@@ -91,11 +103,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     }, [active, done, meta.id]);
 
     const handleOpen = () => {
-        if (compare.enabled && compare.focusedPaneId) {
-            void openConversationInPane(compare.focusedPaneId, meta.id);
-        } else {
-            void openConversation(meta.id);
-        }
+        void openConversationInView(meta.id);
         setMobileSidebarOpen(false);
     };
 
@@ -175,14 +183,24 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                     <TooltipContent>{t("stopGeneration")}</TooltipContent>
                 </Tooltip>
             )}
+            {liveState === "approval" && (
+                <span
+                    className="ml-1 flex size-6 shrink-0 items-center justify-center text-amber-500"
+                    role="img"
+                    aria-label={t("awaitingApproval")}
+                >
+                    <ShieldQuestion className="size-4" aria-hidden="true" />
+                </span>
+            )}
             {done && (
                 <span
                     className={cn(
                         "flex h-6 shrink-0 items-center justify-center overflow-hidden text-success transition-all duration-200",
                         done === "fading"
                             ? "ml-0 -mr-1 w-0 -translate-x-1 opacity-0"
-                            : "ml-1 w-6 animate-in fade-in-0 zoom-in-95",
+                            : cn("ml-1 w-6", popping && "animate-in fade-in-0 zoom-in-95"),
                     )}
+                    onAnimationEnd={() => setPopping(false)}
                     role="img"
                     aria-label={t("generationDone")}
                 >
@@ -198,7 +216,15 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                         <span className="line-clamp-2 font-medium">
                             {meta.title || t("untitled")}
                         </span>
-                        {generating ? (
+                        {liveState === "approval" ? (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                                {t("awaitingApproval")}
+                            </span>
+                        ) : liveState === "tool" ? (
+                            <span className="text-xs text-muted-foreground">
+                                {t("runningTool")}
+                            </span>
+                        ) : generating ? (
                             <LivePreview id={meta.id} placeholder={t("generating")} />
                         ) : done ? (
                             <span className="text-xs text-success">{t("generationDone")}</span>
@@ -244,10 +270,12 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                     <Download aria-hidden="true" />
                     {t("exportConversation")}
                 </ResponsiveMenuItem>
-                <ResponsiveMenuItem onSelect={() => compareConversation(meta.id)}>
-                    <Columns2 aria-hidden="true" />
-                    {t("compare")}
-                </ResponsiveMenuItem>
+                {!embed && (
+                    <ResponsiveMenuItem onSelect={() => compareConversation(meta.id)}>
+                        <Columns2 aria-hidden="true" />
+                        {t("compare")}
+                    </ResponsiveMenuItem>
+                )}
                 <ResponsiveMenuSeparator />
                 <ResponsiveMenuItem
                     variant="destructive"

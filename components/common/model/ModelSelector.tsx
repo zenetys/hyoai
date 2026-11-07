@@ -52,8 +52,10 @@ export function ComposerModelSelector() {
 
 /**
  * Per-pane model selector writing the chosen model into the pane's instance.
- * Falls back to displaying the global model while the pane has no override yet,
- * which matches how the instance resolves its model.
+ * A pane without a pinned model displays the global one, as the instance does.
+ * A pinned model is always displayed as given, even when the config no longer
+ * offers it (disabled, removed or dropped from the server list): the selection is
+ * the user's intent, never swapped for another model.
  *
  * @param align - Dropdown alignment relative to the trigger
  */
@@ -67,17 +69,17 @@ export function PaneModelSelector({ align = "start" }: { align?: "start" | "end"
     const chosenModels = useStore(modelsStore, (state) => state.chosenModels);
     const globalEffort = useStore(settingsStore, (state) => state.settings.effort);
 
-    const paneEntry = selection.entryId
+    const pinned = selection.entryId !== null;
+    const entry = pinned
         ? (entries.find((candidate) => candidate.id === selection.entryId) ?? null)
-        : null;
-    const usePane = Boolean(paneEntry && !paneEntry.disabled);
-    const entry = usePane ? paneEntry : globalEntry;
-    const upstream =
-        usePane && entry
-            ? resolveSelectionUpstream({ chosenModels, lists }, entry, selection.upstreamModel)
-            : globalUpstream;
+        : globalEntry;
+    const upstream = pinned
+        ? (selection.upstreamModel ??
+          (entry ? resolveSelectionUpstream({ chosenModels, lists }, entry, null) : null))
+        : globalUpstream;
     const label =
-        entry?.shortName ?? (upstream ? parseModelName(upstream).base : (entry?.name ?? null));
+        entry?.shortName ??
+        (upstream ? parseModelName(upstream).base : (entry?.name ?? selection.entryId));
     const effort = selection.effort ?? globalEffort;
 
     const handleSelect = (entryId: string, model?: string) => {
@@ -92,7 +94,7 @@ export function PaneModelSelector({ align = "start" }: { align?: "start" | "end"
     return (
         <ModelMenu
             align={align}
-            activeEntryId={entry?.id ?? null}
+            activeEntryId={pinned ? selection.entryId : (entry?.id ?? null)}
             activeUpstream={upstream}
             onSelect={handleSelect}
         >

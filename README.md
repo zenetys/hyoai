@@ -6,9 +6,10 @@
 ZALEANAI is a 100% static front-end: no backend of its own, nothing to deploy or
 secure. The browser talks **directly** to your inference server's API
 (llama.cpp, vLLM, Ollama, or any OpenAI-compatible endpoint, including public
-ones). Conversations never leave the browser — they live in `localStorage`
-(compressed). Drop the build anywhere static files are served: an object store,
-a CDN, or right next to your inference server.
+ones). Conversations are stored only in the browser, in `localStorage`
+(compressed), and are sent only to the endpoints you configure. Drop the build
+anywhere static files are served: an object store, a CDN, or right next to your
+inference server.
 
 > **ZALEANAI ships no model.** You bring your own LLM. The
 > [Bring your own LLM](#bring-your-own-llm) section gets one running in a couple
@@ -27,7 +28,8 @@ choices — for ourselves and for our clients. We wanted a dependency-free way t
 - **verify OpenAI-API compatibility** across backends (llama.cpp, vLLM, Ollama,
   public APIs) from a single client;
 - have a **self-sufficient, portable** chat client with nothing to host, no
-  database, and no data leaving the browser.
+  database, and conversations stored only in the browser (messages go only to the
+  endpoints you configure).
 
 It started life as a replacement for llama.cpp's bundled web UI and grew into a
 general-purpose, multi-backend client.
@@ -39,7 +41,10 @@ run yourself, or at a **remote** API — or both, and switch between them from t
 model menu, where a reasoning level and thinking toggle also live when the model
 declares them (see [Reasoning](#reasoning-thinking-and-effort)).
 
-![Picking a model and reasoning level from the composer](public/images/selection.png)
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/selection.png">
+    <img alt="Picking a model and reasoning level from the composer" src="docs/images/light/selection.png" width="830">
+</picture>
 
 ### Local model
 
@@ -70,44 +75,11 @@ Then add this to `public/config.json` (already present in
 `http://127.0.0.1:4117`) so the browser may call Ollama — use `*` for quick
 tests only.
 
-**llama.cpp** works the same way — run `llama-server` with a CORS origin, then
-point an entry at it (no `model`, so every model the server lists becomes
-selectable):
-
-```bash
-llama-server -hf ggml-org/gpt-oss-20b-GGUF \
-    --host 0.0.0.0 --port 8080 --http-cors-origin http://127.0.0.1:4117
-```
-
-```json
-{
-    "id": "llamacpp",
-    "name": "Local llama.cpp",
-    "baseUrl": "http://127.0.0.1:8080",
-    "type": "llama.cpp",
-    "streaming": true
-}
-```
-
-**vLLM** likewise — serve a model with the front-end origin allowed:
-
-```bash
-vllm serve Qwen/Qwen2.5-7B-Instruct \
-    --host 0.0.0.0 --port 8000 --allowed-origins '["http://127.0.0.1:4117"]'
-```
-
-```json
-{
-    "id": "vllm",
-    "name": "vLLM server",
-    "baseUrl": "http://127.0.0.1:8000/v1",
-    "type": "vllm",
-    "model": "Qwen/Qwen2.5-7B-Instruct"
-}
-```
-
-All three are pre-wired in `config.example.json`; the [CORS](#cors) section
-lists the per-backend origin flags.
+**llama.cpp** and **vLLM** work the same way: start the server with the front-end origin allowed, then add an
+entry that points at it (`"type": "llama.cpp"` or `"type": "vllm"`). All three backends are pre-wired in
+`config.example.json` (the vLLM entry ships with `"disabled": true`; remove that line to use it); the exact
+commands and entries are in [docs/models.md](docs/models.md), and the [CORS](#cors) section lists the
+per-backend origin flags.
 
 ### Remote model
 
@@ -133,20 +105,8 @@ through a same-origin reverse proxy (a relative `baseUrl`, see
 ships to the browser, so only use keys you are comfortable exposing on that
 origin, or front the endpoint with a proxy that injects the key.
 
-**Anthropic** can be reached directly from the browser by declaring its opt-in
-through the per-model `headers` field:
-
-```json
-{
-    "id": "claude",
-    "name": "Claude (Anthropic)",
-    "baseUrl": "https://api.anthropic.com/v1",
-    "type": "openai",
-    "model": "claude-sonnet-4-6",
-    "apiKey": "sk-ant-xxxxxxxx",
-    "headers": { "anthropic-dangerous-direct-browser-access": "true" }
-}
-```
+**Anthropic** is reachable straight from the browser through a per-model `headers` opt-in; that entry, and the
+other providers, are in [docs/models.md](docs/models.md).
 
 ## Quick start (the app)
 
@@ -162,11 +122,27 @@ npm run dev                                         # http://127.0.0.1:4117
 | `npm run build`  | Production build (static export to `out/`)     |
 | `npm run start`  | Serves `out/` on port 4118                     |
 | `npm run check`  | `tsc --noEmit` + ESLint + Prettier (read-only) |
+| `npm run test`   | Unit tests (Vitest), not run by `check`        |
 | `npm run format` | Prettier + ESLint in write mode                |
 
 `npm run build` produces a fully static `out/` directory. Deploy it to any
 static host; `config.json` sits at the site root and can be edited without a
 rebuild.
+
+## Documentation
+
+The sections below give the essentials. The guides in [docs/](docs/) go further, with a walkthrough of the
+interface and the reference for every option:
+
+| Guide                                       | What it covers                                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [Models](docs/models.md)                    | Adding a model (Ollama, llama.cpp, vLLM, OpenRouter, OpenAI, Anthropic), every `config.json` key, the Config tab, reasoning controls |
+| [Tool calling](docs/tools.md)               | Letting a model call tools: approvals, the flow, server flags, safety limits, the Tools settings                                     |
+| [MCP servers](docs/mcp.md)                  | Plugging MCP servers in: the catalog, states, scope per model, CORS, reverse proxy, secrets                                          |
+| [Compare and availability](docs/compare.md) | Side-by-side panes, and what happens when a model's server stops answering                                                           |
+| [Using HYOAI](docs/features.md)             | A tour of conversations, quoting, branches, attachments, search, export, math and mobile                                             |
+| [Embedding](docs/embed.md)                  | The iframe widget and its `postMessage` bridge                                                                                       |
+| [Plugins](plugins/README.md)                | Build-time plugins for backends with their own protocol                                                                              |
 
 ## Model configuration: `config.json`
 
@@ -180,7 +156,10 @@ The tab is fully graphical: models, endpoints, keys, attachment capabilities
 (dedicated image/audio switches) and integrations can be edited without writing
 JSON.
 
-![The Config tab in Settings, editing a model entry](public/images/config.png)
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/config.png">
+    <img alt="The Config tab in Settings, editing a model entry" src="docs/images/light/config.png" width="716">
+</picture>
 
 `public/config.json` is gitignored (it holds deployment-specific endpoints):
 copy `public/config.example.json` to `public/config.json` to get started. The
@@ -190,35 +169,19 @@ behind a reverse proxy.
 
 An optional root `appName` key sets the deployment name shown on the empty chat
 screen (`Chat with <appName> models`); when omitted it falls back to a generic
-localized word (`AI` / `IA`).
+localized word (`AI` / `IA`). The other root keys (`defaultModel`, `embedOrigins`, `mcp`,
+`integrations` and the top-level `thinking` and `effort`) are in
+[docs/models.md](docs/models.md#root-keys).
 
-Keys of a `models` entry:
-
-| Key                | Type                                           | Description                                                                                                                                                                                                     |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`               | string (required)                              | Stable identifier, referenced by `defaultModel` and local preferences                                                                                                                                           |
-| `name`             | string                                         | Name shown in the selector (default: `id`)                                                                                                                                                                      |
-| `baseUrl`          | string (required)                              | Endpoint base URL, with or without `/v1`; absolute, or relative to the site (`/llm`, `./llm`)                                                                                                                   |
-| `model`            | string                                         | Pins the upstream model sent to the API; when absent, every model listed by the endpoint's `GET /v1/models` becomes selectable (llama.cpp, llama-swap)                                                          |
-| `type`             | `vllm` \| `llama.cpp` \| `openai` \| `rag-sse` | Selects the transport: OpenAI-compatible (`vllm`/`llama.cpp`/`openai`) or the named-event RAG protocol (`rag-sse`, with search steps and sources); also drives the sampling-parameter mapping (default: `vllm`) |
-| `apiKey`           | string                                         | Optional; sent as `Authorization: Bearer` when present                                                                                                                                                          |
-| `streaming`        | boolean                                        | `true`: token-by-token SSE; `false`: single JSON response (default: `true`)                                                                                                                                     |
-| `sendContext`      | boolean                                        | `true`: full branch history; `false`: last message only (default: `true`)                                                                                                                                       |
-| `disabled`         | boolean                                        | `true`: keep the entry in the file but hide it from the model selector (default: `false`)                                                                                                                       |
-| `modalities`       | `{ image?, audio? }`                           | Attachment capabilities; on by default, a `false` flag disables that attachment menu entry. Explicit values override the runtime probe.                                                                         |
-| `supportsThinking` | boolean                                        | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                         |
-| `runtimeProps`     | boolean                                        | Whether the endpoint exposes a llama.cpp-style `GET /props` (context size, modalities, model info). Defaults from `type`, overridable                                                                           |
-
-An optional `headers` object adds custom request headers to every call to the
-endpoint (merged after the `apiKey` bearer) — use it for provider opt-ins such
-as Anthropic's `anthropic-dangerous-direct-browser-access`.
-
-Only the active choice (entry and picked model) is remembered in localStorage;
-the file remains the source of truth for the list. Discovered lists refresh at
-startup and whenever the model selector opens, and `runtimeProps` endpoints are
-also probed through `GET /props` for their context size and the model information
-dialog. Image and audio attachments are enabled by default; set `modalities` to
-`false` on an entry to hide them.
+An entry needs an `id` and a `baseUrl`. A `type` (`vllm`, `llama.cpp`, `openai`, or a [plugin](#plugins) type;
+default: `vllm`) selects the transport and the sampling-parameter mapping, and `model` pins the upstream model
+(optional for the built-in types, which list their models; a [plugin](#plugins) type that does not list its models
+needs it, or the entry is disabled). The other keys are optional: `name`, `shortName`, `apiKey`, custom `headers`,
+`streaming`, `sendContext`, `modalities`, `thinking`, `effort`, `supportsThinking`, `runtimeProps`, `disabled`, the
+per-model options of [tool calling](#tool-calling) (`tools`, `parallelToolCalls`, `recoverToolCalls`,
+`supportsToolChoice`) and the `mcpServers` scope of [MCP servers](#mcp-servers). The full key table, how the
+model lists and the `/props` probes work, and what the browser remembers are in [docs/models.md](docs/models.md).
+Image and audio attachments are enabled by default; set `modalities` to `false` on an entry to hide them.
 
 ## Reasoning: `thinking` and `effort`
 
@@ -226,11 +189,14 @@ A model that exposes a reasoning knob (Qwen3, gpt-oss, ...) can declare how to
 drive it from the model menu. Both keys live either at the top level (applied to
 every model) or on a `models` entry (which overrides the top-level default), and
 both merge a backend-specific fragment into the request body — so the same UI
-adapts to any server. The controls only appear where the keys are present, and
-each compare pane keeps its own choice (otherwise the global setting applies).
+adapts to any server. The Thinking switch appears when `supportsThinking`
+resolves to true (by default when a `thinking` config with an `on` or `off`
+fragment is present, or when a plugin type declares that it reasons by default;
+overridable per entry); the levels appear when `effort` has levels. Each compare
+pane keeps its own choice (otherwise the global setting applies).
 
 `thinking` is an on/off toggle. Its `on`/`off` fragments are sent when the
-Reasoning switch is on or off; a missing side sends nothing, leaving the model's
+Thinking switch is on or off; a missing side sends nothing, leaving the model's
 own default.
 
 OpenAI-compatible entries (`openai`, `vllm`) that do not declare `effort` get
@@ -247,9 +213,13 @@ nothing and leaves the request unchanged.
 }
 ```
 
-`effort` is a level picker. `levels` is an ordered list shown as a submenu; the
-active level's `body` is merged into the request and `default` is the id used
-until the user picks another:
+`effort` is a level picker. `levels` is an ordered list shown as a submenu of the
+model menu (flat in the bottom drawer when the menu is a drawer: a window under
+768 px or a device whose primary pointer is coarse); the active level's `body` is
+merged into the request (a level without a `body` sends its `id` as
+`reasoning_effort`, unless the request already carries a `reasoning_effort`, for
+example from the `thinking` fragment) and `default` is the id used until the user
+picks another (without a valid `default`, the first level applies):
 
 ```json
 {
@@ -266,6 +236,113 @@ until the user picks another:
 Typical knobs: `chat_template_kwargs` with `enable_thinking` (Qwen3),
 `reasoning_effort` (gpt-oss), or `reasoning_budget` (`0` disables thinking on
 some llama.cpp Qwen3 builds).
+
+A model whose chat template supports it can also get the reasoning of earlier turns back (`preserve_thinking`, an
+opt-in): see [docs/models.md](docs/models.md).
+
+## Tool calling
+
+The model can call tools while it answers. A tool is a function a provider exposes (the app ships
+a harmless `clock` tool that returns the time in an IANA time zone; [plugins](#plugins) can add
+others). Tools are off by default: turn them on per conversation from the wrench button in the
+composer, whose panel also lists the providers with how many tools each offers, or for new
+conversations in Settings → Tools. The wrench is greyed out when the model cannot take tools. A
+conversation that used tools and has them switched off shows a notice above the composer with a
+button to switch them back on, when the current model can take tools.
+
+For each step the model asks for a call, the app shows the tool and its full arguments, waits for
+your decision (allow once, always allow this tool, or deny) unless the tool is already set to
+Always allow (it runs at once) or Hidden from the model (the tool is not offered to the model), runs it, and
+sends the result back so the model can answer or call again. Calls run one after the other, an
+answer stops after 10 steps by default (then **Continue** or **Answer without tools**), and a
+stopped or reloaded flow can be continued the same way. The calls show as cards above the answer,
+each with its arguments and result; regenerating, branching and deleting act on the whole flow.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/tool-approval.png">
+    <img alt="A tool call waiting for approval: the tool, its full arguments, and the Allow once, Always allow and Deny buttons" src="docs/images/light/tool-approval.png" width="760">
+</picture>
+
+The server has to support it, and some need a flag:
+
+- **llama.cpp**: start `llama-server` with `--jinja`. Without it the server refuses the tools and
+  the error says so. With `runtimeProps`, the app reads the chat template from `GET /props` and
+  turns tools on by itself when the template handles them; set `"tools": false` on the entry when
+  that detection is wrong.
+- **vLLM**: start it with `--enable-auto-tool-choice --tool-call-parser <parser>` (for example
+  `hermes`), and set `"tools": true` on the entry.
+- **Ollama and other OpenAI-compatible servers**: use `"type": "openai"` and `"tools": true`. These
+  servers may reject `tool_choice`, which is why `supportsToolChoice` is off for that type.
+- A model whose chat template does not support tools keeps working: when the request offers no
+  tools, the results of earlier calls stay in the context as text added to the message they
+  answer (or as a message of their own when the model wrote text before the call or the question carries
+  attachments), and the calls
+  themselves are not written out, so the model does not imitate them.
+
+How a step that ends badly is reported, how to recover a call a server leaks as text (`recoverToolCalls`) and the
+Tools settings screen are in [docs/tools.md](docs/tools.md).
+
+Security defaults:
+
+- Every tool asks before it runs. "Always allow" applies to one tool, never to a whole provider,
+  and Settings → Tools lists the decisions and can reset them. Setting the default to "always
+  allow" is a deliberate choice and shows a warning. Approvals are never imported from an export.
+- A result is capped at 20,000 characters by default (the Result size limit setting), shown as
+  plain text (never rendered as Markdown or HTML), and a call is cut after 60 seconds. Nothing the
+  model writes after a tool result on the same branch, and no summary, loads a remote image (the
+  image appears as a link, `Image not loaded: {url}`), so an injected instruction cannot send data
+  out through an image address.
+- Tools are never offered in an embed (see
+  [what the widget leaves out](docs/embed.md#what-the-widget-leaves-out)). A tool provider is code
+  running in the page: see [Plugins](#plugins).
+
+An export in the HYOAI format that contains tool calls imports into this app without loss. The
+llama.cpp webui format brings the calls back with every result as "Done", and the OpenAI
+(JSONL) and Markdown exports cannot be imported (see [Export](docs/tools.md#export)). Older builds
+of the app, and the llama.cpp web interface, may drop or flatten them.
+
+### MCP servers
+
+An [MCP](https://modelcontextprotocol.io) server gives the models more tools. The app is an MCP
+client that runs in the browser and plugs the server's tools into the same loop as the others (see
+[Tool calling](#tool-calling)): the model sees them, every call shows its arguments and waits for
+your decision, and the result is capped and shown as plain text. Nothing is run without your
+approval unless you allow the tool yourself, and no MCP tool is ever offered in an embed (see
+[what the widget leaves out](docs/embed.md#what-the-widget-leaves-out)).
+
+The catalog of servers is the `mcp.servers` list of `config.json`:
+
+```json
+{
+    "mcp": {
+        "servers": [
+            {
+                "id": "docs",
+                "label": "Product docs",
+                "url": "/mcp/docs",
+                "transport": "auto",
+                "headers": { "Authorization": "Bearer xxxxxxxx" },
+                "enabled": true
+            }
+        ]
+    }
+}
+```
+
+A server that is not valid is skipped with a warning in the browser console; the other servers and the models
+are not affected. Settings → Tools shows one card per server: its state (off, not connected, connecting, connected,
+authentication refused (401 or 403), address not found, no answer, unreachable, blocked by CORS or by the local
+network permission, or a protocol error), its address, an on/off switch, and the tools it lists, each with its own
+approval (Ask each time, Always allow or Hidden from the model; the default is Ask each time). The wrench panel in the composer lists the servers too, and
+`mcpServers` on a model entry narrows which of them that model sees.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/mcp-servers-short.png">
+    <img alt="MCP servers in Settings: one connected, one blocked by CORS with the headers to add, one refusing the credentials" src="docs/images/light/mcp-servers-short.png" width="716">
+</picture>
+
+The key table, the CORS headers a server must send, the reverse-proxy recipes (Caddy, nginx), how secrets are
+stored and what is not supported are in [docs/mcp.md](docs/mcp.md).
 
 ## Integrations
 
@@ -297,10 +374,25 @@ omitted) and fires a JSON `POST`:
 | `headers` | object            | Extra request headers (e.g. an `Authorization` bearer)                 |
 | `models`  | string[]          | `models` entry ids it applies to; omit for all                         |
 
-The `feedback` kind POSTs `{ rating, integrationId, model, conversationId,
-messageId, content }`. An unknown or malformed entry is dropped rather than
-failing the whole config. As with `apiKey`, any token in `headers` ships to the
-browser, so keep these endpoints internal or front them with a proxy.
+An entry is matched through its pinned `model`, so an entry without `model` (one
+that discovers its models) is not matched when `models` is set: the entry whose
+`id` is `local` has to pin a `model`.
+
+The `feedback` kind POSTs `{ question, answer, rating, comment, thinking_active,
+effort }`, where `rating` is `"up"` or `"down"` and `effort` is only present when
+a level is set. An unknown or malformed entry is dropped rather than failing the
+whole config. As with `apiKey`, any token in `headers` ships to the browser, so
+keep these endpoints internal or front them with a proxy.
+
+## Plugins
+
+A plugin adds a server type for a backend with its own protocol, without touching the core. Plugins
+are found at build time in the git-ignored `plugins/` folder: drop a folder there, restart
+`npm run dev` or run `npm run build`, and `"type": "<id>"` works in `config.json`. Without any plugin
+the app builds and runs as usual. The contract, the events a transport can emit (steps, citations,
+stage timings), the hook that upgrades the messages it stored, the tool providers a plugin can add,
+and a complete example are in [plugins/README.md](plugins/README.md). Plugins are trusted code,
+bundled into the app: only install ones you wrote or audited.
 
 ## Embed
 
@@ -311,7 +403,6 @@ no second bundle, still no server side.
 ```html
 <iframe
     src="https://chat.example.com/?embed=1&model=local&lock=1&intro=1"
-    title="Assistant"
     style="width: 380px; height: 560px; border: 0"
 ></iframe>
 ```
@@ -319,10 +410,13 @@ no second bundle, still no server side.
 The URL carries the look, the locale and the forced model; a `postMessage`
 bridge lets the host page set the system prompt, inject a turn, follow the
 generation state or run a headless completion in a hidden iframe. The widget
-only accepts messages from the origins listed in `embedOrigins`.
+only accepts messages from its own origin and from the origins listed in
+`embedOrigins`.
 
 See **[docs/embed.md](docs/embed.md)** for the parameter list, the message
-contract and the storage isolation rules.
+contract, the storage isolation rules and
+[what the widget leaves out](docs/embed.md#what-the-widget-leaves-out) (tools, the Tools and Config
+tabs, Compare models, the global shortcuts and the availability watcher).
 
 ## CORS
 
@@ -369,62 +463,115 @@ Other good projects, grouped by architecture:
 
 - Next.js (App Router, static export in production), React 19, strict TypeScript
 - Tailwind CSS v4, shadcn/ui (Radix primitives via the unified `radix-ui` package)
-- next-themes (light/dark/system) + two switchable skins (`soft`, `flat`)
+- next-themes (light/dark/system) + six switchable skins (`soft`, `flat`, `contrast`, `warm`, `forest`,
+  `dim`)
 - next-intl (FR/EN, no routing)
 - react-markdown + remark-gfm + rehype-highlight (Markdown and code rendering)
+- remark-math + rehype-katex (math) and mermaid (diagrams)
 - lz-string (conversation compression in localStorage)
 
 ## Structure
 
 ```
-app/            layout (fonts, anti-FOUC script), single page, globals.css (tokens + skins)
+app/            layout (fonts, anti-FOUC script), single page, globals.css (tokens), appearance/ (skins)
 components/     chat/ (view, message, composer, dialogs), settings/ (tabs, fields,
-                editors, dialogs), layout/ (shells, header, sidebar), compare/,
+                editors, dialogs, mcp), layout/ (shells, header, sidebar), compare/,
                 markdown/, common/ (cross-domain), ui/ (shadcn)
 hooks/          useStore (useSyncExternalStore + selectors), useActiveChat, useConversations
-lib/            api/ (SSE, params mapping), storage/ (compressed localStorage, quota),
-                stores/ (settings, models, conversations, chat), messageTree, chatActions
+lib/            api/ (SSE, params mapping), plugins/ (registry, SDK), tools/ (catalog, runner),
+                mcp/ (MCP client and server registry), storage/ (compressed
+                localStorage, quota), stores/ (settings, models, conversations, chat),
+                chat/ (chat instances, panes, availability), tree, actions
 messages/       next-intl catalogs fr.json / en.json
-docs/           embed.md (widget parameters, postMessage bridge)
-public/         config.json (models), assets
-types/          shared types (chat, server, settings, api, storage)
+plugins/        build-time plugins (git-ignored, see plugins/README.md)
+docs/           guides (models, tools, MCP, compare, features, embed) and images/ (their screenshots)
+public/         config.example.json (sample) and config.json (your models, git-ignored)
+types/          shared types (chat, server, settings, api, storage, tools, mcp, plugin)
 ```
 
 ## Features
 
-- Local conversations: lightweight index + one localStorage key per
-  conversation, debounced writes while streaming, usage gauge and JSON
-  export/import
+The interface features are walked through, with more screenshots, in [Using HYOAI](docs/features.md);
+compare and availability, tool calling and MCP, and the model and reasoning options have their own guides:
+[Compare and availability](docs/compare.md), [Tool calling](docs/tools.md), [MCP servers](docs/mcp.md) and
+[Models](docs/models.md).
 
-    ![Conversations sidebar with the background-generation indicator](public/images/sidebar.png)
+- Local conversations: lightweight index + one localStorage key per
+  conversation, debounced writes while streaming, usage gauge, JSON
+  export/import (native or llama.cpp web UI format) and export as Markdown or
+  OpenAI-format JSONL
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/sidebar.png">
+  <img alt="Conversations sidebar with the background-generation indicator" src="docs/images/light/sidebar.png" width="596">
+</picture>
 
 - Branches: editing a message or regenerating a reply creates a navigable
-  alternative version (1/2 indicator on each message)
-- Quote & reply: quote a whole message or just a text selection to anchor the
-  next question on it
+  alternative version (a 1/2 indicator on each message that has alternatives)
+- Quote & reply: quote a whole answer or just a text selection of it to anchor
+  the next question on it
 
-    ![Composer quoting a previous message](public/images/reply.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/reply.png">
+  <img alt="Composer quoting a previous message" src="docs/images/light/reply.png" width="830">
+</picture>
 
 - Reasoning (`reasoning_content`) shown in a collapsible block, per-message
   stats (tokens, tok/s, duration); a thinking toggle and effort level in the
   model menu when declared in `config.json` (see above), per pane in compare mode
 
-    ![The reasoning block expanded under an answer](public/images/thinking.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/thinking.png">
+  <img alt="A collapsible reasoning block above the answer, then its sources and the per-message stats" src="docs/images/light/thinking.png" width="770">
+</picture>
 
-- Compare mode: run the same prompt against two models side by side, each pane
-  keeping its own reasoning choice
+- Compare mode: run the same prompt against up to four models side by side, each
+  pane keeping its own model and reasoning choice. Closing a pane keeps its
+  conversation and lets a running answer finish in the background (it stays in
+  the sidebar); closing down to one pane returns to the single chat on that
+  conversation without interrupting it. The text typed in the composer follows
+  you in and out of the compare (see [docs/compare.md](docs/compare.md)).
 
-    ![Compare mode — the same prompt answered by two models side by side](public/images/compare.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/compare.png">
+  <img alt="Three models answering the same question side by side, each with its own reasoning level and its own stats" src="docs/images/light/compare.png" width="830">
+</picture>
+
+- Model availability: when a model's server stops answering, the model is greyed
+  out as unavailable in the menus, the single-chat composer is blocked with the
+  reason and a Retry button, and a compare pane is greyed and skipped by the
+  shared send ("Sending to 2 panes of 3"). It comes back on its own once the
+  server answers again. A server counts as down only on a network error, a
+  timeout or a gateway 502/503/504, and a slow server that still answers is never
+  cut off. The "Automatically disable unavailable models" setting turns this off:
+  the model then stays selectable and the error shows on send. A model removed or
+  disabled in the configuration is never replaced by another one (see
+  [docs/compare.md](docs/compare.md#model-availability)).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/unavailable.png">
+  <img alt="A model whose server does not answer: the composer shows the reason and a Retry button" src="docs/images/light/unavailable.png" width="830">
+</picture>
+
+- Tool calling: the model can call tools during an answer, with the arguments shown and your
+  approval asked before each call (see [Tool calling](#tool-calling)); calls and their results
+  appear as cards above the answer and stay in the conversation; [MCP servers](#mcp-servers) plug
+  their tools into the same loop
 
 - Markdown & sources: tables, code highlighting and blockquotes render inline;
-  answers can carry retrieved source citations alongside the per-message stats
-
-    ![A Markdown answer with a sources block and per-message stats](public/images/sources.png)
+  answers can carry source citations and a trace of the backend's steps
+  alongside the per-message stats
+- Math & diagrams: KaTeX renders `$...$`, `$$...$$`, `\(...\)` and `\[...\]`
+  formulas, and `mermaid` code blocks render as diagrams with a copy button for
+  the source and an SVG download
 
 - Images: paste/drag-and-drop, resized client-side before sending (OpenAI
   vision format)
 
-    ![Attachment menu: images, audio, text files, PDFs and a system message](public/images/attachements.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/attachments.png">
+  <img alt="Attachment menu: images, audio, text files, PDFs and a system message" src="docs/images/light/attachments.png" width="830">
+</picture>
 
 - Camera and drawing board: capture a photo from the device camera or write a
   formula on a canvas; both land in the composer as regular image attachments
@@ -435,13 +582,18 @@ types/          shared types (chat, server, settings, api, storage)
   (`repetition_penalty` for vLLM, `repeat_penalty` and `dry_*` for llama.cpp)
 - Shortcuts: Ctrl/Cmd+K (palette), Ctrl/Cmd+B (sidebar), Ctrl/Cmd+Shift+O
   (new conversation)
-- Responsive, touch-first on mobile: below the `md` breakpoint the model and
+- Responsive, touch-first on mobile: when the window is under the `md` breakpoint
+  (768 px) or the primary pointer is coarse (a touch-first device), the model and
   conversation menus open as bottom drawers (drag handle, swipe-to-dismiss,
-  safe-area padding) and message actions as a sheet, so long menus stay
-  thumb-reachable; the media-query hook is SSR-safe, so the static export
-  hydrates cleanly
+  safe-area padding); the header More menu exists only below `md`, where it is a
+  drawer too; message actions open as a sheet on a long-press with touch or pen,
+  at any width, so long menus stay thumb-reachable; the media-query hook is
+  SSR-safe, so the static export hydrates cleanly
 
-    ![The model menu as a mobile bottom drawer with reasoning levels and a thinking toggle](public/images/responsive.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/responsive.png">
+  <img alt="The model menu as a mobile bottom drawer with reasoning levels and a thinking toggle" src="docs/images/light/responsive.png" width="426">
+</picture>
 
 - Localized interface in French, English and Chinese, switchable from the header
   and forceable in embeds with `lang=zh`

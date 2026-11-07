@@ -20,6 +20,41 @@ export function formatBytes(bytes: number, locale: string): string {
 }
 
 /**
+ * Turn a title into a file-name-safe slug: accents stripped, lowercase ASCII
+ * letters and digits separated by single dashes, capped at 60 characters.
+ *
+ * @param text - Free text such as a conversation title
+ * @returns The slug, empty when the text holds no letter or digit
+ */
+export function slugify(text: string): string {
+    return text
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60)
+        .replace(/-+$/g, "");
+}
+
+/**
+ * Pick the download name of a text export: the slugged title when a single
+ * conversation is exported, a dated generic name otherwise or when the title
+ * has nothing usable for a file name.
+ *
+ * @param titles - Titles of the exported conversations
+ * @param extension - File extension without the dot
+ * @returns The file name
+ */
+export function exportFilename(titles: string[], extension: string): string {
+    const slug = titles.length === 1 ? slugify(titles[0]) : "";
+
+    if (slug) return `${slug}.${extension}`;
+
+    return `${new Date().toISOString().slice(0, 10)}_conversations.${extension}`;
+}
+
+/**
  * Format a duration in milliseconds as seconds with one decimal.
  *
  * @param ms - Duration in milliseconds

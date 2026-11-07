@@ -34,7 +34,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
             }
             toastOptions={{
                 classNames: {
-                    toast: "cn-toast",
+                    toast: "pointer-events-auto!",
+                    actionButton:
+                        "h-7! transition-all! rounded-[min(var(--radius-md),12px)]! bg-primary! px-2.5! text-[0.8rem]! font-medium! text-primary-foreground! hover:bg-primary/80!",
+                    cancelButton:
+                        "h-7! transition-all! rounded-[min(var(--radius-md),12px)]! bg-secondary! px-2.5! text-[0.8rem]! font-medium! text-secondary-foreground! hover:bg-secondary/80!",
                 },
             }}
             {...props}

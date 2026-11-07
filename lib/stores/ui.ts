@@ -2,7 +2,7 @@ import { createStore } from "@/lib/store";
 import type { EmbedTheme } from "@/lib/url";
 
 // Settings dialog tabs, kept in sync with the SettingsDialog triggers.
-export type SettingsTab = "general" | "generation" | "data" | "config";
+export type SettingsTab = "general" | "generation" | "tools" | "data" | "config";
 
 /**
  * Which model the info dialog describes; null means the active model.

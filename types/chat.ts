@@ -1,5 +1,5 @@
 // Role of a node in the conversation tree. The synthetic root carries no content.
-export type MessageRole = "root" | "system" | "user" | "assistant";
+export type MessageRole = "root" | "system" | "user" | "assistant" | "tool";
 
 // What an attachment carries; drives both rendering and the API mapping.
 export type AttachmentKind = "image" | "audio" | "text" | "pdf";
@@ -20,19 +20,124 @@ export interface Attachment {
 }
 
 /**
- * Per-stage durations (ms) of the backend RAG pipeline, decoded from the
- * latencies event. Stages the backend reports as zero (e.g. the retrieval
- * stages when RAG is not used) are dropped, so only the steps that actually
- * ran are surfaced in the footer.
+ * Text a backend wants shown in the UI, in a form the core can translate. "key"
+ * is a full message catalog key (a plugin's strings live under "plugins.<id>");
+ * the UI uses its translation when the catalog has the key and falls back to
+ * "text" otherwise, so a backend always renders something readable.
  */
-export interface PipelineTimings {
-    intentDetection?: number;
-    queryDecomposition?: number;
-    embeddingGeneration?: number;
-    vectorSearch?: number;
-    reranking?: number;
-    llmGeneration?: number;
-    totalPipeline?: number;
+export interface LocalizedText {
+    key: string;
+    values?: Record<string, string | number>;
+    text: string;
+}
+
+/**
+ * One source a backend grounded its answer on: a document, a page, a file.
+ * Only "title" is required; everything else is shown when present.
+ */
+export interface Citation {
+    id: string;
+    title: string;
+    url?: string;
+    preview?: string;
+    score?: number;
+}
+
+// What an activity step stands for; drives the icon and the trace header.
+export type ActivityKind = "search" | "step" | "tool";
+
+// Where a step stands: waiting for approval, running, or how it ended.
+export type ActivityStatus =
+    "pending" | "running" | "done" | "error" | "denied" | "cancelled" | "notRun";
+
+/**
+ * Input and output of a step, shown verbatim as escaped text, never as Markdown.
+ *
+ * @param input - What the step was given (a tool's arguments)
+ * @param output - What it returned
+ * @param truncated - Characters cut from the output before the model saw it
+ */
+export interface ActivityDetail {
+    input?: string;
+    output?: string;
+    truncated?: number;
+}
+
+/**
+ * One step of what happened before or while the answer was written, such as a
+ * search with its reformulated queries and the documents it found, or a tool
+ * call. Steps are identified by "id": a later event with the same id replaces
+ * the earlier one.
+ *
+ * @param status - Where the step stands, when it can wait or fail
+ * @param durationMs - How long it took
+ * @param detail - Its input and output
+ * @param text - What the model wrote before the step (untrusted Markdown)
+ */
+export interface ActivityStep {
+    id: string;
+    kind: ActivityKind;
+    label: LocalizedText;
+    items?: string[];
+    citations?: Citation[];
+    status?: ActivityStatus;
+    durationMs?: number;
+    detail?: ActivityDetail;
+    text?: string;
+}
+
+/**
+ * Duration of one stage of a backend pipeline, shown in the message footer.
+ * Stages that did not run are simply absent.
+ */
+export interface StageTiming {
+    id: string;
+    label: LocalizedText;
+    ms: number;
+}
+
+/**
+ * A function call the model emitted. The arguments are kept verbatim, as the
+ * model wrote them, so the call can be replayed to the server exactly.
+ *
+ * @param id - Id from the server, or generated when the server sent none
+ * @param name - Function name as the model called it
+ * @param arguments - Raw JSON text of the arguments
+ */
+export interface ToolCall {
+    id: string;
+    name: string;
+    arguments: string;
+}
+
+// How the end of a tool call came about.
+export type ToolCallStatus = "done" | "error" | "denied" | "cancelled";
+
+// How a tool call was authorized, kept as an audit trail.
+export type ToolApprovalKind = "once" | "always" | "policy" | "denied";
+
+/**
+ * What is known about a tool result node; the node's content is the text the
+ * model received.
+ *
+ * @param name - Function name as the model called it
+ * @param providerId - Provider that served it, absent when the name matched no tool
+ * @param toolName - The provider's own name for the tool
+ * @param title - Label at call time, so it survives the provider's removal
+ * @param status - How the call ended
+ * @param approval - How it was authorized
+ * @param durationMs - How long the call took
+ * @param originalLength - Result length before it was capped, when it was
+ */
+export interface ToolResultMeta {
+    name: string;
+    providerId?: string;
+    toolName?: string;
+    title?: LocalizedText;
+    status: ToolCallStatus;
+    approval?: ToolApprovalKind;
+    durationMs?: number;
+    originalLength?: number;
 }
 
 /**
@@ -49,36 +154,11 @@ export interface MessageStats {
     tokensPerSecond?: number;
     durationMs?: number;
     timeToFirstTokenMs?: number;
-    pipeline?: PipelineTimings;
+    stages?: StageTiming[];
 }
 
 // Why an assistant generation ended.
 export type FinishReason = "stop" | "length" | "aborted" | "error" | string;
-
-/**
- * One document surfaced by the RAG pipeline (retrieval candidate or final
- * source). The wire shape from the RAG backend matches this one to one.
- */
-export interface RagDoc {
-    id: number;
-    source: string;
-    preview: string;
-    score: number;
-    url: string;
-}
-
-/**
- * Retrieval-Augmented Generation trace attached to an assistant message: the
- * reformulated sub-queries and the documents at each pipeline stage. "reranked"
- * holds the final sources kept for the answer; "dense"/"sparse" are the
- * intermediate retrieval candidates, surfaced for transparency.
- */
-export interface RagData {
-    subQueries?: string[];
-    dense?: RagDoc[];
-    sparse?: RagDoc[];
-    reranked?: RagDoc[];
-}
 
 /**
  * An excerpt the user is replying to, captured from an earlier assistant
@@ -103,7 +183,8 @@ export interface MessageNode {
     content: string;
     reasoningContent?: string;
     quote?: MessageQuote;
-    rag?: RagData;
+    activity?: ActivityStep[];
+    citations?: Citation[];
     attachments?: Attachment[];
     model?: string;
     thinking?: boolean;
@@ -115,6 +196,9 @@ export interface MessageNode {
     chunk?: { index: number; total: number; kind: "chunk" | "synthesis" };
     summary?: boolean;
     feedback?: "up" | "down";
+    toolCalls?: ToolCall[];
+    toolCallId?: string;
+    tool?: ToolResultMeta;
     createdAt: number;
 }
 
@@ -142,6 +226,7 @@ export interface CompactionState {
  * @param modelId - config.json entry the conversation was last used with
  * @param model - Upstream model name last used
  * @param systemPrompt - Per-conversation system prompt override
+ * @param tools - Whether tools are on for the conversation, unset to follow the setting
  */
 export interface ConversationMeta {
     id: string;
@@ -152,6 +237,7 @@ export interface ConversationMeta {
     modelId?: string;
     model?: string;
     systemPrompt?: string;
+    tools?: boolean;
 }
 
 /**

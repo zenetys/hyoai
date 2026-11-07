@@ -1,4 +1,5 @@
-import { SERVER_TYPES } from "@/types/server";
+import { readModelScope } from "@/lib/mcp/config";
+import { type ConfigOverride, diffConfig, mergeConfig } from "@/lib/merge";
 import type { ServerType } from "@/types/server";
 
 /**
@@ -29,6 +30,11 @@ export interface DraftModel {
     modalities: string;
     supportsThinking: Capability;
     runtimeProps: Capability;
+    tools: Capability;
+    parallelToolCalls: Capability;
+    recoverToolCalls: boolean;
+    supportsToolChoice: Capability;
+    mcpServers: string[] | null;
 }
 
 /**
@@ -64,6 +70,27 @@ export interface DraftIntegration {
 }
 
 /**
+ * One MCP server of the catalog as edited in the form.
+ *
+ * @param id - Stable identifier of the server
+ * @param label - Name shown to the user, the id when empty
+ * @param url - Endpoint, absolute or relative to the page
+ * @param transport - How the server is reached
+ * @param token - Bearer token, sent as the Authorization header
+ * @param headers - Other request headers as JSON text
+ * @param enabled - Whether the server is registered
+ */
+export interface DraftMcpServer {
+    id: string;
+    label: string;
+    url: string;
+    transport: "auto" | "http" | "sse";
+    token: string;
+    headers: string;
+    enabled: boolean;
+}
+
+/**
  * Whole config as edited in the form, flattened for direct field binding.
  *
  * @param appName - Application name shown in the UI
@@ -74,6 +101,7 @@ export interface DraftIntegration {
  * @param effortDefault - Id of the default effort level
  * @param effortLevels - Effort levels as edited in the form
  * @param integrations - Side-channel integrations as edited in the form
+ * @param mcpServers - MCP server catalog as edited in the form
  */
 export interface Draft {
     appName: string;
@@ -84,6 +112,7 @@ export interface Draft {
     effortDefault: string;
     effortLevels: DraftLevel[];
     integrations: DraftIntegration[];
+    mcpServers: DraftMcpServer[];
 }
 
 // Coerce an unknown value to a plain string, empty when absent.
@@ -95,6 +124,28 @@ const asBool = (value: unknown): boolean => (typeof value === "boolean" ? value 
 // Read a nested object, or undefined when the value is not an object.
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     value && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
+
+/**
+ * Split a server's headers into its bearer token and the other headers. The form
+ * edits the token apart so it can be masked; any other Authorization scheme stays
+ * among the headers.
+ *
+ * @param headers - The raw headers value of a server entry, of any shape
+ * @returns The bearer token, empty when there is none, and the other headers: as given when
+ *          no token was taken out, undefined when nothing else remains
+ */
+function splitBearer(headers: unknown): { token: string; rest: unknown } {
+    const record = asRecord(headers);
+    if (!record || Array.isArray(record)) return { token: "", rest: headers };
+
+    const key = Object.keys(record).find((name) => name.toLowerCase() === "authorization");
+    const match =
+        key && typeof record[key] === "string" ? /^bearer\s+(.+)$/i.exec(record[key]) : null;
+    if (!key || !match) return { token: "", rest: headers };
+
+    const rest = Object.entries(record).filter(([name]) => name !== key);
+    return { token: match[1], rest: rest.length > 0 ? Object.fromEntries(rest) : undefined };
+}
 
 // Pretty-print a JSON fragment for a text field, empty when absent.
 const asJson = (value: unknown): string =>
@@ -109,6 +160,47 @@ const fromCapability = (value: Capability): boolean | undefined =>
     value === "auto" ? undefined : value === "on";
 
 /**
+ * A blank model entry for the form: a llama.cpp endpoint with every optional
+ * capability left on "auto".
+ *
+ * @returns A new draft model
+ */
+export function newDraftModel(): DraftModel {
+    return {
+        id: "",
+        name: "",
+        shortName: "",
+        baseUrl: "",
+        model: "",
+        type: "llama.cpp",
+        apiKey: "",
+        headers: "",
+        streaming: true,
+        sendContext: true,
+        disabled: false,
+        thinking: "",
+        effort: "",
+        modalities: "",
+        supportsThinking: "auto",
+        runtimeProps: "auto",
+        tools: "auto",
+        parallelToolCalls: "auto",
+        recoverToolCalls: false,
+        supportsToolChoice: "auto",
+        mcpServers: null,
+    };
+}
+
+/**
+ * A blank MCP server for the form: enabled, with the transport picked automatically.
+ *
+ * @returns A new draft server
+ */
+export function newDraftMcpServer(): DraftMcpServer {
+    return { id: "", label: "", url: "", transport: "auto", token: "", headers: "", enabled: true };
+}
+
+/**
  * Build an editable draft from a raw config object, coercing every field so a
  * malformed or partial config.json still loads into the form.
  *
@@ -121,6 +213,7 @@ export function rawToDraft(raw: unknown): Draft {
     const levels = Array.isArray(effort?.levels) ? effort.levels : [];
     const integrations = Array.isArray(root.integrations) ? root.integrations : [];
     const thinking = asRecord(root.thinking);
+    const mcpServers = asRecord(root.mcp)?.servers;
 
     return {
         appName: asString(root.appName),
@@ -133,9 +226,7 @@ export function rawToDraft(raw: unknown): Draft {
                 shortName: asString(model.shortName),
                 baseUrl: asString(model.baseUrl),
                 model: asString(model.model),
-                type: (SERVER_TYPES.includes(model.type as ServerType)
-                    ? model.type
-                    : "vllm") as ServerType,
+                type: asString(model.type) || "vllm",
                 apiKey: asString(model.apiKey),
                 headers: asJson(model.headers),
                 streaming: asBool(model.streaming),
@@ -146,6 +237,13 @@ export function rawToDraft(raw: unknown): Draft {
                 modalities: asJson(model.modalities),
                 supportsThinking: asCapability(model.supportsThinking),
                 runtimeProps: asCapability(model.runtimeProps),
+                tools: asCapability(model.tools),
+                parallelToolCalls: asCapability(model.parallelToolCalls),
+                recoverToolCalls: model.recoverToolCalls === true,
+                supportsToolChoice: asCapability(model.supportsToolChoice),
+
+                // Unset offers all servers; a malformed value is an empty scope, as in the config.
+                mcpServers: readModelScope(model.mcpServers) ?? null,
             };
         }),
         thinkingOn: asJson(thinking?.on),
@@ -170,6 +268,22 @@ export function rawToDraft(raw: unknown): Draft {
                 models: Array.isArray(integration.models)
                     ? integration.models.map(String).join(", ")
                     : "",
+            };
+        }),
+        mcpServers: (Array.isArray(mcpServers) ? mcpServers : []).map((entry) => {
+            const server = asRecord(entry) ?? {};
+            const { token, rest } = splitBearer(server.headers);
+            return {
+                id: asString(server.id),
+                label: asString(server.label),
+                url: asString(server.url),
+                transport:
+                    server.transport === "http" || server.transport === "sse"
+                        ? server.transport
+                        : "auto",
+                token,
+                headers: asJson(rest),
+                enabled: server.enabled !== false,
             };
         }),
     };
@@ -228,6 +342,11 @@ export function buildConfig(
         put(entry, "modalities", parse(model.modalities, `models[${index}].modalities`));
         put(entry, "supportsThinking", fromCapability(model.supportsThinking));
         put(entry, "runtimeProps", fromCapability(model.runtimeProps));
+        put(entry, "tools", fromCapability(model.tools));
+        put(entry, "parallelToolCalls", fromCapability(model.parallelToolCalls));
+        put(entry, "recoverToolCalls", model.recoverToolCalls || undefined);
+        put(entry, "supportsToolChoice", fromCapability(model.supportsToolChoice));
+        put(entry, "mcpServers", model.mcpServers ?? undefined);
         return entry;
     });
 
@@ -273,6 +392,54 @@ export function buildConfig(
         });
     }
 
+    if (draft.mcpServers.length > 0) {
+        config.mcp = {
+            servers: draft.mcpServers.map((server, index) => {
+                const out: Record<string, unknown> = {
+                    id: server.id.trim(),
+                    url: server.url.trim(),
+                };
+                put(out, "label", server.label.trim() || undefined);
+                put(out, "transport", server.transport === "auto" ? undefined : server.transport);
+                const headers = parse(server.headers, `mcp.servers[${index}].headers`);
+                const token = server.token.trim();
+                const others = asRecord(headers);
+
+                // Headers that are not an object are kept as typed, for the checks to refuse.
+                if (token && (headers === undefined || (others && !Array.isArray(others)))) {
+                    const kept = Object.fromEntries(
+                        Object.entries(others ?? {}).filter(
+                            ([name]) => name.toLowerCase() !== "authorization",
+                        ),
+                    );
+                    out.headers = { Authorization: `Bearer ${token}`, ...kept };
+                } else {
+                    put(out, "headers", headers);
+                }
+                put(out, "enabled", server.enabled ? undefined : false);
+                return out;
+            }),
+        };
+    }
+
     if (badField) return { ok: false, field: badField };
     return { ok: true, config };
+}
+
+/**
+ * Reduce a stored override to what still differs from the deployed config.json.
+ * The file can change after an override was saved, for instance an entry edited
+ * to match it or an id removed, which leaves entries that no longer override
+ * anything. They are compared the way a save compares them, against the file as
+ * the form builds it, and what stays is kept as stored.
+ *
+ * @param base - Raw config.json object
+ * @param override - Stored differential override
+ * @returns The reduced override, empty when nothing differs, or null when the file cannot be built
+ */
+export function settleOverride(base: unknown, override: unknown): ConfigOverride | null {
+    const canonical = buildConfig(rawToDraft(base));
+    if (!canonical.ok) return null;
+
+    return diffConfig(canonical.config, mergeConfig(canonical.config, override));
 }

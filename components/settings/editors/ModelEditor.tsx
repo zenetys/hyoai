@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { EditableCard } from "@/components/settings/fields/EditableCard";
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
 import { JsonField } from "@/components/settings/fields/JsonField";
+import { McpScopeField } from "@/components/settings/fields/McpScopeField";
 import { TextField } from "@/components/settings/fields/TextField";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -19,8 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { Capability, DraftModel } from "@/lib/draft";
-import { SERVER_TYPES } from "@/types/server";
-import type { ServerType } from "@/types/server";
+import { listServerTypes } from "@/lib/plugins/registry";
 
 /**
  * DOM id of a model card, so the config tab can scroll one entry into view and
@@ -134,6 +134,7 @@ function ModalityToggles({
  * @param onMoveDown - Move the entry one position down
  * @param canMoveUp - Whether an up move is possible (not already first)
  * @param canMoveDown - Whether a down move is possible (not already last)
+ * @param mcpServers - The MCP servers of the catalog, for the scope of the entry
  */
 export function ModelEditor({
     index,
@@ -144,6 +145,7 @@ export function ModelEditor({
     onMoveDown,
     canMoveUp,
     canMoveDown,
+    mcpServers,
 }: {
     index: number;
     model: DraftModel;
@@ -153,9 +155,11 @@ export function ModelEditor({
     onMoveDown: () => void;
     canMoveUp: boolean;
     canMoveDown: boolean;
+    mcpServers: { id: string; label: string }[];
 }) {
     const t = useTranslations("settings");
     const title = model.id || t("config.modelUntitled");
+    const serverTypes = listServerTypes().map((definition) => definition.id);
 
     return (
         <EditableCard
@@ -227,19 +231,21 @@ export function ModelEditor({
                 <div className="space-y-1.5">
                     <Label>{t("config.serverType")}</Label>
                     <p className="text-xs text-muted-foreground">{t("config.serverTypeHint")}</p>
-                    <Select
-                        value={model.type}
-                        onValueChange={(value) => onChange({ type: value as ServerType })}
-                    >
+                    <Select value={model.type} onValueChange={(value) => onChange({ type: value })}>
                         <SelectTrigger className="w-full">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {SERVER_TYPES.map((type) => (
+                            {serverTypes.map((type) => (
                                 <SelectItem key={type} value={type}>
                                     {type}
                                 </SelectItem>
                             ))}
+                            {!serverTypes.includes(model.type) && (
+                                <SelectItem value={model.type}>
+                                    {t("config.serverTypeNotInstalled", { type: model.type })}
+                                </SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
@@ -316,7 +322,45 @@ export function ModelEditor({
                             value={model.runtimeProps}
                             onChange={(value) => onChange({ runtimeProps: value })}
                         />
+                        <CapabilityField
+                            label={t("config.tools")}
+                            hint={t("config.toolsHint")}
+                            value={model.tools}
+                            onChange={(value) => onChange({ tools: value })}
+                        />
+                        <CapabilityField
+                            label={t("config.parallelToolCalls")}
+                            value={model.parallelToolCalls}
+                            onChange={(value) => onChange({ parallelToolCalls: value })}
+                        />
+                        <CapabilityField
+                            label={t("config.supportsToolChoice")}
+                            hint={t("config.supportsToolChoiceHint")}
+                            value={model.supportsToolChoice}
+                            onChange={(value) => onChange({ supportsToolChoice: value })}
+                        />
                     </div>
+                    <div className="space-y-1.5">
+                        <Label className="flex items-center gap-2 font-normal cursor-pointer">
+                            <Switch
+                                id={`${modelAnchorId(index)}-recover-tool-calls`}
+                                checked={model.recoverToolCalls}
+                                onCheckedChange={(checked) =>
+                                    onChange({ recoverToolCalls: checked })
+                                }
+                            />
+                            {t("config.recoverToolCalls")}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                            {t("config.recoverToolCallsHint")}
+                        </p>
+                    </div>
+                    <McpScopeField
+                        servers={mcpServers}
+                        value={model.mcpServers}
+                        onChange={(value) => onChange({ mcpServers: value })}
+                        toolsOff={model.tools === "off"}
+                    />
                 </CollapsibleContent>
             </Collapsible>
         </EditableCard>
@@ -328,15 +372,18 @@ export function ModelEditor({
  * omitted (derived from the backend type), "on"/"off" force it.
  *
  * @param label - Field label
+ * @param hint - Helper text shown under the select
  * @param value - Current tri-state value
  * @param onChange - Called with the next tri-state value
  */
 function CapabilityField({
     label,
+    hint,
     value,
     onChange,
 }: {
     label: string;
+    hint?: string;
     value: Capability;
     onChange: (value: Capability) => void;
 }) {
@@ -356,6 +403,7 @@ function CapabilityField({
                     <SelectItem value="off">{t("config.capabilityOff")}</SelectItem>
                 </SelectContent>
             </Select>
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
     );
 }

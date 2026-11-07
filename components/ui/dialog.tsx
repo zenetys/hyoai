@@ -44,6 +44,7 @@ function DialogContent({
     children,
     showCloseButton = true,
     scrollable = true,
+    onInteractOutside,
     ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean;
@@ -60,6 +61,13 @@ function DialogContent({
                     className,
                 )}
                 {...props}
+                onInteractOutside={(event) => {
+                    if ((event.target as Element | null)?.closest?.("[data-sonner-toaster]")) {
+                        event.preventDefault();
+                        return;
+                    }
+                    onInteractOutside?.(event);
+                }}
             >
                 {scrollable ? (
                     <div

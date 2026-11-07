@@ -4,7 +4,12 @@ import { useMemo } from "react";
 
 import { useStore } from "@/hooks/useStore";
 import { useChatModel } from "@/lib/chat/context";
-import { modelsStore, resolveUpstreamModelFor, resolveUsableEntry } from "@/lib/stores/models";
+import {
+    modelsStore,
+    resolveSelectionUpstream,
+    resolveUpstreamModelFor,
+    resolveUsableEntry,
+} from "@/lib/stores/models";
 import type { ModelConfig, ModelListState, PropsState, ServerProps } from "@/types/server";
 
 export interface ResolvedModel {
@@ -15,9 +20,10 @@ export interface ResolvedModel {
 }
 
 /**
- * Resolve the model the current chat instance would use, honoring its own
- * override when set and falling back to the global selection otherwise. This
- * lets the composer reflect a pane's model or the global one transparently.
+ * Resolve the model the current chat instance would use: its own pinned choice
+ * when set, otherwise the global selection. A pinned choice the config no longer
+ * offers resolves to nothing rather than to another model, so a pane never shows
+ * or sends with a model the user did not pick.
  *
  * The selection lives in a separate store from the model catalog, so the
  * result is memoized over both rather than computed inside a single store
@@ -36,7 +42,7 @@ export function useResolvedModel(): ResolvedModel {
     return useMemo(() => {
         const resolve = (
             entry: ModelConfig | null,
-            override: string | null,
+            upstream: string | null,
             catalog: {
                 chosenModels: Record<string, string>;
                 lists: Record<string, ModelListState>;
@@ -44,7 +50,6 @@ export function useResolvedModel(): ResolvedModel {
             propsByEntry: Record<string, PropsState>,
         ): ResolvedModel => {
             if (!entry) return { entry: null, upstream: null, props: null, resolveFailed: false };
-            const upstream = entry.model ?? override ?? resolveUpstreamModelFor(catalog, entry);
             return {
                 entry,
                 upstream,
@@ -55,10 +60,14 @@ export function useResolvedModel(): ResolvedModel {
         const catalog = { chosenModels, lists };
         if (selection.entryId) {
             const entry = entries.find((candidate) => candidate.id === selection.entryId) ?? null;
-            if (entry && !entry.disabled)
-                return resolve(entry, selection.upstreamModel, catalog, props);
+            if (!entry || entry.disabled) {
+                return { entry: null, upstream: null, props: null, resolveFailed: false };
+            }
+            const upstream = resolveSelectionUpstream(catalog, entry, selection.upstreamModel);
+            return resolve(entry, upstream, catalog, props);
         }
         const globalEntry = resolveUsableEntry(entries, activeEntryId);
-        return resolve(globalEntry, null, catalog, props);
+        const globalUpstream = globalEntry ? resolveUpstreamModelFor(catalog, globalEntry) : null;
+        return resolve(globalEntry, globalUpstream, catalog, props);
     }, [selection, entries, activeEntryId, chosenModels, lists, props]);
 }

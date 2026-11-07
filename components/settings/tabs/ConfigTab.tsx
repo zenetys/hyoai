@@ -30,8 +30,10 @@ import {
     type DraftIntegration,
     type DraftLevel,
     type DraftModel,
+    newDraftModel,
     rawToDraft,
 } from "@/lib/draft";
+import { maskMcpHeaders } from "@/lib/mcp/config";
 import { describeOverride, diffConfig, pruneOverride } from "@/lib/merge";
 import {
     modelsStore,
@@ -50,7 +52,8 @@ const SCROLL_SETTLE_MS = 400;
 /**
  * Config tab: a full form over config.json that stores a local override
  * bypassing the deployed file (applied live), with a generated-JSON preview to
- * copy and a reset back to the deployment config.
+ * copy and a reset back to the deployment config. The preview shown hides the
+ * MCP tokens, while Copy still gives the whole config.
  */
 export function ConfigTab() {
     const t = useTranslations("settings");
@@ -70,6 +73,7 @@ export function ConfigTab() {
 
     const built = useMemo(() => (draft ? buildConfig(draft) : null), [draft]);
     const preview = built?.ok ? JSON.stringify(built.config, null, 4) : "";
+    const shown = built?.ok ? JSON.stringify(maskMcpHeaders(built.config), null, 4) : "";
 
     const overrideItems = useMemo(() => {
         const canonical = buildConfig(rawToDraft(baseRaw ?? { models: [] }));
@@ -163,27 +167,7 @@ export function ConfigTab() {
 
     const addModel = () =>
         patch({
-            models: [
-                {
-                    id: "",
-                    name: "",
-                    shortName: "",
-                    baseUrl: "",
-                    model: "",
-                    type: "llama.cpp",
-                    apiKey: "",
-                    headers: "",
-                    streaming: true,
-                    sendContext: true,
-                    disabled: false,
-                    thinking: "",
-                    effort: "",
-                    modalities: "",
-                    supportsThinking: "auto",
-                    runtimeProps: "auto",
-                },
-                ...draft.models,
-            ],
+            models: [newDraftModel(), ...draft.models],
         });
     const addLevel = () =>
         patch({ effortLevels: [...draft.effortLevels, { id: "", label: "", body: "" }] });
@@ -276,6 +260,9 @@ export function ConfigTab() {
                         onMoveDown={() => moveModel(index, 1)}
                         canMoveUp={index > 0}
                         canMoveDown={index < draft.models.length - 1}
+                        mcpServers={draft.mcpServers
+                            .filter((server) => server.id.trim())
+                            .map((server) => ({ id: server.id, label: server.label }))}
                     />
                 ))}
             </ListSection>
@@ -364,7 +351,7 @@ export function ConfigTab() {
                     </p>
                 ) : (
                     <pre className="max-h-60 overflow-auto rounded-md border bg-muted/40 p-3 text-xs break-all whitespace-pre-wrap">
-                        {preview}
+                        {shown}
                     </pre>
                 )}
             </section>

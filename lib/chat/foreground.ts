@@ -50,14 +50,14 @@ const trackers = new Map<ChatInstance, () => void>();
 let requestToken = 0;
 
 /**
- * Whether an instance is doing any work that must not be dropped.
+ * Whether an instance is doing any work that must not be dropped: a turn, a
+ * stream, a compaction or a chunked run.
  *
  * @param instance - Instance to inspect
- * @returns true when the instance is streaming, compacting, or chunking
+ * @returns true when the instance is busy
  */
 function isBusy(instance: ChatInstance): boolean {
-    const state = instance.store.getState();
-    return state.streaming.status !== "idle" || state.compacting || state.chunking !== null;
+    return instance.isBusy();
 }
 
 /**
@@ -70,8 +70,16 @@ function isBusy(instance: ChatInstance): boolean {
  */
 function track(instance: ChatInstance): void {
     if (trackers.has(instance)) return;
-    let wasBusy = false;
+    let wasBusy = isBusy(instance);
+    let lastId = instance.store.getState().conversationId;
     const unsub = instance.store.subscribe(() => {
+        // Follow the instance when its conversation changes (a fork opens inside it).
+        const id = instance.store.getState().conversationId;
+        if (id !== lastId) {
+            if (lastId && instances.get(lastId) === instance) instances.delete(lastId);
+            lastId = id;
+            register(instance);
+        }
         if (isBusy(instance)) {
             wasBusy = true;
             return;
@@ -91,7 +99,27 @@ function track(instance: ChatInstance): void {
  */
 function register(instance: ChatInstance): void {
     const id = instance.store.getState().conversationId;
-    if (id) instances.set(id, instance);
+    if (!id) return;
+    const holder = instances.get(id);
+    if (holder && holder !== instance && process.env.NODE_ENV !== "production") {
+        console.warn(`Conversation ${id} is held by two live chat instances.`);
+    }
+    instances.set(id, instance);
+}
+
+/**
+ * Stop tracking an instance and forget its conversation id, without disposing it.
+ *
+ * @param instance - Instance leaving the registry
+ */
+function release(instance: ChatInstance): void {
+    const unsub = trackers.get(instance);
+    if (unsub) {
+        unsub();
+        trackers.delete(instance);
+    }
+    const id = instance.store.getState().conversationId;
+    if (id && instances.get(id) === instance) instances.delete(id);
 }
 
 /**
@@ -102,13 +130,7 @@ function register(instance: ChatInstance): void {
  * @param instance - Instance to discard
  */
 function evict(instance: ChatInstance): void {
-    const unsub = trackers.get(instance);
-    if (unsub) {
-        unsub();
-        trackers.delete(instance);
-    }
-    const id = instance.store.getState().conversationId;
-    if (id && instances.get(id) === instance) instances.delete(id);
+    release(instance);
     instance.dispose();
 }
 
@@ -183,9 +205,12 @@ export async function setActiveConversation(id: string): Promise<boolean> {
         return false;
     }
 
+    // A closed compare pane still running is adopted with the model it was set to.
+    const adopted = !created && !instance.followsGlobalModel;
     demote(previous);
+    if (adopted) instance.setFollowGlobalModel(true);
     promote(instance);
-    if (!created) restoreGlobalModel(id);
+    if (!created && !adopted) restoreGlobalModel(id);
     setChatIdInUrl(id);
     return true;
 }
@@ -197,12 +222,82 @@ export async function setActiveConversation(id: string): Promise<boolean> {
  */
 export function startNewForeground(): void {
     demote(activeChatStore.getState().instance);
+    openFresh();
+}
+
+/**
+ * Put a brand-new empty conversation in the foreground. Leaves the previous
+ * active instance alone: the caller has already demoted or taken it.
+ */
+function openFresh(): void {
     const instance = new ChatInstance(undefined, { followGlobalModel: true });
     track(instance);
     instance.setActive(true);
     activeChatStore.setState({ instance, epoch: activeChatStore.getState().epoch + 1 });
     instance.startNewConversation();
     register(instance);
+}
+
+/**
+ * Detach a conversation's live instance (the active one or a background one) for
+ * a compare pane, without aborting it. The instance is pinned to its current
+ * model first. When it was the active one, a fresh chat replaces it and pending
+ * switches are superseded.
+ *
+ * @param id - Conversation whose live instance to take
+ * @returns The instance, or null when no live instance holds the conversation
+ */
+export function takeFromForeground(id: string): ChatInstance | null {
+    const active = activeChatStore.getState().instance;
+    const wasActive = active.store.getState().conversationId === id;
+    const instance = wasActive ? active : (instances.get(id) ?? null);
+    if (!instance) return null;
+
+    release(instance);
+    instance.setFollowGlobalModel(false);
+    if (wasActive) {
+        requestToken += 1;
+        openFresh();
+    }
+    return instance;
+}
+
+/**
+ * Keep an instance a pane released running in the background: registered and
+ * self-evicting once idle. An idle instance is simply disposed, its state is on
+ * disk.
+ *
+ * @param instance - Instance leaving a compare pane
+ */
+export function keepInBackground(instance: ChatInstance): void {
+    if (!instance.isBusy()) {
+        instance.dispose();
+        return;
+    }
+    track(instance);
+    register(instance);
+}
+
+/**
+ * Make a live instance the foreground one, with no reload and no abort. Its
+ * model, thinking and effort are published to the global selection.
+ *
+ * @param instance - Live instance, typically the survivor of a closed compare
+ */
+export function adoptInstance(instance: ChatInstance): void {
+    const previous = activeChatStore.getState().instance;
+    if (previous === instance) return;
+    requestToken += 1;
+
+    // The outgoing instance is frozen before the global selection moves to the incoming one.
+    demote(previous);
+    instance.setFollowGlobalModel(true);
+    release(instance);
+    track(instance);
+    register(instance);
+    promote(instance);
+    const id = instance.store.getState().conversationId;
+    setChatIdInUrl(id && getMeta(id) ? id : null);
 }
 
 /**

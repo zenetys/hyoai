@@ -1,13 +1,19 @@
 import type { ChatModelSelection } from "@/lib/chat/model";
 import { createConversation } from "@/lib/conversation";
 import { newId } from "@/lib/id";
-import { flushAll, readConversation, writeConversationNow } from "@/lib/storage/persistence";
+import {
+    flushAll,
+    flushKey,
+    readConversation,
+    writeConversationNow,
+} from "@/lib/storage/persistence";
 import type { Store } from "@/lib/store";
 import { type ChatState, IDLE_STREAMING } from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
 import { modelsStore, setActiveModel } from "@/lib/stores/models";
 import { cloneBranch } from "@/lib/tree";
 import type { ConversationData } from "@/types/chat";
+import { STORAGE_KEYS } from "@/types/storage";
 
 /**
  * What conversation lifecycle operations need from the owning ChatInstance:
@@ -20,7 +26,7 @@ export interface LifecycleContext {
     followGlobalModel: boolean;
     syncUrlMaybe: (id: string | null) => void;
     stopGeneration: () => void;
-    isChunking: () => boolean;
+    isRunning: () => boolean;
 }
 
 /**
@@ -100,7 +106,12 @@ export function setConversationSystemPrompt(ctx: LifecycleContext, prompt: strin
  * @param ctx - Owning instance context
  */
 export function startNewConversation(ctx: LifecycleContext): void {
-    if (ctx.isChunking() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
+    // Capture the outgoing tree before the swap: flushKey builds its value synchronously.
+    const outgoing = ctx.store.getState().conversationId;
+    if (outgoing && getMeta(outgoing)) {
+        void flushKey(STORAGE_KEYS.conversation(outgoing)).catch(() => undefined);
+    }
+    if (ctx.isRunning() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
     const { meta, data } = createConversation(Date.now());
     ctx.store.setState({
         conversationId: meta.id,
@@ -110,6 +121,8 @@ export function startNewConversation(ctx: LifecycleContext): void {
         streaming: IDLE_STREAMING,
         compaction: null,
         compacting: false,
+        agent: null,
+        toolsEnabled: null,
         pendingReply: null,
     });
     ctx.syncUrlMaybe(null);
@@ -126,7 +139,7 @@ export function startNewConversation(ctx: LifecycleContext): void {
  */
 export async function openConversation(ctx: LifecycleContext, id: string): Promise<boolean> {
     if (ctx.store.getState().conversationId === id) return true;
-    if (ctx.isChunking() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
+    if (ctx.isRunning() || ctx.store.getState().streaming.status !== "idle") ctx.stopGeneration();
     await flushAll();
 
     const raw = (await readConversation(id)) as ConversationData | null;
@@ -140,6 +153,8 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
         streaming: IDLE_STREAMING,
         compaction: raw.compaction ?? null,
         compacting: false,
+        agent: null,
+        toolsEnabled: getMeta(id)?.tools ?? null,
         pendingReply: null,
     });
     ctx.syncUrlMaybe(id);
@@ -151,7 +166,8 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
     ) {
         if (ctx.followGlobalModel) {
             setActiveModel(meta.modelId, meta.model);
-        } else {
+        } else if (!ctx.selection.getState().entryId) {
+            // A pinned instance (a compare pane) keeps the model it was given.
             ctx.selection.setState({ entryId: meta.modelId, upstreamModel: meta.model ?? null });
         }
     }
@@ -171,7 +187,7 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
 export async function reloadConversation(ctx: LifecycleContext, id: string): Promise<void> {
     const state = ctx.store.getState();
     if (state.conversationId !== id) return;
-    if (ctx.isChunking() || state.streaming.status !== "idle" || state.compacting) return;
+    if (ctx.isRunning() || state.streaming.status !== "idle" || state.compacting) return;
 
     const raw = (await readConversation(id)) as ConversationData | null;
     if (!raw || typeof raw !== "object" || !raw.rootId || !raw.nodes) return;

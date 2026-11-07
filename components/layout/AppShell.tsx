@@ -15,16 +15,20 @@ import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile, useOnBreakpointCross } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { paneEntries } from "@/lib/chat/broadcast";
 import { ForegroundChatProvider } from "@/lib/chat/context";
 import { activeChatStore } from "@/lib/chat/foreground";
 import { startNewChat } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
+import { watchHealth } from "@/lib/stores/health";
+import { modelsStore, selectActiveEntry } from "@/lib/stores/models";
 import { setCommandOpen, setMobileSidebarOpen, toggleSidebar, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 /**
  * Application frame: collapsible sidebar (sheet on mobile), header, chat
- * column, global dialogs and keyboard shortcuts.
+ * column, global dialogs and keyboard shortcuts. It keeps the reachability of
+ * the models in use fresh: the active one and the compare panes' models.
  */
 export function AppShell() {
     const t = useTranslations("common");
@@ -37,6 +41,16 @@ export function AppShell() {
     useOnBreakpointCross(isMobile, () => {
         if (mobileOpen) setMobileSidebarOpen(false);
     });
+
+    useEffect(
+        () =>
+            watchHealth(() => {
+                const active = selectActiveEntry(modelsStore.getState());
+                const panes = compareStore.getState().enabled ? paneEntries() : [];
+                return active ? [active, ...panes] : panes;
+            }),
+        [],
+    );
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {

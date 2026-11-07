@@ -76,7 +76,7 @@ export interface PenaltySettings {
  * @param showStats - Show the generation stats footer on messages
  * @param expandReasoningByDefault - Expand the reasoning section on new messages
  * @param expandSearchByDefault - Expand the search/sub-queries section on new messages
- * @param expandSourcesByDefault - Expand the RAG sources section on new messages
+ * @param expandSourcesByDefault - Expand the sources section on new messages
  * @param chatWidth - Column and composer width on large screens
  * @param compactInput - Use the compact composer layout
  */
@@ -117,6 +117,40 @@ export interface CompactionSettings {
 }
 
 /**
+ * How the app reacts to a model whose server does not answer.
+ *
+ * @param autoDisable - Grey out and skip the unreachable models until they answer again; off keeps them selectable and shows the error on send
+ * @param connectCheckSeconds - Seconds without any stream event before the server is probed; 0 never checks
+ */
+export interface AvailabilitySettings {
+    autoDisable: boolean;
+    connectCheckSeconds: number;
+}
+
+// "deny" removes the tool from what the model is offered.
+export type ToolPolicy = "ask" | "allow" | "deny";
+
+/**
+ * Tool calling preferences.
+ *
+ * @param enabledByDefault - New conversations start with tools on
+ * @param maxSteps - Model requests per answer before asking to continue
+ * @param defaultPolicy - Policy of the tools without an entry of their own
+ * @param maxResultChars - Characters of one result sent to the model
+ * @param policies - Policy per tool, keyed by "<providerId>/<toolName>", with "@<scope>" after the
+ *        provider id for a provider whose backing can change (an MCP server's address)
+ * @param disabledProviders - Providers whose tools are never offered
+ */
+export interface ToolSettings {
+    enabledByDefault: boolean;
+    maxSteps: number;
+    defaultPolicy: "ask" | "allow";
+    maxResultChars: number;
+    policies: Record<string, ToolPolicy>;
+    disabledProviders: string[];
+}
+
+/**
  * All persisted user settings.
  *
  * @param systemPrompt - Default system prompt sent with each conversation
@@ -130,6 +164,8 @@ export interface CompactionSettings {
  * @param display - Purely visual preferences
  * @param chunking - Over-context chunking settings
  * @param compaction - Conversation compaction settings
+ * @param availability - Reaction to models whose server does not answer
+ * @param tools - Tool calling preferences
  * @param imageMaxDimension - Max pixel dimension images are downscaled to
  * @param pdfAsImage - Whether PDFs are sent as page images instead of extracted text
  */
@@ -145,6 +181,8 @@ export interface AppSettings {
     display: DisplaySettings;
     chunking: ChunkingSettings;
     compaction: CompactionSettings;
+    availability: AvailabilitySettings;
+    tools: ToolSettings;
     imageMaxDimension: number;
     pdfAsImage: boolean;
 }
@@ -177,6 +215,18 @@ export const DEFAULT_SETTINGS: AppSettings = {
         enabled: true,
         thresholdFraction: 0.8,
         keepRecentTurns: 2,
+    },
+    availability: {
+        autoDisable: true,
+        connectCheckSeconds: 20,
+    },
+    tools: {
+        enabledByDefault: false,
+        maxSteps: 10,
+        defaultPolicy: "ask",
+        maxResultChars: 20000,
+        policies: {},
+        disabledProviders: [],
     },
     imageMaxDimension: 1024,
     pdfAsImage: false,

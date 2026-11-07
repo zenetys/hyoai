@@ -4,7 +4,7 @@ import { GitBranch, type LucideIcon, Pencil, RefreshCw, Reply, Trash2 } from "lu
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { useSiblingInfo, useStreamingStatus } from "@/hooks/useActiveChat";
+import { useChatBusy, useFlowHead, useIsInFlow, useSiblingInfo } from "@/hooks/useActiveChat";
 import { useChatInstance } from "@/lib/chat/context";
 import { getMeta } from "@/lib/stores/conversations";
 import type { MessageNode } from "@/types/chat";
@@ -50,6 +50,10 @@ interface Options {
  * decides when to fire each handler (the sheet defers them past its close
  * animation).
  *
+ * A message that ends a tool flow acts on the whole flow: its branches are those of
+ * the flow's first message, regenerating re-runs the flow and deleting removes it.
+ * The steps in between cannot be edited.
+ *
  * @param node - Message node the actions operate on
  * @param onEdit - Switches the message row to its inline editor, when editable
  */
@@ -58,9 +62,9 @@ export function useMessageActions(node: MessageNode, { onEdit }: Options = {}): 
     const tc = useTranslations("common");
     const ts = useTranslations("sidebar");
     const chat = useChatInstance();
-    const info = useSiblingInfo(node.id);
-    const status = useStreamingStatus();
-    const idle = status === "idle";
+    const info = useSiblingInfo(useFlowHead(node.id));
+    const inFlow = useIsInFlow(node.id);
+    const idle = !useChatBusy();
     const isAssistant = node.role === "assistant";
 
     // Fork the conversation at this node, then surface a toast.
@@ -108,7 +112,7 @@ export function useMessageActions(node: MessageNode, { onEdit }: Options = {}): 
         });
     }
 
-    if (onEdit) {
+    if (onEdit && !inFlow) {
         actions.push({
             kind: "button",
             id: "edit",

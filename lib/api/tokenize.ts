@@ -26,7 +26,7 @@ export async function tokenizeCount(
     text: string,
     signal?: AbortSignal,
 ): Promise<number | null> {
-    if (endpoint.type !== "llama.cpp" && endpoint.type !== "vllm") return null;
+    if (!endpoint.tokenize) return null;
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TOKENIZE_TIMEOUT_MS);

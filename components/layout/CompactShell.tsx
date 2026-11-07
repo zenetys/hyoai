@@ -13,7 +13,7 @@ import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useActivePathIds, useStreamingStatus } from "@/hooks/useActiveChat";
+import { useActivePathIds, useChatBusy } from "@/hooks/useActiveChat";
 import { useStore } from "@/hooks/useStore";
 import { sendMessage, startNewConversation } from "@/lib/actions";
 import { ChatInstanceProvider, ForegroundChatProvider } from "@/lib/chat/context";
@@ -166,7 +166,7 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
  * @param hostOrigins - Acknowledged host origins to post the state to
  */
 function EmbedStateBridge({ hostOrigins }: { hostOrigins: Set<string> }) {
-    const generating = useStreamingStatus() !== "idle";
+    const generating = useChatBusy();
     const lastRef = useRef<boolean | null>(null);
 
     useEffect(() => {
