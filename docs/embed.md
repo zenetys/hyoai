@@ -1,6 +1,6 @@
-# Embedding HYOAI
+# Embedding ZALEANAI
 
-HYOAI ships an embeddable widget. The same static build, loaded in an iframe
+ZALEANAI ships an embeddable widget. The same static build, loaded in an iframe
 with `?embed=1`, renders a compact chat surface instead of the full
 application: there is no second bundle to deploy and still no server side. A
 host page points an iframe at the deployed app, configures the look and the
@@ -47,7 +47,7 @@ working widget. Booleans accept `1`/`true` and `0`/`false`.
 | `embed`       | `1`, `true`, empty, or any other value              | —        | Enables embed mode. Any other non-empty value is kept as a widget id, reserved for future per-widget memory |
 | `theme`       | `light`, `dark`, `system`                           | `system` | Forces the colour theme                                                                                     |
 | `skin`        | `flat`, `soft`, `contrast`, `warm`, `forest`, `dim` | `soft`   | Forces the UI skin                                                                                          |
-| `lang`        | `fr`, `en`                                          | `fr`     | Forces the UI locale, which unlike the full app does not follow the browser                                 |
+| `lang`        | `fr`, `en`, `zh`                                    | `fr`     | Forces the UI locale, which unlike the full app does not follow the browser                                 |
 | `model`       | a `models` entry id from `config.json`              | —        | Preselects that [entry](models.md#keys-of-a-models-entry); ignored when no entry carries the id             |
 | `upstream`    | upstream model id                                   | —        | Upstream model to use within the preselected entry                                                          |
 | `lock`        | boolean                                             | `0`      | Hides the model selector. A display hint, not a security boundary                                           |

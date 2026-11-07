@@ -32,7 +32,7 @@ import {
     uiStore,
 } from "@/lib/stores/ui";
 import { getEmbedConfig } from "@/lib/url";
-import { CHAT_WIDTH_CLASS } from "@/types/settings";
+import { CHAT_WIDTH_CLASS, isLocale } from "@/types/settings";
 
 /**
  * Host postMessage channel for the widget. Accepts config and send actions on
@@ -86,7 +86,7 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                     ) {
                         setEmbedThemeOverride(data.theme);
                     }
-                    if (data.lang === "fr" || data.lang === "en") setLocale(data.lang);
+                    if (isLocale(data.lang)) setLocale(data.lang);
                     break;
                 case "send":
                     if (typeof data.text === "string" && data.text.trim()) {

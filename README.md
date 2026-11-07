@@ -1,9 +1,9 @@
-# HYOAI
+# ZALEANAI
 
 > **Host Your Own AI** — a server-less, browser-only chat UI for any
 > OpenAI-compatible LLM.
 
-HYOAI is a 100% static front-end: no backend of its own, nothing to deploy or
+ZALEANAI is a 100% static front-end: no backend of its own, nothing to deploy or
 secure. The browser talks **directly** to your inference server's API
 (llama.cpp, vLLM, Ollama, or any OpenAI-compatible endpoint, including public
 ones). Conversations are stored only in the browser, in `localStorage`
@@ -11,13 +11,13 @@ ones). Conversations are stored only in the browser, in `localStorage`
 anywhere static files are served: an object store, a CDN, or right next to your
 inference server.
 
-> **HYOAI ships no model.** You bring your own LLM. The
+> **ZALEANAI ships no model.** You bring your own LLM. The
 > [Bring your own LLM](#bring-your-own-llm) section gets one running in a couple
 > of minutes.
 
 ## Why we built it
 
-HYOAI is built and open-sourced by **[Zenetys](https://www.zenetys.com)**, an IT
+ZALEANAI is built and open-sourced by **[Zenetys](https://www.zenetys.com)**, an IT
 services company specialized in the **observability** and **operational
 maintenance** of network and security infrastructures.
 
@@ -36,7 +36,7 @@ general-purpose, multi-backend client.
 
 ## Bring your own LLM
 
-HYOAI needs an LLM endpoint to talk to. You point it at a **local** server you
+ZALEANAI needs an LLM endpoint to talk to. You point it at a **local** server you
 run yourself, or at a **remote** API — or both, and switch between them from the
 model menu, where a reasoning level and thinking toggle also live when the model
 declares them (see [Reasoning](#reasoning-thinking-and-effort)).
@@ -83,7 +83,7 @@ per-backend origin flags.
 
 ### Remote model
 
-Point HYOAI at a hosted API instead. Browsers can only call APIs that send CORS
+Point ZALEANAI at a hosted API instead. Browsers can only call APIs that send CORS
 headers. **[OpenRouter](https://openrouter.ai)** does, so it works directly from
 a static deployment:
 
@@ -152,6 +152,9 @@ application loads a `config.json` file served next to it (in dev:
 rebuild). Each entry describes a model and the endpoint serving it. The in-app
 **Config** tab (Settings) edits the same fields as local overrides, stored in
 `localStorage` on top of the deployed file and revertable from the Reset dialog.
+The tab is fully graphical: models, endpoints, keys, attachment capabilities
+(dedicated image/audio switches) and integrations can be edited without writing
+JSON.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/config.png">
@@ -178,6 +181,7 @@ needs it, or the entry is disabled). The other keys are optional: `name`, `short
 per-model options of [tool calling](#tool-calling) (`tools`, `parallelToolCalls`, `recoverToolCalls`,
 `supportsToolChoice`) and the `mcpServers` scope of [MCP servers](#mcp-servers). The full key table, how the
 model lists and the `/props` probes work, and what the browser remembers are in [docs/models.md](docs/models.md).
+Image and audio attachments are enabled by default; set `modalities` to `false` on an entry to hide them.
 
 ## Reasoning: `thinking` and `effort`
 
@@ -193,7 +197,12 @@ pane keeps its own choice (otherwise the global setting applies).
 
 `thinking` is an on/off toggle. Its `on`/`off` fragments are sent when the
 Thinking switch is on or off; a missing side sends nothing, leaving the model's
-own default:
+own default.
+
+OpenAI-compatible entries (`openai`, `vllm`) that do not declare `effort` get
+generic **Auto / Low / Medium / High** levels backed by `reasoning_effort`; the
+active level is adjustable from the control beside the composer. `Auto` sends
+nothing and leaves the request unchanged.
 
 ```json
 {
@@ -430,7 +439,7 @@ then stay on the same origin and no CORS configuration is needed. A `./llm`
 
 ## Related projects
 
-HYOAI's niche is the **pure-client, static** end of the spectrum: no backend, no
+ZALEANAI's niche is the **pure-client, static** end of the spectrum: no backend, no
 container required, multi-backend, with reasoning controls and a compare mode.
 Other good projects, grouped by architecture:
 
@@ -564,6 +573,10 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   <img alt="Attachment menu: images, audio, text files, PDFs and a system message" src="docs/images/light/attachments.png" width="830">
 </picture>
 
+- Camera and drawing board: capture a photo from the device camera or write a
+  formula on a canvas; both land in the composer as regular image attachments
+  (subject to the same vision-model gate)
+
 - Sampling and penalty settings: an empty field is not sent (the endpoint
   applies its own defaults); parameter names are adapted to the endpoint `type`
   (`repetition_penalty` for vLLM, `repeat_penalty` and `dry_*` for llama.cpp)
@@ -581,6 +594,9 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/responsive.png">
   <img alt="The model menu as a mobile bottom drawer with reasoning levels and a thinking toggle" src="docs/images/light/responsive.png" width="426">
 </picture>
+
+- Localized interface in French, English and Chinese, switchable from the header
+  and forceable in embeds with `lang=zh`
 
 - Accessible: icon-only controls carry `aria-label`s and decorative glyphs are
   `aria-hidden`; drawers and dialogs keep a title (visually hidden when not

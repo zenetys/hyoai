@@ -5,6 +5,7 @@ import { ModelTrigger } from "@/components/common/model/ModelTrigger";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance, useChatModel } from "@/lib/chat/context";
 import { parseModelName } from "@/lib/format";
+import { isImageGenerationModel } from "@/lib/imageModels";
 import {
     modelsStore,
     refreshModelList,
@@ -42,6 +43,7 @@ export function ComposerModelSelector() {
                 label={label}
                 entry={active}
                 effort={effort}
+                hideEffort={isImageGenerationModel(upstream)}
                 disabled={entries.length === 0}
             />
         </ModelMenu>
@@ -100,6 +102,7 @@ export function PaneModelSelector({ align = "start" }: { align?: "start" | "end"
                 label={label}
                 entry={entry}
                 effort={effort}
+                hideEffort={isImageGenerationModel(upstream)}
                 disabled={entries.length === 0}
             />
         </ModelMenu>

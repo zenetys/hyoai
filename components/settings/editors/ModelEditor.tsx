@@ -33,6 +33,94 @@ export function modelAnchorId(index: number): string {
 }
 
 /**
+ * Parse the JSON text held by the draft's modalities field. An empty value
+ * means "use the defaults" (both attachment kinds enabled).
+ *
+ * @param value - JSON text from the draft
+ * @returns The parsed flags, or an empty object when absent/invalid
+ */
+function parseModalities(value: string): { image?: boolean; audio?: boolean } {
+    if (!value.trim()) return {};
+    try {
+        const parsed: unknown = JSON.parse(value);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? (parsed as { image?: boolean; audio?: boolean })
+            : {};
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * Serialize modality flags back to the draft's JSON text. Enabled kinds are
+ * omitted, so the generated config stays empty when both are on (the default).
+ *
+ * @param flags - Flags to serialize
+ * @returns Compact JSON text, or an empty string when nothing is disabled
+ */
+function serializeModalities(flags: { image?: boolean; audio?: boolean }): string {
+    return Object.keys(flags).length > 0 ? JSON.stringify(flags) : "";
+}
+
+/**
+ * Graphical switches for the attachment capabilities of one model entry.
+ * Both kinds are on unless explicitly disabled; disabling writes `false` into
+ * the modalities JSON, which the config schema already understands.
+ *
+ * @param value - JSON text from the draft
+ * @param onChange - Called with the next JSON text
+ */
+function ModalityToggles({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    const t = useTranslations("settings");
+    const flags = parseModalities(value);
+
+    const setFlag = (key: "image" | "audio", enabled: boolean) => {
+        const next = { ...flags };
+        if (enabled) delete next[key];
+        else next[key] = false;
+        onChange(serializeModalities(next));
+    };
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+                <div className="min-w-0">
+                    <p className="text-sm font-medium">{t("config.modalityImage")}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {t("config.modalityImageDescription")}
+                    </p>
+                </div>
+                <Switch
+                    checked={flags.image !== false}
+                    onCheckedChange={(checked) => setFlag("image", checked)}
+                    aria-label={t("config.modalityImage")}
+                />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+                <div className="min-w-0">
+                    <p className="text-sm font-medium">{t("config.modalityAudio")}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {t("config.modalityAudioDescription")}
+                    </p>
+                </div>
+                <Switch
+                    checked={flags.audio !== false}
+                    onCheckedChange={(checked) => setFlag("audio", checked)}
+                    aria-label={t("config.modalityAudio")}
+                />
+            </div>
+            <p className="text-xs text-muted-foreground">{t("config.modalityHint")}</p>
+        </div>
+    );
+}
+
+/**
  * Editor for one model entry: identity and endpoint fields, capability
  * switches, request headers, and an advanced section for the thinking and
  * effort request-body fragments. The header carries reorder controls, a power
@@ -194,6 +282,14 @@ export function ModelEditor({
                 </Label>
             </div>
 
+            <div className="space-y-1.5">
+                <Label>{t("config.modelModalities")}</Label>
+                <ModalityToggles
+                    value={model.modalities}
+                    onChange={(value) => onChange({ modalities: value })}
+                />
+            </div>
+
             <Collapsible>
                 <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                     <ChevronDown aria-hidden="true" className="size-3.5" />
@@ -214,11 +310,6 @@ export function ModelEditor({
                         label={t("config.modelEffort")}
                         value={model.effort}
                         onChange={(value) => onChange({ effort: value })}
-                    />
-                    <JsonField
-                        label={t("config.modelModalities")}
-                        value={model.modalities}
-                        onChange={(value) => onChange({ modalities: value })}
                     />
                     <div className="grid gap-3 sm:grid-cols-2">
                         <CapabilityField

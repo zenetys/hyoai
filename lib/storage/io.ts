@@ -249,7 +249,7 @@ export function parseImport(
         const issue = result.error.issues[0];
         const where = issue && issue.path.length > 0 ? ` at "${issue.path.join(".")}"` : "";
         const detail = issue ? `${issue.message}${where}` : "unknown validation error";
-        return { ok: false, error: `The file is not a valid HYOAI export: ${detail}.` };
+        return { ok: false, error: `The file is not a valid ZALEANAI export: ${detail}.` };
     }
     return { ok: true, data: result.data as ExportFile };
 }

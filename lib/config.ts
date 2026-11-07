@@ -6,6 +6,7 @@ import { getServerType } from "@/lib/plugins/registry";
 import { loadJson } from "@/lib/storage/persistence";
 import type {
     AppConfig,
+    EffortConfig,
     IntegrationConfig,
     ModalityFlags,
     ModelIssue,
@@ -135,9 +136,13 @@ function resolveCapabilities(
     const definition = getServerType(type);
     const capabilities = definition?.capabilities;
     const runtimeProps = entry.runtimeProps ?? capabilities?.runtimeProps === true;
+    // Attachment kinds stay enabled unless the entry explicitly disables them:
+    // OpenAI-compatible endpoints rarely advertise capabilities, and blocking a
+    // capable vision/audio model is worse than letting the server reject a
+    // request from a model that lacks the capability.
     const modalities = runtimeProps
         ? entry.modalities
-        : { image: false, audio: false, ...entry.modalities };
+        : { image: true, audio: true, ...entry.modalities };
     const supportsThinking =
         entry.supportsThinking ??
         (Boolean(entry.thinking?.on || entry.thinking?.off) ||
@@ -188,6 +193,31 @@ function normalizeEmbedOrigins(origins: string[]): string[] {
     return result;
 }
 
+// Generic reasoning-effort levels for OpenAI-compatible endpoints. "auto" is
+// the default and sends nothing; the other levels map to the widely supported
+// `reasoning_effort` request field.
+const DEFAULT_EFFORT: EffortConfig = {
+    default: "auto",
+    levels: [
+        { id: "auto", label: "Auto" },
+        { id: "low", label: "Low", body: { reasoning_effort: "low" } },
+        { id: "medium", label: "Medium", body: { reasoning_effort: "medium" } },
+        { id: "high", label: "High", body: { reasoning_effort: "high" } },
+    ],
+};
+
+/**
+ * Effort levels offered when an entry does not declare any. OpenAI-compatible
+ * endpoints accept `reasoning_effort` far more often than they advertise it;
+ * "auto" keeps the default request unchanged until the user picks a level.
+ *
+ * @param type - Backend type of the entry
+ * @returns Default effort config for OpenAI-compatible backends, else undefined
+ */
+function defaultEffort(type: ServerType): EffortConfig | undefined {
+    return type === "openai" || type === "vllm" ? DEFAULT_EFFORT : undefined;
+}
+
 /**
  * Validate and normalize a raw config object (from the deployed file or the
  * local override) into an AppConfig: defaults model names, drops invalid
@@ -218,7 +248,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
                 ...entry,
                 name: entry.name ?? entry.id,
                 thinking,
-                effort: entry.effort ?? parsed.data.effort,
+                effort: entry.effort ?? parsed.data.effort ?? defaultEffort(entry.type),
                 ...resolved,
 
                 // An entry that cannot work is kept, but never offered to the user.

@@ -1,6 +1,6 @@
 {
     "common": {
-        "appName": "HYOAI",
+        "appName": "ZALEANAI",
         "cancel": "Cancel",
         "save": "Save",
         "close": "Close",
@@ -70,7 +70,11 @@
         "thinking": "Thinking",
         "thinkingDescription": "Can think through more complex tasks",
         "effortDescription": "Higher effort means more thorough but slower answers",
-        "default": "Default"
+        "default": "Default",
+        "effortAuto": "Auto",
+        "effortHigh": "High",
+        "effortLow": "Low",
+        "effortMedium": "Medium"
     },
     "chat": {
         "emptyTitle": "Chat with {name} models",
@@ -154,7 +158,8 @@
         "flowStepStage": "Step {step}",
         "imageBlocked": "Image not loaded: {url}",
         "toolProviderFailed": "Tools from {provider} are unavailable for this answer.",
-        "errorToolsRejected": "The server rejected the tools ({message}). Start llama.cpp with --jinja or vLLM with --enable-auto-tool-choice, or set \"tools\" to false on this entry."
+        "errorToolsRejected": "The server rejected the tools ({message}). Start llama.cpp with --jinja or vLLM with --enable-auto-tool-choice, or set \"tools\" to false on this entry.",
+        "generatedImage": "Generated image"
     },
     "composer": {
         "placeholder": "Send a message...",
@@ -198,7 +203,41 @@
         "toolsRetry": "Retry",
         "toolsRetryLabel": "Retry the connection to {provider}",
         "toolsCorsDetail": "The browser blocked the request: the server may be down, or it does not allow this page. The details are in the settings.",
-        "toolsLocalNetworkDetail": "The server is on the local network: allow this site to reach it in the browser, then retry. The details are in the settings."
+        "toolsLocalNetworkDetail": "The server is on the local network: allow this site to reach it in the browser, then retry. The details are in the settings.",
+        "camera": "Take a photo",
+        "cameraBusy": "The camera is being used by another application.",
+        "cameraCapture": "Take photo",
+        "cameraDescription": "The photo is added to your message; you can still add text before sending.",
+        "cameraFromDevice": "Choose from device",
+        "cameraInsecure": "The camera requires HTTPS or localhost. Choose a photo from your device instead.",
+        "cameraPermission": "Camera access was denied. Allow it in the browser settings, or choose a photo from your device.",
+        "cameraRetake": "Retake",
+        "cameraStarting": "Starting the camera...",
+        "cameraSwitch": "Switch camera",
+        "cameraTitle": "Camera",
+        "cameraTryAgain": "Try again",
+        "cameraUnavailable": "No camera was found on this device.",
+        "cameraUse": "Use photo",
+        "draw": "Draw",
+        "drawClear": "Clear",
+        "drawColor": "Color",
+        "drawColorBlack": "Black",
+        "drawColorBlue": "Blue",
+        "drawColorGreen": "Green",
+        "drawColorRed": "Red",
+        "drawDescription": "Write or sketch, then add it to your message. The white area is what gets sent.",
+        "drawEmpty": "Draw or write something first",
+        "drawEraser": "Eraser",
+        "drawExportFailed": "Could not export the drawing",
+        "drawGrid": "Toggle grid",
+        "drawPen": "Pen",
+        "drawRedo": "Redo",
+        "drawThickness": "Stroke width",
+        "drawTitle": "Drawing board",
+        "drawUndo": "Undo",
+        "drawUse": "Add to message",
+        "imagePrompt": "Describe the image to generate...",
+        "thinkingEffort": "Thinking effort"
     },
     "contextBar": {
         "context": "Context: {used}/{total} ({percent}%)",
@@ -557,7 +596,12 @@
             "mcpScopeAll": "Every enabled server",
             "mcpScopeNone": "No server is set up yet. Add one in the Tools tab.",
             "mcpScopeMissing": "{id} (not in the catalog)",
-            "mcpScopeOff": "Tool calling is off for this model."
+            "mcpScopeOff": "Tool calling is off for this model.",
+            "modalityAudio": "Audio",
+            "modalityAudioDescription": "Allow audio file attachments.",
+            "modalityHint": "Both are on by default; turn one off only if the model cannot handle it.",
+            "modalityImage": "Images (vision)",
+            "modalityImageDescription": "Allow camera, drawing board and image attachments."
         },
         "tools": {
             "title": "Tool calling",

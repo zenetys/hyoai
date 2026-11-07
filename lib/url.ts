@@ -1,4 +1,4 @@
-import type { Locale, SamplingSettings, SkinId } from "@/types/settings";
+import { isLocale, type Locale, type SamplingSettings, type SkinId } from "@/types/settings";
 
 // Query parameter carrying the open conversation id, e.g. ?chat=<uuid>.
 const CHAT_PARAM = "chat";
@@ -255,7 +255,7 @@ export function getEmbedConfig(): EmbedConfig | null {
         id,
         theme: theme === "light" || theme === "dark" || theme === "system" ? theme : undefined,
         skin: SKIN_IDS.includes(skin as SkinId) ? (skin as SkinId) : undefined,
-        locale: lang === "fr" || lang === "en" ? lang : undefined,
+        locale: isLocale(lang) ? lang : undefined,
         modelEntryId: params.get("model") ?? undefined,
         upstreamModel: params.get("upstream") ?? undefined,
         modelLock: boolParam(params.get("lock")),

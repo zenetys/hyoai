@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
+import { ComposerReasoningControl } from "@/components/chat/composer/ComposerReasoningControl";
 import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
 import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
@@ -17,6 +18,7 @@ import { useStore } from "@/hooks/useStore";
 import { isEntryInactive } from "@/lib/chat/availability";
 import { useChatInstance } from "@/lib/chat/context";
 import { resolveModalityGate } from "@/lib/chat/modalities";
+import { isImageGenerationModel } from "@/lib/imageModels";
 import { settingsStore } from "@/lib/stores/settings";
 import { setSystemPromptOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
@@ -55,6 +57,7 @@ export function Composer({ home = false }: { home?: boolean }) {
             : null;
 
     const { visionBlocked, audioBlocked } = resolveModalityGate(entry, props);
+    const imageMode = isImageGenerationModel(upstream);
 
     const single = chat.controlsGlobalModel;
     const embed = useStore(uiStore, (state) => state.embed);
@@ -92,6 +95,8 @@ export function Composer({ home = false }: { home?: boolean }) {
                 disabledReason={disabledReason}
                 visionBlocked={Boolean(visionBlocked)}
                 audioBlocked={Boolean(audioBlocked)}
+                imageMode={imageMode}
+                placeholder={imageMode ? t("imagePrompt") : undefined}
                 onSystemMessage={
                     chat.controlsGlobalModel ? () => setSystemPromptOpen(true) : undefined
                 }
@@ -103,16 +108,22 @@ export function Composer({ home = false }: { home?: boolean }) {
                     </>
                 }
                 rightControls={
-                    <>
-                        <ToolsToggle />
-                        <ChunkingControl />
-                        {!modelLocked &&
-                            (single ? (
-                                <ComposerModelSelector />
-                            ) : (
-                                <PaneModelSelector align="end" />
-                            ))}
-                    </>
+                    imageMode ? (
+                        !modelLocked &&
+                        (single ? <ComposerModelSelector /> : <PaneModelSelector align="end" />)
+                    ) : (
+                        <>
+                            <ComposerReasoningControl />
+                            <ToolsToggle />
+                            <ChunkingControl />
+                            {!modelLocked &&
+                                (single ? (
+                                    <ComposerModelSelector />
+                                ) : (
+                                    <PaneModelSelector align="end" />
+                                ))}
+                        </>
+                    )
                 }
             />
         </div>

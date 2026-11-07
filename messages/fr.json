@@ -1,6 +1,6 @@
 {
     "common": {
-        "appName": "HYOAI",
+        "appName": "ZALEANAI",
         "cancel": "Annuler",
         "save": "Enregistrer",
         "close": "Fermer",
@@ -70,7 +70,11 @@
         "thinking": "Réflexion",
         "thinkingDescription": "Peut réfléchir aux tâches plus complexes",
         "effortDescription": "Un effort plus élevé donne des réponses plus complètes mais plus lentes",
-        "default": "Défaut"
+        "default": "Défaut",
+        "effortAuto": "Auto",
+        "effortHigh": "Élevé",
+        "effortLow": "Faible",
+        "effortMedium": "Moyen"
     },
     "chat": {
         "emptyTitle": "Discute avec les modèles {name}",
@@ -154,7 +158,8 @@
         "flowStepStage": "Étape {step}",
         "imageBlocked": "Image non chargée : {url}",
         "toolProviderFailed": "Les outils de {provider} sont indisponibles pour cette réponse.",
-        "errorToolsRejected": "Le serveur a refusé les outils ({message}). Lance llama.cpp avec --jinja ou vLLM avec --enable-auto-tool-choice, ou mets « tools » à false sur cette entrée."
+        "errorToolsRejected": "Le serveur a refusé les outils ({message}). Lance llama.cpp avec --jinja ou vLLM avec --enable-auto-tool-choice, ou mets « tools » à false sur cette entrée.",
+        "generatedImage": "Image générée"
     },
     "composer": {
         "placeholder": "Envoie un message...",
@@ -198,7 +203,41 @@
         "toolsRetry": "Réessayer",
         "toolsRetryLabel": "Réessayer la connexion à {provider}",
         "toolsCorsDetail": "Le navigateur a bloqué la requête : le serveur est peut-être arrêté, ou il n'autorise pas cette page. Le détail est dans les réglages.",
-        "toolsLocalNetworkDetail": "Le serveur est sur le réseau local : autorise ce site à y accéder dans le navigateur, puis réessaie. Le détail est dans les réglages."
+        "toolsLocalNetworkDetail": "Le serveur est sur le réseau local : autorise ce site à y accéder dans le navigateur, puis réessaie. Le détail est dans les réglages.",
+        "camera": "Prendre une photo",
+        "cameraBusy": "La caméra est utilisée par une autre application.",
+        "cameraCapture": "Prendre la photo",
+        "cameraDescription": "La photo est ajoutée à ton message ; tu peux encore écrire du texte avant l'envoi.",
+        "cameraFromDevice": "Choisir sur l'appareil",
+        "cameraInsecure": "La caméra nécessite HTTPS ou localhost. Choisis plutôt une photo sur ton appareil.",
+        "cameraPermission": "L'accès à la caméra a été refusé. Autorise-le dans les réglages du navigateur, ou choisis une photo sur ton appareil.",
+        "cameraRetake": "Reprendre",
+        "cameraStarting": "Démarrage de la caméra...",
+        "cameraSwitch": "Changer de caméra",
+        "cameraTitle": "Caméra",
+        "cameraTryAgain": "Réessayer",
+        "cameraUnavailable": "Aucune caméra n'a été trouvée sur cet appareil.",
+        "cameraUse": "Utiliser la photo",
+        "draw": "Dessiner",
+        "drawClear": "Effacer",
+        "drawColor": "Couleur",
+        "drawColorBlack": "Noir",
+        "drawColorBlue": "Bleu",
+        "drawColorGreen": "Vert",
+        "drawColorRed": "Rouge",
+        "drawDescription": "Écris ou dessine, puis ajoute le résultat à ton message. La zone blanche est ce qui sera envoyé.",
+        "drawEmpty": "Dessine ou écris d'abord quelque chose",
+        "drawEraser": "Gomme",
+        "drawExportFailed": "Impossible d'exporter le dessin",
+        "drawGrid": "Afficher ou masquer la grille",
+        "drawPen": "Stylo",
+        "drawRedo": "Rétablir",
+        "drawThickness": "Épaisseur du trait",
+        "drawTitle": "Tableau blanc",
+        "drawUndo": "Annuler",
+        "drawUse": "Ajouter au message",
+        "imagePrompt": "Décris l'image à générer...",
+        "thinkingEffort": "Effort de réflexion"
     },
     "contextBar": {
         "context": "Contexte : {used}/{total} ({percent} %)",
@@ -557,7 +596,12 @@
             "mcpScopeAll": "Tous les serveurs activés",
             "mcpScopeNone": "Aucun serveur n'est encore configuré. Ajoutes-en un dans l'onglet Outils.",
             "mcpScopeMissing": "{id} (absent du catalogue)",
-            "mcpScopeOff": "L'appel d'outils est désactivé pour ce modèle."
+            "mcpScopeOff": "L'appel d'outils est désactivé pour ce modèle.",
+            "modalityAudio": "Audio",
+            "modalityAudioDescription": "Autoriser les pièces jointes audio.",
+            "modalityHint": "Les deux sont activés par défaut ; désactivez uniquement ce que le modèle ne prend pas en charge.",
+            "modalityImage": "Images (vision)",
+            "modalityImageDescription": "Autoriser la caméra, le tableau blanc et les pièces jointes image."
         },
         "tools": {
             "title": "Appel d'outils",

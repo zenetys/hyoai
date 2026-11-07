@@ -40,6 +40,7 @@ interface ResponsiveMenuProps {
     align?: "start" | "end";
     title?: React.ReactNode;
     contentClassName?: string;
+    mobileContentClassName?: string;
     preventCloseAutoFocus?: boolean;
     onDismiss?: () => void;
     isMobile?: boolean;
@@ -71,6 +72,7 @@ export function ResponsiveMenu({
     align = "start",
     title,
     contentClassName,
+    mobileContentClassName,
     preventCloseAutoFocus = false,
     onDismiss,
     isMobile: isMobileProp,
@@ -100,7 +102,12 @@ export function ResponsiveMenu({
                         <DrawerTitle className={cn("px-4 pt-2 pb-1", !title && "sr-only")}>
                             {title ?? ""}
                         </DrawerTitle>
-                        <div className="overflow-y-auto px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                        <div
+                            className={cn(
+                                "overflow-y-auto px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+                                mobileContentClassName,
+                            )}
+                        >
                             {children}
                         </div>
                     </DrawerContent>

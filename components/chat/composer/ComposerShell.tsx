@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
 import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
+import { ComposerImageTools } from "@/components/chat/composer/ComposerImageTools";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,6 +28,7 @@ interface ComposerShellProps {
     disabledReason?: string | null;
     visionBlocked?: boolean;
     audioBlocked?: boolean;
+    imageMode?: boolean;
     onSystemMessage?: () => void;
     banner?: React.ReactNode;
     notice?: React.ReactNode;
@@ -64,6 +66,7 @@ interface ComposerShellProps {
  * @param disabledReason - Tooltip explaining why sending is unavailable
  * @param visionBlocked - The model rejects images
  * @param audioBlocked - The model rejects audio
+ * @param imageMode - The active model generates images, so hide chat-only attachments and reasoning
  * @param onSystemMessage - Opens the system message dialog when provided
  * @param banner - Indicator rendered above the input, e.g. the system chip
  * @param notice - Strip at the top of the input card, e.g. why the model cannot answer
@@ -86,6 +89,7 @@ export function ComposerShell({
     disabledReason,
     visionBlocked = false,
     audioBlocked = false,
+    imageMode = false,
     onSystemMessage,
     banner,
     notice,
@@ -179,7 +183,15 @@ export function ComposerShell({
         el.style.height = `${el.scrollHeight}px`;
     }, [text]);
 
-    const hasInput = Boolean(text.trim()) || att.attachments.length > 0;
+    // Image models take a text prompt only; drop attachments left over from a
+    // chat model when the selector moves to an image model.
+    const attachmentCount = att.attachments.length;
+    const setAttachments = att.setAttachments;
+    useEffect(() => {
+        if (imageMode && attachmentCount > 0) setAttachments([]);
+    }, [imageMode, attachmentCount, setAttachments]);
+
+    const hasInput = Boolean(text.trim()) || (!imageMode && att.attachments.length > 0);
     const canSend = ready && !busy && hasInput;
 
     const submit = () => {
@@ -288,7 +300,7 @@ export function ComposerShell({
                 setText(event.target.value);
             }}
             onKeyDown={handleKeyDown}
-            onPaste={att.handlePaste}
+            onPaste={imageMode ? undefined : att.handlePaste}
             placeholder={placeholder ?? t("placeholder")}
             rows={1}
             className={cn(
@@ -301,11 +313,13 @@ export function ComposerShell({
     return (
         <div
             className={wrapperClassName}
-            onDrop={handleDrop}
+            onDrop={imageMode ? (event) => event.preventDefault() : handleDrop}
             onDragOver={(event) => event.preventDefault()}
         >
-            {banner}
-            <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
+            {!imageMode && banner}
+            {!imageMode && (
+                <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
+            )}
             <div
                 ref={boxRef}
                 className={cn(
@@ -313,7 +327,7 @@ export function ComposerShell({
                     compact ? "p-1.5" : "p-2",
                 )}
             >
-                {notice && (
+                {!imageMode && notice && (
                     <div
                         className={cn(
                             "overflow-hidden border-b border-input/60",
@@ -323,7 +337,7 @@ export function ComposerShell({
                         {notice}
                     </div>
                 )}
-                {reply}
+                {!imageMode && reply}
                 <div
                     ref={rowRef}
                     className={cn(
@@ -331,7 +345,14 @@ export function ComposerShell({
                         compactRow ? "gap-1" : "flex-wrap gap-x-1.5",
                     )}
                 >
-                    {attachmentMenu}
+                    {!imageMode && attachmentMenu}
+                    {!imageMode && (
+                        <ComposerImageTools
+                            blocked={visionBlocked}
+                            onImages={att.addImageFiles}
+                            onAdded={focusInput}
+                        />
+                    )}
                     {textareaEl}
                     <div
                         className={cn(

@@ -4,11 +4,12 @@ import { getInstalledPlugins } from "@/lib/plugins/registry";
 import { localeStore } from "@/lib/stores/locale";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
+import zh from "@/messages/zh.json";
 
-type Locale = "fr" | "en";
+type Locale = "fr" | "en" | "zh";
 
 // The app's own catalogs: the typed source of keys for getTranslator.
-const CORE_MESSAGES = { fr, en } as const;
+const CORE_MESSAGES = { fr, en, zh } as const;
 
 /**
  * The core catalog of a locale plus the catalogs of the installed plugins,
@@ -21,7 +22,9 @@ const CORE_MESSAGES = { fr, en } as const;
 function catalogFor(locale: Locale): AbstractIntlMessages {
     const plugins: AbstractIntlMessages = {};
     for (const plugin of getInstalledPlugins()) {
-        const catalog = plugin.messages?.[locale] ?? plugin.messages?.en;
+        const catalog =
+            (locale === "zh" ? plugin.messages?.en : plugin.messages?.[locale]) ??
+            plugin.messages?.en;
         if (catalog) plugins[plugin.id] = catalog;
     }
     return { ...CORE_MESSAGES[locale], plugins };
@@ -34,6 +37,7 @@ function catalogFor(locale: Locale): AbstractIntlMessages {
 export const MESSAGES: Record<Locale, AbstractIntlMessages> = {
     fr: catalogFor("fr"),
     en: catalogFor("en"),
+    zh: catalogFor("zh"),
 };
 
 /**

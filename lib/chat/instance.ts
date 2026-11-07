@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import { streamChatCompletion } from "@/lib/api/chat";
+import { generateImage } from "@/lib/api/image";
 import { shouldPreserveThinking } from "@/lib/api/thinking";
 import { measureCharsPerToken } from "@/lib/api/tokenize";
 import { classifyEnding, endingMessage, type SilentEnding } from "@/lib/chat/endings";
@@ -32,6 +33,7 @@ import {
 } from "@/lib/conversation";
 import { resolveEffortLevel } from "@/lib/effort";
 import { getTranslator, translateKey } from "@/lib/i18n";
+import { isImageGenerationModel } from "@/lib/imageModels";
 import { providerIdsOutsideScope } from "@/lib/mcp/registry";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
@@ -1228,10 +1230,129 @@ export class ChatInstance {
     };
 
     /**
-     * Continue a turn from an existing user node: run the chapter pipeline when
-     * chunking is on and the input is over-context, otherwise stream a single
-     * assistant answer. Shared by the first send, message edits and regeneration
-     * so all three route large inputs through chunking identically.
+     * Start an image-generation turn: append the assistant placeholder, index
+     * the conversation and run the image request. Used instead of the chat
+     * pipeline when the selected upstream model is an image model.
+     *
+     * @param userNodeId - User node whose text becomes the image prompt
+     * @param entry - Resolved model entry
+     * @param model - Resolved upstream image model id
+     */
+    private startImageTurn = async (
+        userNodeId: string,
+        entry: ModelConfig,
+        model: string,
+    ): Promise<void> => {
+        const userNode = this.store.getState().nodes[userNodeId];
+        if (!userNode || userNode.role !== "user") return;
+
+        const afterAssistant = appendNode(
+            this.store.getState().nodes,
+            userNodeId,
+            { role: "assistant", content: "" },
+            Date.now(),
+        );
+        this.store.setState({ nodes: afterAssistant.nodes, currNode: afterAssistant.id });
+        this.ensureIndexed(userNode.content, entry, model);
+        this.persistActiveConversation();
+        await this.runImageGeneration(afterAssistant.id, userNode.content, entry, model);
+    };
+
+    /**
+     * Call the endpoint's OpenAI-compatible image generation API and turn the
+     * result into an image attachment on the assistant node. Image generation
+     * is not streamed, so the live state stays in "connecting"/"streaming"
+     * until the request settles; the stop button aborts the fetch.
+     *
+     * @param nodeId - Assistant placeholder receiving the image
+     * @param prompt - Image prompt taken from the user node
+     * @param entry - Resolved model entry
+     * @param model - Resolved upstream image model id
+     */
+    private runImageGeneration = async (
+        nodeId: string,
+        prompt: string,
+        entry: ModelConfig,
+        model: string,
+    ): Promise<void> => {
+        const settings = settingsStore.getState().settings;
+        const controller = new AbortController();
+        this.abortRef = controller;
+
+        const startedAt = Date.now();
+        const liveConvId = this.store.getState().conversationId;
+        this.store.setState({
+            streaming: {
+                nodeId,
+                status: "connecting",
+                content: "",
+                reasoning: "",
+                startedAt,
+                firstTokenAt: null,
+                usage: {},
+            },
+        });
+        setLiveStatus(liveConvId, "connecting", this.stopGeneration);
+
+        let attachment: Attachment | null = null;
+        let finishReason: FinishReason = "stop";
+        let nodeError: string | undefined;
+        let errorKind: string | undefined;
+
+        try {
+            this.store.setState((current) => ({
+                streaming: { ...current.streaming, status: "streaming" },
+            }));
+            setLiveStatus(liveConvId, "streaming", this.stopGeneration);
+            attachment = await generateImage(
+                entry,
+                model,
+                prompt,
+                controller.signal,
+                settings.imageMaxDimension,
+            );
+        } catch (error) {
+            if (error instanceof ApiError && error.kind === "aborted") {
+                finishReason = "aborted";
+            } else {
+                nodeError = error instanceof Error ? error.message : String(error);
+                errorKind = error instanceof ApiError ? error.kind : "http";
+                finishReason = "error";
+            }
+        } finally {
+            this.abortRef = null;
+            if (finishReason === "stop") setGenerationDone(liveConvId);
+            else setLiveStatus(liveConvId, "idle");
+        }
+
+        const endedAt = Date.now();
+        this.store.setState((current) => ({
+            nodes: updateNode(current.nodes, nodeId, {
+                content: "",
+                attachments: attachment ? [attachment] : undefined,
+                stats: { durationMs: endedAt - startedAt },
+                finishReason,
+                error: nodeError,
+                errorKind,
+                model,
+            }),
+            streaming: IDLE_STREAMING,
+        }));
+
+        const conversationId = this.store.getState().conversationId;
+        if (conversationId) {
+            const data = this.snapshotData();
+            if (data) await writeConversationNow(conversationId, data);
+            patchMeta(conversationId, { lastModified: Date.now() });
+        }
+        void refreshStorage();
+    };
+
+    /**
+     * Continue a turn from an existing user node: run the image pipeline for
+     * image-generation models, the chapter pipeline when chunking is on and the
+     * input is over-context, otherwise stream a single assistant answer. Shared
+     * by the first send, message edits and regeneration.
      *
      * @param userNodeId - User node whose content drives the turn
      * @param entry - Resolved model entry
@@ -1247,6 +1368,11 @@ export class ChatInstance {
 
         if (this.cancelled()) {
             this.keepPromptOfCancelledTurn(userNode, entry, model);
+            return;
+        }
+
+        if (model && isImageGenerationModel(model)) {
+            await this.startImageTurn(userNodeId, entry, model);
             return;
         }
 

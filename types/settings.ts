@@ -10,8 +10,19 @@ export type SkinId = (typeof SKIN_IDS)[number];
 export const LOCALES = [
     { id: "fr", label: "Français" },
     { id: "en", label: "English" },
+    { id: "zh", label: "中文" },
 ] as const;
 export type Locale = (typeof LOCALES)[number]["id"];
+
+/**
+ * Narrow an arbitrary value to a supported locale id.
+ *
+ * @param value - Value to check
+ * @returns True when the value is one of the supported locale ids
+ */
+export function isLocale(value: unknown): value is Locale {
+    return typeof value === "string" && LOCALES.some((entry) => entry.id === value);
+}
 
 // Width of the single-chat column and composer on large screens.
 export type ChatWidth = "medium" | "large" | "xlarge";
