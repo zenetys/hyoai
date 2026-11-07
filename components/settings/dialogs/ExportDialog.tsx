@@ -25,9 +25,17 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useConversationList } from "@/hooks/useConversations";
-import { downloadJson, exportConversations, exportConversationsLlamaCpp } from "@/lib/transfer";
+import { exportFilename } from "@/lib/format";
+import {
+    downloadJson,
+    downloadText,
+    exportConversations,
+    exportConversationsLlamaCpp,
+    exportConversationsMarkdown,
+    exportConversationsOpenAi,
+} from "@/lib/transfer";
 
-type ExportFormat = "native" | "llamacpp";
+type ExportFormat = "native" | "openai" | "markdown" | "llamacpp";
 
 interface ExportDialogProps {
     open: boolean;
@@ -36,7 +44,8 @@ interface ExportDialogProps {
 
 /**
  * Selective conversation export: pick the conversations, the file format
- * (native or llama.cpp webui compatible) and whether settings ride along.
+ * (native, OpenAI JSONL, markdown or llama.cpp webui compatible) and whether
+ * settings ride along. Markdown and OpenAI keep the branch shown on screen only.
  */
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     const t = useTranslations("settings");
@@ -81,10 +90,26 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
             if (format === "native") {
                 const file = await exportConversations(ids, { includeSettings });
                 downloadJson("hyoai-export.json", file);
-            } else {
+            } else if (format === "llamacpp") {
                 const items = await exportConversationsLlamaCpp(ids);
                 const stamp = new Date().toISOString().slice(0, 10);
                 downloadJson(`${stamp}_conversations.json`, items);
+            } else {
+                const titles = ids.map((id) => list.find((meta) => meta.id === id)?.title ?? "");
+
+                if (format === "markdown") {
+                    downloadText(
+                        exportFilename(titles, "md"),
+                        await exportConversationsMarkdown(ids),
+                        "text/markdown",
+                    );
+                } else {
+                    downloadText(
+                        exportFilename(titles, "jsonl"),
+                        await exportConversationsOpenAi(ids),
+                        "application/x-ndjson",
+                    );
+                }
             }
             toast.success(t("data.exportDone", { count: ids.length }));
             onOpenChange(false);
@@ -116,12 +141,23 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                                 <SelectItem value="native">
                                     {t("data.exportFormatNative")}
                                 </SelectItem>
+                                <SelectItem value="openai">
+                                    {t("data.exportFormatOpenAi")}
+                                </SelectItem>
+                                <SelectItem value="markdown">
+                                    {t("data.exportFormatMarkdown")}
+                                </SelectItem>
                                 <SelectItem value="llamacpp">
                                     {t("data.exportFormatLlamaCpp")}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
+                    {(format === "markdown" || format === "openai") && (
+                        <p className="text-xs text-muted-foreground">
+                            {t("data.exportBranchOnly")}
+                        </p>
+                    )}
                     <div className="flex items-center justify-between gap-4">
                         <Label htmlFor="export-include-settings" className="min-w-0 flex-1">
                             {t("data.includeSettings")}

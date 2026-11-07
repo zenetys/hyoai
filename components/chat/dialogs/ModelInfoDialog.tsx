@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { useEffect } from "react";
 
 import { CopyButton } from "@/components/common/CopyButton";
 import {
@@ -14,11 +15,13 @@ import { useStore } from "@/hooks/useStore";
 import { formatBytes } from "@/lib/format";
 import {
     modelsStore,
+    refreshProps,
     selectActiveModelMeta,
     selectActiveProps,
     selectActiveUpstreamModel,
 } from "@/lib/stores/models";
 import { setModelInfoOpen, uiStore } from "@/lib/stores/ui";
+import { resolveToolSupport } from "@/lib/tools/support";
 
 interface InfoRowProps {
     label: string;
@@ -59,7 +62,10 @@ function formatParams(params: number, locale: string): string {
  * endpoint, capability flags) followed by the runtime identity and capacity
  * from GET /props and the GGUF metadata of GET /v1/models, with the chat
  * template at the bottom. Describes the model the store pins as its target,
- * falling back to the active model when none is pinned.
+ * falling back to the active model when none is pinned. Entries other than the
+ * active one (a footer-pinned target, or the other pane of a compare view) may
+ * never have been probed, so the props are fetched on open and the runtime
+ * section shows the same information the model selector offers.
  */
 export function ModelInfoDialog() {
     const t = useTranslations("modelInfo");
@@ -81,6 +87,10 @@ export function ModelInfoDialog() {
     const upstream = target ? target.model : activeUpstream;
     const entryId = target?.entryId ?? activeEntryId;
     const entry = entries.find((item) => item.id === entryId) ?? null;
+
+    useEffect(() => {
+        if (open && entry) void refreshProps(entry);
+    }, [open, entry]);
 
     const tokens = (count: number) =>
         `${new Intl.NumberFormat(locale).format(count)} ${t("tokensUnit")}`;
@@ -160,6 +170,16 @@ export function ModelInfoDialog() {
                                         value={yesNo(entry.runtimeProps)}
                                     />
                                 )}
+                                <InfoRow
+                                    label={t("toolCalling")}
+                                    value={
+                                        entry.tools === true
+                                            ? yesNo(true)
+                                            : resolveToolSupport(entry, props ?? null)
+                                              ? t("toolCallingDetected")
+                                              : yesNo(false)
+                                    }
+                                />
                             </div>
                         </div>
                     )}

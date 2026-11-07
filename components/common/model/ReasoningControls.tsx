@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { effortLabelKey } from "@/lib/effort";
 import { cn } from "@/lib/utils";
 import type { EffortLevel } from "@/types/server";
 
@@ -48,6 +49,10 @@ export function ReasoningControls({
     onThinking,
 }: ReasoningControlsProps) {
     const t = useTranslations("header");
+    const effortLabel = (level: EffortLevel) => {
+        const key = effortLabelKey(level);
+        return key ? t(key) : level.label;
+    };
 
     if (isMobile) {
         return (
@@ -60,7 +65,7 @@ export function ReasoningControls({
                             className={sheetRowClass}
                             onClick={() => onEffort(level.id)}
                         >
-                            <span className="flex-1">{level.label}</span>
+                            <span className="flex-1">{effortLabel(level)}</span>
                             {level.id === defaultEffortId && (
                                 <span className="text-xs text-muted-foreground">
                                     {t("default")}
@@ -96,7 +101,7 @@ export function ReasoningControls({
                     {effortLevels.map((level, index) => (
                         <DropdownMenuRadioItem key={level.id} value={level.id}>
                             <span className="flex items-baseline gap-2">
-                                <span>{level.label}</span>
+                                <span>{effortLabel(level)}</span>
                                 {level.id === defaultEffortId && (
                                     <span className="text-xs text-muted-foreground">
                                         {t("default")}

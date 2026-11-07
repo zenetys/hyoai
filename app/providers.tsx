@@ -8,16 +8,11 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStore } from "@/hooks/useStore";
-import { bootApp, bootEmbed } from "@/lib/boot";
+import { MESSAGES } from "@/lib/i18n";
 import { onQuotaError } from "@/lib/storage/persistence";
 import { localeStore } from "@/lib/stores/locale";
 import { openSettings, uiStore } from "@/lib/stores/ui";
 import { getEmbedConfig } from "@/lib/url";
-import en from "@/messages/en.json";
-import fr from "@/messages/fr.json";
-import zh from "@/messages/zh.json";
-
-const MESSAGES = { fr, en, zh } as const;
 
 /**
  * Surfaces storage quota failures as a translated toast.
@@ -51,7 +46,8 @@ function QuotaWatcher() {
 
 /**
  * Client providers: theme (next-themes), i18n (next-intl without routing),
- * tooltips, toasts and the one-shot boot sequence.
+ * tooltips and toasts. Pure context: the boot sequence lives in the home page, so
+ * any other route renders without migrations, config requests or URL sync.
  *
  * @param children - Application tree
  */
@@ -59,11 +55,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const locale = useStore(localeStore, (state) => state.locale);
     const [embedConfig] = useState(() => getEmbedConfig());
     const themeOverride = useStore(uiStore, (state) => state.embedThemeOverride);
-
-    useEffect(() => {
-        if (embedConfig) void bootEmbed(embedConfig);
-        else void bootApp();
-    }, [embedConfig]);
 
     return (
         <ThemeProvider

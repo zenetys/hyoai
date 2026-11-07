@@ -14,7 +14,8 @@ import type { MessageNode } from "@/types/chat";
  * Collapsible recap standing in for the messages folded away by the "free
  * storage" prune. Collapsed by default since it replaces a long prefix; the
  * stored content is the bare summary, the upstream framing prefix being added
- * only when the node is sent to the API.
+ * only when the node is sent to the API. The model wrote it from a transcript that
+ * may hold tool results, so no remote image gets loaded there.
  *
  * @param node - Summary node (role user, summary flag set)
  */
@@ -43,7 +44,7 @@ export function SummaryMessage({ node }: { node: MessageNode }) {
             </CollapsibleTrigger>
             <CollapsibleContent>
                 <div className="mt-2 border-l-2 border-border pl-3 text-sm text-muted-foreground">
-                    <MarkdownRenderer content={body} />
+                    <MarkdownRenderer content={body} untrusted />
                 </div>
             </CollapsibleContent>
         </Collapsible>

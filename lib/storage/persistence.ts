@@ -1,6 +1,7 @@
 import { type Codec, StorageQuotaError } from "@/lib/storage/adapter";
 import { identityCodec, lzCodec } from "@/lib/storage/codec";
 import { isPersistenceAllowed, localStorageAdapter } from "@/lib/storage/local";
+import { upgradeConversation } from "@/lib/storage/upgrade";
 import { STORAGE_KEYS, type StorageUsage } from "@/types/storage";
 
 const DEBOUNCE_MS = 500;
@@ -299,13 +300,15 @@ export async function removeKey(key: string): Promise<void> {
 }
 
 /**
- * Read one conversation payload, transparently decompressing it.
+ * Read one conversation payload, transparently decompressing it and upgrading
+ * messages written by an older version (a no-op once migrated).
  *
  * @param id - Conversation id
  * @returns Parsed conversation payload, or null when absent or unreadable
  */
 export async function readConversation(id: string): Promise<unknown | null> {
-    return loadJson(STORAGE_KEYS.conversation(id), lzCodec);
+    const stored = await loadJson<unknown>(STORAGE_KEYS.conversation(id), lzCodec);
+    return stored === null ? null : upgradeConversation(stored);
 }
 
 /**

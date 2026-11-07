@@ -2,6 +2,9 @@ import type { useTranslations } from "next-intl";
 
 import type { MessageNode } from "@/types/chat";
 
+// Wording of a server refusing tools (llama.cpp without --jinja, vLLM without auto tool choice).
+const TOOLS_REJECTED = /jinja|tool[_ ]?(call|choice|s)\b|auto tool choice/i;
+
 /**
  * Pick the translated error text for a failed generation, keyed by its error
  * kind. Shared by the normal assistant row and the chapter row so both render a
@@ -17,10 +20,26 @@ export function errorText(
     switch (node.errorKind) {
         case "network":
             return t("errorNetwork");
+        case "timeout":
+            return t("errorTimeout");
         case "auth":
             return t("errorAuth");
         case "stream":
             return t("errorStream", { message: node.error ?? "" });
+        case "truncated":
+            return t("errorTruncated");
+        case "callCutOff":
+            return t("errorCallCutOff");
+        case "callMissing":
+            return t("errorCallMissing");
+        case "emptyAnswer":
+            return t("errorEmptyAnswer");
+        case "reasoningOnly":
+            return t("errorReasoningOnly");
+        case "http":
+            return TOOLS_REJECTED.test(node.error ?? "")
+                ? t("errorToolsRejected", { message: node.error ?? "" })
+                : t("errorHttp", { message: node.error ?? "" });
         default:
             return t("errorHttp", { message: node.error ?? "" });
     }

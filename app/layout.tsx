@@ -24,9 +24,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "HYOAI - Host Your Own AI",
+    title: "ZALEANAI - Host Your Own AI",
     description:
-        "HYOAI: a server-less, browser-only chat client for llama.cpp, vLLM, Ollama and OpenAI-compatible LLMs.",
+        "ZALEANAI: a server-less, browser-only chat client for llama.cpp, vLLM, Ollama and OpenAI-compatible LLMs.",
 };
 
 /**
@@ -39,7 +39,8 @@ export const metadata: Metadata = {
  * the default skin. Outside embed mode the locale has no pre-paint visual impact
  * and is resolved at mount by hydrateLocale.
  */
-const DEFAULT_LOCALE = LOCALES[0].id;
+// Default UI language before the user picks one.
+const DEFAULT_LOCALE = "zh";
 const LOCALE_IDS = LOCALES.map((entry) => entry.id);
 
 const bootScript = `(function(){try{var d=document.documentElement;var SK=${JSON.stringify(SKIN_IDS)};var DEF=${JSON.stringify(DEFAULT_SETTINGS.skin)};var EL=${JSON.stringify(LOCALE_IDS)};var DL=${JSON.stringify(DEFAULT_LOCALE)};var q=new URLSearchParams(location.search);if(q.has("embed")){d.dataset.embed="1";var es=q.get("skin");d.dataset.skin=(SK.indexOf(es)>=0)?es:DEF;var el=q.get("lang");var bl=(navigator.language||DL).slice(0,2);d.lang=(EL.indexOf(el)>=0)?el:((EL.indexOf(bl)>=0)?bl:DL);var et=q.get("theme");if(et==="dark"||et==="light"){d.classList.toggle("dark",et==="dark");}}else{var s=localStorage.getItem(${JSON.stringify(STORAGE_KEYS.skin)});d.dataset.skin=(SK.indexOf(s)>=0)?s:DEF;var sl=localStorage.getItem(${JSON.stringify(STORAGE_KEYS.locale)});if(EL.indexOf(sl)>=0){d.lang=sl;}}}catch(e){document.documentElement.dataset.skin=${JSON.stringify(DEFAULT_SETTINGS.skin)};}})();`;

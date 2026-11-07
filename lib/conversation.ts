@@ -2,8 +2,14 @@ import { getTranslator } from "@/lib/i18n";
 import { newId } from "@/lib/id";
 import { condenseDocumentText } from "@/lib/tabular";
 import { createRoot } from "@/lib/tree";
-import type { ApiContentPart, ApiMessage } from "@/types/api";
-import type { Attachment, ConversationData, ConversationMeta, MessageNode } from "@/types/chat";
+import type { ApiContentPart, ApiMessage, ApiToolCall } from "@/types/api";
+import type {
+    Attachment,
+    ConversationData,
+    ConversationMeta,
+    MessageNode,
+    ToolCall,
+} from "@/types/chat";
 
 // Maximum title length produced by defaultTitleFromContent
 const MAX_TITLE_LENGTH = 80;
@@ -216,44 +222,170 @@ function partialChapterAnalyses(path: MessageNode[], sourceIndex: number): strin
 }
 
 /**
+ * Convert a stored tool call to its wire shape.
+ *
+ * @param call - Tool call stored on an assistant node
+ * @returns The call as the API expects it in an assistant message
+ */
+export function toApiToolCall(call: ToolCall): ApiToolCall {
+    return {
+        id: call.id,
+        type: "function",
+        function: { name: call.name, arguments: call.arguments },
+    };
+}
+
+/**
+ * The nodes of the turn being answered: the last user message and everything the
+ * model and its tools added after it. Used when earlier turns are not sent.
+ *
+ * @param path - Root-first branch nodes
+ * @returns The nodes from the last user message to the end of the branch
+ */
+export function currentTurn(path: MessageNode[]): MessageNode[] {
+    for (let i = path.length - 1; i >= 0; i -= 1) {
+        if (path[i].role === "user") return path.slice(i);
+    }
+    return [];
+}
+
+/**
+ * Options of buildApiMessages.
+ *
+ * @param nativeTools - Send calls and results natively; otherwise only the results, as text
+ * @param preserveThinking - Include the saved assistant reasoning, when explicitly enabled
+ */
+export interface BuildMessagesOptions {
+    nativeTools?: boolean;
+    preserveThinking?: boolean;
+}
+
+/**
  * Convert a root-first branch path into the message list sent to the API.
  * Nodes with attachments use the OpenAI multimodal content-part format
  * (file texts first, then the message text, then images and audio); nodes
  * with neither content nor attachments (streaming placeholders) are skipped,
- * and assistant reasoningContent is never sent back to the server. A chunk-source
+ * and assistant reasoningContent is only sent when explicitly enabled. A chunk-source
  * turn is replaced by a compact placeholder so its document is not re-sent.
+ *
+ * Tool calls and results go out in the native format only when the request offers
+ * tools. Otherwise only the results are kept, as text added to the user message they
+ * answer (or as a user message after the assistant's own text), since many chat
+ * templates reject a tool role they were not given tools for and a model shown its
+ * past calls as text imitates them. A result without its call is dropped, and, in the
+ * native format, a call left without a result (stopped, reloaded) gets a synthetic
+ * "cancelled" result so the history stays valid.
  *
  * @param path - Root-first branch nodes, as returned by getPath
  * @param systemPrompt - System prompt prepended when non-blank
+ * @param options - Whether tools are offered and whether the saved reasoning is sent
  * @returns Messages ready for a /v1/chat/completions request
  */
-export function buildApiMessages(path: MessageNode[], systemPrompt: string): ApiMessage[] {
+export function buildApiMessages(
+    path: MessageNode[],
+    systemPrompt: string,
+    options: BuildMessagesOptions = {},
+): ApiMessage[] {
+    const native = options.nativeTools === true;
+    const preserveThinking = options.preserveThinking === true;
+    const t = getTranslator("prompts");
     const messages: ApiMessage[] = [];
     if (systemPrompt.trim().length > 0) {
         messages.push({ role: "system", content: systemPrompt });
     }
+
+    // Calls of the last assistant message still without a result, and the results flattened so far.
+    let open: string[] = [];
+    let known = new Set<string>();
+    let flattened: string[] = [];
+
+    const flushFlattened = () => {
+        if (flattened.length === 0) return;
+        const text = flattened.join("\n\n");
+        flattened = [];
+
+        // The results join the user message they answer, so the roles keep alternating.
+        const last = messages[messages.length - 1];
+        if (last?.role === "user" && typeof last.content === "string") {
+            last.content = `${last.content}\n\n${text}`;
+            return;
+        }
+        messages.push({ role: "user", content: text });
+    };
+    const closeOpenCalls = () => {
+        for (const id of open) {
+            messages.push({ role: "tool", tool_call_id: id, content: t("toolCancelled") });
+        }
+        open = [];
+    };
+
     for (let i = 0; i < path.length; i += 1) {
         const node = path[i];
+        if (node.role === "tool") {
+            const id = node.toolCallId;
+            if (!id || !known.has(id)) continue;
+            if (native) {
+                if (!open.includes(id)) continue;
+                open = open.filter((candidate) => candidate !== id);
+                messages.push({ role: "tool", tool_call_id: id, content: node.content });
+            } else {
+                const name = node.tool?.name ?? "tool";
+                flattened.push(`${t("speakerTool", { name })}:\n${node.content}`);
+            }
+            continue;
+        }
         if (node.role !== "user" && node.role !== "assistant") {
             continue;
         }
         if (node.chunk?.kind === "chunk") {
             continue;
         }
+        const calls = node.role === "assistant" ? (node.toolCalls ?? []) : [];
         const next = path[i + 1];
-        if (node.role === "user" && next?.chunk?.kind === "chunk") {
+        const placeholder = node.role === "user" && next?.chunk?.kind === "chunk";
+        const attachments = node.attachments ?? [];
+        const reasoning =
+            preserveThinking && node.role === "assistant" && node.reasoningContent
+                ? { reasoning_content: node.reasoningContent }
+                : {};
+        if (
+            !placeholder &&
+            calls.length === 0 &&
+            node.content.length === 0 &&
+            attachments.length === 0 &&
+            !reasoning.reasoning_content
+        ) {
+            continue;
+        }
+
+        // Anything but a result ends the run of results and settles the calls still open.
+        flushFlattened();
+        closeOpenCalls();
+        known = new Set<string>();
+
+        if (placeholder && next.chunk) {
             messages.push(
                 chunkSourceMessage(node, next.chunk.total, partialChapterAnalyses(path, i)),
             );
             continue;
         }
-        const attachments = node.attachments ?? [];
-        if (node.content.length === 0 && attachments.length === 0) {
+        if (calls.length > 0) {
+            known = new Set(calls.map((call) => call.id));
+            if (native) {
+                open = calls.map((call) => call.id);
+                messages.push({
+                    role: "assistant",
+                    content: node.content,
+                    ...reasoning,
+                    tool_calls: calls.map(toApiToolCall),
+                });
+            } else if (node.content.length > 0 || reasoning.reasoning_content) {
+                // A call shown as text gets imitated, so it is not written out; its reasoning is.
+                messages.push({ role: "assistant", content: node.content, ...reasoning });
+            }
             continue;
         }
-        const text = node.summary
-            ? getTranslator("prompts")("summaryPrefix") + node.content
-            : nodeText(node);
+        const text = node.summary ? t("summaryPrefix") + node.content : nodeText(node);
         const fileParts: ApiContentPart[] = [];
         const mediaParts: ApiContentPart[] = [];
         for (const attachment of attachments) {
@@ -262,7 +394,7 @@ export function buildApiMessages(path: MessageNode[], systemPrompt: string): Api
             (part.type === "text" ? fileParts : mediaParts).push(part);
         }
         if (fileParts.length === 0 && mediaParts.length === 0) {
-            messages.push({ role: node.role, content: text });
+            messages.push({ role: node.role, content: text, ...reasoning });
             continue;
         }
         const parts: ApiContentPart[] = [...fileParts];
@@ -270,8 +402,10 @@ export function buildApiMessages(path: MessageNode[], systemPrompt: string): Api
             parts.push({ type: "text", text });
         }
         parts.push(...mediaParts);
-        messages.push({ role: node.role, content: parts });
+        messages.push({ role: node.role, content: parts, ...reasoning });
     }
+    flushFlattened();
+    closeOpenCalls();
     return messages;
 }
 

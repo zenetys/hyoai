@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     basePath: process.env.BASE_PATH,
     trailingSlash: true,
     images: { unoptimized: true },
+    agentRules: false,
 };
 
 export default nextConfig;

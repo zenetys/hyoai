@@ -1,17 +1,17 @@
 import { localStorageAdapter } from "@/lib/storage/local";
 import { createStore } from "@/lib/store";
-import { isLocale, type Locale, LOCALES } from "@/types/settings";
+import { isLocale, type Locale } from "@/types/settings";
 import { STORAGE_KEYS } from "@/types/storage";
 
-// First declared locale, used as the fallback when nothing else matches.
-const FALLBACK_LOCALE: Locale = LOCALES[0].id;
+// Locale used until the user explicitly picks one.
+const DEFAULT_LOCALE: Locale = "zh";
 
 // UI locale, persisted to lc:locale as a raw string by setLocale.
 interface LocaleState {
     locale: Locale;
 }
 
-export const localeStore = createStore<LocaleState>({ locale: FALLBACK_LOCALE });
+export const localeStore = createStore<LocaleState>({ locale: DEFAULT_LOCALE });
 
 /**
  * Narrow an arbitrary string to a supported locale id.
@@ -24,15 +24,14 @@ function asLocale(value: string | null | undefined): Locale | null {
 }
 
 /**
- * Resolve the active locale at mount: the persisted value, else the browser
- * language, else the fallback. Updates the store and the document language.
+ * Resolve the active locale at mount: the persisted value, else Chinese.
+ * Updates the store and the document language.
  */
 export async function hydrateLocale(): Promise<void> {
     if (typeof document === "undefined") return;
 
     const stored = asLocale(await localStorageAdapter.get(STORAGE_KEYS.locale));
-    const browser = asLocale((navigator.language || "").slice(0, 2));
-    const locale = stored ?? browser ?? FALLBACK_LOCALE;
+    const locale = stored ?? DEFAULT_LOCALE;
 
     localeStore.setState({ locale });
     document.documentElement.lang = locale;

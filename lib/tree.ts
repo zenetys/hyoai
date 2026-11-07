@@ -1,5 +1,12 @@
 import { newId } from "@/lib/id";
-import type { Attachment, MessageNode, MessageQuote, MessageRole } from "@/types/chat";
+import type {
+    Attachment,
+    MessageNode,
+    MessageQuote,
+    MessageRole,
+    ToolCall,
+    ToolResultMeta,
+} from "@/types/chat";
 
 /**
  * Fields required to create a new node in the conversation tree.
@@ -13,6 +20,9 @@ export interface NodeInit {
     model?: string;
     chunk?: MessageNode["chunk"];
     summary?: boolean;
+    toolCalls?: ToolCall[];
+    toolCallId?: string;
+    tool?: ToolResultMeta;
 }
 
 /**
@@ -92,6 +102,9 @@ export function appendNode(
         model: init.model,
         chunk: init.chunk,
         summary: init.summary,
+        toolCalls: init.toolCalls,
+        toolCallId: init.toolCallId,
+        tool: init.tool,
         createdAt: now,
     };
     return {

@@ -1,11 +1,17 @@
-import { openConversation, reloadActiveConversation, startNewConversation } from "@/lib/actions";
+import { openConversation, reloadLiveConversation, startNewConversation } from "@/lib/actions";
 import { setPersistenceGate } from "@/lib/storage/local";
 import { runMigrations } from "@/lib/storage/migrations";
 import { registerLifecycleFlush } from "@/lib/storage/persistence";
-import { applyCompareUrlState, enableCompareUrlSync, hydrateCompare } from "@/lib/stores/compare";
+import {
+    applyCompareUrlState,
+    compareStore,
+    enableCompareUrlSync,
+    hydrateCompare,
+    setCompareEnabled,
+} from "@/lib/stores/compare";
 import { hydrateConversations } from "@/lib/stores/conversations";
 import { hydrateLocale, setLocale } from "@/lib/stores/locale";
-import { initModels, modelsStore, setActiveModel } from "@/lib/stores/models";
+import { initModels, modelsStore, pruneStaleOverride, setActiveModel } from "@/lib/stores/models";
 import { hydrateSettings, setSkin, settingsStore, updateSettings } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
 import { setEmbed } from "@/lib/stores/ui";
@@ -25,17 +31,23 @@ export async function bootApp(): Promise<void> {
     if (booted || typeof window === "undefined") return;
     booted = true;
     await runMigrations();
+    await pruneStaleOverride();
     await Promise.all([hydrateSettings(), initModels(), hydrateConversations(), hydrateCompare()]);
     await hydrateLocale();
     registerLifecycleFlush();
 
     const compare = getCompareFromUrl();
-    if (compare) applyCompareUrlState(compare);
-
     const urlChatId = getChatIdFromUrl();
-    if (!urlChatId || !(await openConversation(urlChatId))) {
-        startNewConversation();
+    if (compare) {
+        applyCompareUrlState(compare);
+    } else if (urlChatId) {
+        // A link to a single conversation opens it alone, whatever compare was saved.
+        setCompareEnabled(false);
     }
+
+    // The panes own their conversations; the single chat behind them starts empty.
+    if (compareStore.getState().enabled) startNewConversation();
+    else if (!urlChatId || !(await openConversation(urlChatId))) startNewConversation();
 
     enableCompareUrlSync();
     enableCrossTabRefresh();
@@ -60,7 +72,7 @@ function enableCrossTabRefresh(): void {
         if (event.key === STORAGE_KEYS.conversationsIndex) {
             void hydrateConversations();
         } else if (event.key.startsWith(STORAGE_KEYS.conversationPrefix)) {
-            reloadActiveConversation(event.key.slice(STORAGE_KEYS.conversationPrefix.length));
+            reloadLiveConversation(event.key.slice(STORAGE_KEYS.conversationPrefix.length));
         }
     });
 }

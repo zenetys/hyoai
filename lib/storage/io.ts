@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { newId } from "@/lib/id";
+import { upgradeConversation } from "@/lib/storage/upgrade";
 import type { Conversation, MessageNode } from "@/types/chat";
 import { type AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
 import type { ExportFile } from "@/types/storage";
@@ -22,28 +23,106 @@ const attachmentSchema = z.object({
     name: z.string().optional(),
 });
 
+const localizedTextSchema = z.object({
+    key: z.string(),
+    values: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+    text: z.string().catch(""),
+});
+
+const citationSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    url: z.string().optional(),
+    preview: z.string().optional(),
+    score: z.number().optional(),
+});
+
+const activityDetailSchema = z.object({
+    input: z.string().optional(),
+    output: z.string().optional(),
+    truncated: z.number().optional(),
+});
+
+const activityStepSchema = z.object({
+    id: z.string(),
+    kind: z.enum(["search", "step", "tool"]).catch("step"),
+    label: localizedTextSchema,
+    items: z.array(z.string()).optional(),
+    citations: z.array(citationSchema).optional(),
+    status: z
+        .enum(["pending", "running", "done", "error", "denied", "cancelled", "notRun"])
+        .optional()
+        .catch(undefined),
+    durationMs: z.number().optional(),
+    detail: activityDetailSchema.optional(),
+    text: z.string().optional(),
+});
+
+const toolCallSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    arguments: z.string().catch(""),
+});
+
+const toolResultMetaSchema = z.object({
+    name: z.string(),
+    providerId: z.string().optional(),
+    toolName: z.string().optional(),
+    title: localizedTextSchema.optional(),
+    status: z.enum(["done", "error", "denied", "cancelled"]).catch("done"),
+    approval: z.enum(["once", "always", "policy", "denied"]).optional().catch(undefined),
+    durationMs: z.number().optional(),
+    originalLength: z.number().optional(),
+});
+
+const stageTimingSchema = z.object({
+    id: z.string(),
+    label: localizedTextSchema,
+    ms: z.number(),
+});
+
 const messageStatsSchema = z.object({
     promptTokens: z.number().optional(),
+    promptMs: z.number().optional(),
+    promptPerSecond: z.number().optional(),
     completionTokens: z.number().optional(),
+    predictedMs: z.number().optional(),
     tokensPerSecond: z.number().optional(),
     durationMs: z.number().optional(),
     timeToFirstTokenMs: z.number().optional(),
+    stages: z.array(stageTimingSchema).optional(),
 });
 
 const messageNodeSchema = z.object({
     id: z.string(),
     parent: z.string().nullable(),
     children: z.array(z.string()).catch([]),
-    role: z.enum(["root", "system", "user", "assistant"]),
+    role: z.enum(["root", "system", "user", "assistant", "tool"]),
     content: z.string().catch(""),
     reasoningContent: z.string().optional(),
     quote: z.object({ text: z.string(), sourceId: z.string().optional() }).optional(),
+    activity: z.array(activityStepSchema).optional(),
+    citations: z.array(citationSchema).optional(),
     attachments: z.array(attachmentSchema).optional(),
     model: z.string().optional(),
+    thinking: z.boolean().optional(),
+    effort: z.string().optional(),
     stats: messageStatsSchema.optional(),
     finishReason: z.string().optional(),
     error: z.string().optional(),
     errorKind: z.string().optional(),
+    chunk: z
+        .object({
+            index: z.number(),
+            total: z.number(),
+            kind: z.enum(["chunk", "synthesis"]),
+        })
+        .optional(),
+    summary: z.boolean().optional(),
+    feedback: z.enum(["up", "down"]).optional(),
+    toolCalls: z.array(toolCallSchema).optional(),
+    toolCallId: z.string().optional(),
+    tool: toolResultMetaSchema.optional(),
     createdAt: z.number().catch(0),
 });
 
@@ -56,6 +135,7 @@ const conversationSchema = z.object({
     modelId: z.string().optional(),
     model: z.string().optional(),
     systemPrompt: z.string().optional(),
+    tools: z.boolean().optional(),
     rootId: z.string(),
     currNode: z.string(),
     nodes: z.record(z.string(), messageNodeSchema),
@@ -153,12 +233,23 @@ export function parseImport(
     } catch {
         return { ok: false, error: "The file is not valid JSON." };
     }
+
+    // Plugins upgrade the messages of files exported by an older version.
+    if (typeof raw === "object" && raw !== null && "conversations" in raw) {
+        const file = raw as { conversations: unknown };
+        if (Array.isArray(file.conversations)) {
+            raw = {
+                ...raw,
+                conversations: file.conversations.map((entry) => upgradeConversation(entry)),
+            };
+        }
+    }
     const result = exportFileSchema.safeParse(raw);
     if (!result.success) {
         const issue = result.error.issues[0];
         const where = issue && issue.path.length > 0 ? ` at "${issue.path.join(".")}"` : "";
         const detail = issue ? `${issue.message}${where}` : "unknown validation error";
-        return { ok: false, error: `The file is not a valid HYOAI export: ${detail}.` };
+        return { ok: false, error: `The file is not a valid ZALEANAI export: ${detail}.` };
     }
     return { ok: true, data: result.data as ExportFile };
 }

@@ -1,6 +1,6 @@
 {
     "common": {
-        "appName": "HYOAI",
+        "appName": "ZALEANAI",
         "cancel": "Cancel",
         "save": "Save",
         "close": "Close",
@@ -10,7 +10,8 @@
         "copyLink": "Copy link",
         "linkCopied": "Link copied",
         "edit": "Edit",
-        "loading": "Loading"
+        "loading": "Loading",
+        "downloadSvg": "Download SVG"
     },
     "sidebar": {
         "newChat": "New conversation",
@@ -31,7 +32,9 @@
         "stopGeneration": "Stop generation",
         "generationDone": "Generation complete — click to view",
         "deleteTitle": "Delete conversation",
-        "deleteDescription": "This conversation and all its branches will be permanently deleted."
+        "deleteDescription": "This conversation and all its branches will be permanently deleted.",
+        "awaitingApproval": "Waiting for your approval",
+        "runningTool": "Running a tool…"
     },
     "header": {
         "selectModel": "Select a model",
@@ -61,11 +64,17 @@
         "configMissing": "No model available: check the config.json file deployed with the app.",
         "modelUnavailable": "Model unreachable: check that its endpoint is running and that CORS allows this origin.",
         "modelDisabled": "Model disabled",
+        "modelUnknownType": "No installed plugin handles the type \"{type}\".",
+        "modelRequiresPin": "This server type does not list its models: set the entry's \"model\" field.",
         "reasoning": "Reasoning",
         "thinking": "Thinking",
         "thinkingDescription": "Can think through more complex tasks",
         "effortDescription": "Higher effort means more thorough but slower answers",
-        "default": "Default"
+        "default": "Default",
+        "effortAuto": "Auto",
+        "effortHigh": "High",
+        "effortLow": "Low",
+        "effortMedium": "Medium"
     },
     "chat": {
         "emptyTitle": "Chat with {name} models",
@@ -75,10 +84,8 @@
         "thinking": "Thinking",
         "search": "Search",
         "searching": "Searching...",
-        "subQueries": "Sub-queries",
-        "retrievedDense": "Dense retrieval ({count})",
-        "retrievedSparse": "Sparse retrieval ({count})",
-        "rerankedDocs": "Reranked ({count})",
+        "activity": "Steps",
+        "activityRunning": "Working...",
         "sources": "{count, plural, one {# source} other {# sources}}",
         "relevanceScore": "Relevance score",
         "copyMessage": "Copy message",
@@ -92,15 +99,8 @@
         "forkSuccess": "New conversation created from this message",
         "statsReading": "Reading (prompt processing)",
         "statsGeneration": "Generation (token output)",
-        "statsPipeline": "Pipeline (per-stage latency)",
+        "statsStages": "Steps (time per step)",
         "statsStorage": "Storage (this conversation · total)",
-        "pipelineIntent": "Intent",
-        "pipelineDecomposition": "Decomposition",
-        "pipelineEmbedding": "Embedding",
-        "pipelineVectorSearch": "Vector search",
-        "pipelineReranking": "Reranking",
-        "pipelineGeneration": "Generation",
-        "pipelineTotal": "Total",
         "feedbackUp": "Good response",
         "feedbackDown": "Bad response",
         "feedbackCommentPlaceholder": "Add a comment (optional)...",
@@ -123,7 +123,43 @@
         "errorNetwork": "Could not reach the model. Check that its endpoint is running and that CORS allows this origin.",
         "errorAuth": "Authentication refused: check the server API key.",
         "errorHttp": "The server returned an error: {message}",
-        "errorStream": "The stream was interrupted: {message}"
+        "errorStream": "The stream was interrupted: {message}",
+        "errorTruncated": "The server closed the connection before the answer was complete. Regenerate the answer.",
+        "errorCallCutOff": "The answer hit the token limit while the model was writing a tool call, so the call was dropped. Raise the maximum number of tokens and regenerate the answer.",
+        "errorCallMissing": "The server announced a tool call but did not send it. Regenerate the answer, or check the tool call parser of the server.",
+        "errorEmptyAnswer": "The model ended its turn without writing an answer after the tool results. Regenerate the answer.",
+        "errorReasoningOnly": "After the tool results the model only reasoned and wrote no answer. Regenerate the answer, or raise the maximum number of tokens if the reasoning uses them all.",
+        "errorTimeout": "The server did not start answering in time and looks unreachable.",
+        "toolCalls": "{count, plural, one {# tool call} other {# tool calls}}",
+        "toolStatusPending": "Waiting for approval",
+        "toolStatusRunning": "Running…",
+        "toolStatusDone": "Done",
+        "toolStatusError": "Failed",
+        "toolStatusDenied": "Denied",
+        "toolStatusCancelled": "Cancelled",
+        "toolStatusNotRun": "Not run",
+        "toolArguments": "Arguments",
+        "toolResult": "Result",
+        "toolTruncated": "Truncated: {omitted} characters were not sent to the model",
+        "toolPreparing": "Preparing {name}…",
+        "toolApprovalTitle": "Allow {tool} to run?",
+        "toolNoArguments": "No arguments",
+        "toolApprovalDescription": "{provider} will receive the arguments below.",
+        "toolApprovalNoArguments": "{provider} will receive no arguments.",
+        "toolApprovalName": "Tool name: {name}",
+        "toolApprovalReadOnly": "Declared read-only by its provider",
+        "toolAllowOnce": "Allow once",
+        "toolAllowAlways": "Always allow",
+        "toolDeny": "Deny",
+        "toolStepLimit": "Stopped after {steps} steps.",
+        "toolInterrupted": "Some tool calls did not run.",
+        "toolContinue": "Continue",
+        "toolAnswerNow": "Answer without tools",
+        "flowStepStage": "Step {step}",
+        "imageBlocked": "Image not loaded: {url}",
+        "toolProviderFailed": "Tools from {provider} are unavailable for this answer.",
+        "errorToolsRejected": "The server rejected the tools ({message}). Start llama.cpp with --jinja or vLLM with --enable-auto-tool-choice, or set \"tools\" to false on this entry.",
+        "generatedImage": "Generated image"
     },
     "composer": {
         "placeholder": "Send a message...",
@@ -146,7 +182,62 @@
         "systemMessageDescription": "Sent at the top of this conversation, overriding the global system prompt setting.",
         "systemMessagePlaceholder": "You are a helpful assistant...",
         "enterHint": "Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line",
-        "disabledNoModel": "No model available (config.json)"
+        "disabledNoModel": "No model available (config.json)",
+        "tools": "Tools",
+        "toolsEnabledState": "Enabled for this conversation",
+        "toolsDisabledState": "Disabled for this conversation",
+        "toolsMaster": "Tools for this conversation",
+        "toolsProviders": "Providers",
+        "toolsGlobal": "Global setting",
+        "toolsProviderSwitch": "Offer the tools of {provider} to models",
+        "toolsCount": "{count, plural, one {# tool} other {# tools}}",
+        "toolsCountHidden": "{count, plural, one {# tool} other {# tools}} · {hidden} hidden",
+        "toolsListFailed": "The tools could not be listed",
+        "toolsPending": "A call is waiting for your approval in the conversation.",
+        "toolsManage": "Manage in settings",
+        "toolsUnsupported": "This model does not support tools.",
+        "toolsOffNotice": "This conversation used tools, which are off for now.",
+        "toolsOffEnable": "Enable",
+        "toolsMcp": "MCP",
+        "toolsOutOfScope": "Not offered to this model",
+        "toolsRetry": "Retry",
+        "toolsRetryLabel": "Retry the connection to {provider}",
+        "toolsCorsDetail": "The browser blocked the request: the server may be down, or it does not allow this page. The details are in the settings.",
+        "toolsLocalNetworkDetail": "The server is on the local network: allow this site to reach it in the browser, then retry. The details are in the settings.",
+        "camera": "Take a photo",
+        "cameraBusy": "The camera is being used by another application.",
+        "cameraCapture": "Take photo",
+        "cameraDescription": "The photo is added to your message; you can still add text before sending.",
+        "cameraFromDevice": "Choose from device",
+        "cameraInsecure": "The camera requires HTTPS or localhost. Choose a photo from your device instead.",
+        "cameraPermission": "Camera access was denied. Allow it in the browser settings, or choose a photo from your device.",
+        "cameraRetake": "Retake",
+        "cameraStarting": "Starting the camera...",
+        "cameraSwitch": "Switch camera",
+        "cameraTitle": "Camera",
+        "cameraTryAgain": "Try again",
+        "cameraUnavailable": "No camera was found on this device.",
+        "cameraUse": "Use photo",
+        "draw": "Draw",
+        "drawClear": "Clear",
+        "drawColor": "Color",
+        "drawColorBlack": "Black",
+        "drawColorBlue": "Blue",
+        "drawColorGreen": "Green",
+        "drawColorRed": "Red",
+        "drawDescription": "Write or sketch, then add it to your message. The white area is what gets sent.",
+        "drawEmpty": "Draw or write something first",
+        "drawEraser": "Eraser",
+        "drawExportFailed": "Could not export the drawing",
+        "drawGrid": "Toggle grid",
+        "drawPen": "Pen",
+        "drawRedo": "Redo",
+        "drawThickness": "Stroke width",
+        "drawTitle": "Drawing board",
+        "drawUndo": "Undo",
+        "drawUse": "Add to message",
+        "imagePrompt": "Describe the image to generate...",
+        "thinkingEffort": "Thinking effort"
     },
     "contextBar": {
         "context": "Context: {used}/{total} ({percent}%)",
@@ -184,7 +275,26 @@
         "maxPanes": "Maximum panes reached",
         "removePane": "Close pane",
         "newConversation": "New conversation",
-        "stopGeneration": "Stop generation"
+        "stopGeneration": "Stop generation",
+        "sendingTo": "{count, plural, one {Sending to # pane of {total}} other {Sending to # panes of {total}}}",
+        "skippedList": "Skipped: {names}",
+        "noTarget": "No pane can receive this message right now.",
+        "closedRunning": "The answer keeps generating in the background. You will find it in the sidebar.",
+        "awaitingApproval": "A tool call needs your approval in this pane",
+        "closedAwaitingApproval": "This answer is waiting for your approval of a tool call. Open it from the sidebar to decide."
+    },
+    "availability": {
+        "unavailable": "Unavailable",
+        "unreachable": "Unreachable",
+        "checking": "Checking…",
+        "retry": "Retry",
+        "reasonMissing": "This model is no longer in the configuration. Pick another one.",
+        "reasonDisabled": "This model is disabled in the configuration.",
+        "reasonNotListed": "The server no longer offers this model.",
+        "reasonUnreachable": "The server does not answer. The model is available again as soon as it is reachable.",
+        "reasonTimeout": "The server did not start answering in time.",
+        "skippedHint": "This pane is left out of shared sends while its model is unavailable.",
+        "keptHint": "Auto-disable is off: this model still receives messages."
     },
     "modelInfo": {
         "title": "Model Information",
@@ -216,7 +326,9 @@
         "parallelSlots": "Parallel Slots",
         "buildInfo": "Build Info",
         "chatTemplate": "Chat template",
-        "tokensUnit": "tokens"
+        "tokensUnit": "tokens",
+        "toolCalling": "Tool calling",
+        "toolCallingDetected": "Yes (detected from the chat template)"
     },
     "settings": {
         "title": "Settings",
@@ -226,7 +338,8 @@
             "general": "General",
             "generation": "Generation",
             "data": "Data",
-            "config": "Config"
+            "config": "Config",
+            "tools": "Tools"
         },
         "general": {
             "appearanceTitle": "Appearance",
@@ -245,7 +358,7 @@
             "expandGroup": "Expand after the answer",
             "expandReasoning": "Expand reasoning",
             "expandReasoningDescription": "Keep the thinking block open once the answer is done.",
-            "expandSearch": "Expand search",
+            "expandSearch": "Expand search and tool activity",
             "expandSearchDescription": "Keep the search panel open once the answer is done.",
             "expandSources": "Expand sources",
             "expandSourcesDescription": "Show the sources expanded under the answer.",
@@ -263,7 +376,13 @@
             "imageMaxDimensionDescription": "Images are downscaled before sending and local storage.",
             "visionRequired": "Requires a vision model",
             "mobileUnavailable": "Not available on mobile",
-            "narrowUnavailable": "Not available at this window width"
+            "narrowUnavailable": "Not available at this window width",
+            "availabilityTitle": "Model availability",
+            "availabilityDescription": "What the app does when a model stops answering.",
+            "autoDisable": "Automatically disable unavailable models",
+            "autoDisableDescription": "A model that stops answering is greyed out and left out of shared sends; it comes back as soon as its server answers. Off: it stays selectable and the error is shown when sending.",
+            "connectCheck": "Check a silent server after (seconds)",
+            "connectCheckDescription": "When a server has sent nothing after this delay, the app checks it is reachable and gives up on the request if it is not. A slow but reachable server is never interrupted. 0: never."
         },
         "sampling": {
             "description": "Empty fields use the server defaults.",
@@ -319,13 +438,16 @@
         },
         "data": {
             "exportTitle": "Export",
-            "exportDescription": "Download your conversations as JSON, in the native format or one compatible with the llama.cpp web UI.",
+            "exportDescription": "Download your conversations as native JSON, OpenAI-format JSONL, Markdown, or the llama.cpp web UI format.",
             "exportOpen": "Export conversations...",
             "exportDialogTitle": "Export conversations",
             "exportDialogDescription": "Choose the conversations to include in the downloaded file.",
             "exportFormat": "Format",
             "exportFormatNative": "HYOAI",
             "exportFormatLlamaCpp": "llama.cpp webui",
+            "exportFormatMarkdown": "Markdown",
+            "exportFormatOpenAi": "OpenAI (JSONL)",
+            "exportBranchOnly": "Only the displayed branch of each conversation is exported, without the model reasoning.",
             "selectAll": "{count}/{total} selected",
             "exportSelected": "Export ({count})",
             "exporting": "Exporting...",
@@ -381,6 +503,7 @@
             "baseUrlHint": "Base address of the model server.",
             "serverType": "Server type",
             "serverTypeHint": "Backend type; tunes the request format.",
+            "serverTypeNotInstalled": "{type} (not installed)",
             "pinnedModel": "Model id",
             "pinnedModelHint": "Technical id sent to the server.",
             "pinnedModelPlaceholder": "Empty: discover via /v1/models",
@@ -443,7 +566,8 @@
                 "general": "General",
                 "models": "Models",
                 "effort": "Effort",
-                "integrations": "Integrations"
+                "integrations": "Integrations",
+                "mcp": "MCP servers"
             },
             "itemAppName": "App name",
             "itemDefaultModel": "Default model",
@@ -453,11 +577,165 @@
             "itemModel": "Model: {name}",
             "itemLevel": "Effort level: {name}",
             "itemIntegration": "Integration: {name}",
+            "itemMcpServer": "MCP server: {name}",
             "itemRemoved": "Restore: {name}",
             "mode": {
                 "added": "added",
                 "modified": "modified",
                 "removed": "removed"
+            },
+            "tools": "Tool calling",
+            "toolsHint": "Auto: on only when llama.cpp's chat template supports tools. vLLM needs --enable-auto-tool-choice --tool-call-parser.",
+            "parallelToolCalls": "Parallel tool calls",
+            "recoverToolCalls": "Recover tool calls written as text",
+            "recoverToolCallsHint": "For servers whose parser lets a call leak into the answer. A complete call at the end of the text runs like any other, after your approval.",
+            "supportsToolChoice": "Send tool_choice",
+            "supportsToolChoiceHint": "Off for servers that reject the field (e.g. Ollama).",
+            "mcpScope": "MCP servers",
+            "mcpScopeHint": "Which servers of the catalog this model may use.",
+            "mcpScopeAll": "Every enabled server",
+            "mcpScopeNone": "No server is set up yet. Add one in the Tools tab.",
+            "mcpScopeMissing": "{id} (not in the catalog)",
+            "mcpScopeOff": "Tool calling is off for this model.",
+            "modalityAudio": "Audio",
+            "modalityAudioDescription": "Allow audio file attachments.",
+            "modalityHint": "Both are on by default; turn one off only if the model cannot handle it.",
+            "modalityImage": "Images (vision)",
+            "modalityImageDescription": "Allow camera, drawing board and image attachments."
+        },
+        "tools": {
+            "title": "Tool calling",
+            "description": "Lets models call tools while answering. Every call is shown and asks for your approval unless you allow it.",
+            "enabledByDefault": "Enable tools in new conversations",
+            "enabledByDefaultDescription": "The toggle in the composer still applies per conversation.",
+            "maxSteps": "Maximum steps per answer",
+            "maxStepsDescription": "Model requests in one answer before asking to continue (1 to 50).",
+            "defaultPolicy": "Default approval",
+            "policyAsk": "Ask each time",
+            "policyAllow": "Always allow",
+            "policyHint": "Hidden from the model: the tool is not offered, so the model cannot ask for it.",
+            "policyDeny": "Hidden from the model",
+            "defaultPolicyWarning": "Tools will run without asking. A tool result can contain instructions that steer the model.",
+            "maxResultChars": "Result size limit",
+            "maxResultCharsDescription": "Characters of one result sent to the model; the rest is cut.",
+            "providers": "Tool providers",
+            "noProviders": "No tool provider is installed.",
+            "listFailed": "The tools of this provider could not be listed.",
+            "providerEnabled": "Offer the tools of {provider} to models",
+            "resetApprovals": "Reset approvals",
+            "resetApprovalsDone": "Every tool asks again.",
+            "mcp": {
+                "title": "MCP servers",
+                "description": "An MCP server gives models more tools. Its calls ask for your approval like any other tool, unless you allow them.",
+                "storedHere": "Tokens and headers are kept in this browser like API keys, and are sent to the server with every request.",
+                "none": "No MCP server is set up.",
+                "add": "Add a server",
+                "newServer": "New server",
+                "enable": "Offer the tools of {name} to models",
+                "edit": "Edit {name}",
+                "remove": "Remove {name}",
+                "removedDone": "{name} removed.",
+                "restoredDone": "{name} restored.",
+                "undo": "Undo",
+                "save": "Save",
+                "cancel": "Cancel",
+                "saved": "{name} saved.",
+                "saveFailed": "The change was refused: {detail}",
+                "refresh": "Refresh",
+                "refreshLabel": "Refresh {name}",
+                "resetServer": "Back to config.json",
+                "resetServerDone": "{name} is back to config.json.",
+                "origin": {
+                    "file": "config.json",
+                    "modified": "Changed here",
+                    "local": "Added here"
+                },
+                "removedTitle": "Removed from config.json",
+                "restore": "Restore {name}",
+                "fields": {
+                    "label": "Name",
+                    "labelPlaceholder": "Shown in the list",
+                    "id": "Identifier",
+                    "idHint": "Letters, digits, - and _ (30 at most). It cannot change once saved.",
+                    "url": "Address",
+                    "urlHint": "The MCP endpoint, or a path on this site.",
+                    "transport": "Transport",
+                    "transportAuto": "Automatic",
+                    "transportHttp": "Streamable HTTP",
+                    "transportSse": "SSE",
+                    "transportHint": "Automatic: Streamable HTTP, then SSE if the server does not know it.",
+                    "token": "Bearer token",
+                    "tokenHint": "Sent as Authorization: Bearer. Leave empty if the server needs none.",
+                    "showToken": "Show the token",
+                    "hideToken": "Hide the token",
+                    "copyToken": "Copy the token",
+                    "headers": "Other headers (JSON, not masked)"
+                },
+                "problems": {
+                    "id": "The identifier must have 1 to 30 letters, digits, - or _.",
+                    "idTaken": "Another server already uses this identifier.",
+                    "url": "The address must be an http(s) URL or a path starting with /.",
+                    "headers": "The headers must be a JSON object whose values are all text."
+                },
+                "tools": "Tools ({count})",
+                "toolsLoading": "Listing the tools…",
+                "toolsFailed": "The tools could not be listed.",
+                "listError": "The server is connected, but it did not list its tools correctly.",
+                "noTools": "This server lists no tool.",
+                "policy": "Approval for {tool}",
+                "annotations": {
+                    "readOnly": "Read-only",
+                    "destructive": "Destructive",
+                    "openWorld": "Reaches outside",
+                    "unverified": "declared by the server, not verified"
+                },
+                "corsHeaders": "The server must send these headers, and list the name of each header configured here in Access-Control-Allow-Headers:",
+                "status": {
+                    "disabled": {
+                        "label": "Off",
+                        "detail": "This server is not offered to models."
+                    },
+                    "idle": {
+                        "label": "Not connected",
+                        "detail": "The server connects when its tools are first needed."
+                    },
+                    "connecting": {
+                        "label": "Connecting…",
+                        "detail": "Waiting for the server to answer."
+                    },
+                    "connected": {
+                        "label": "Connected",
+                        "detail": "{count, plural, one {# tool} other {# tools}} offered."
+                    },
+                    "cors": {
+                        "label": "CORS blocked",
+                        "detail": "The browser blocked the request. It does not say why: the server may be down, or, on another origin, it must allow this page and expose the headers below."
+                    },
+                    "localNetwork": {
+                        "label": "Local network",
+                        "detail": "The server is on a local address. Allow this site to reach the local network in the browser, then refresh. If the browser already allows it, the server must also send the headers below."
+                    },
+                    "unauthorized": {
+                        "label": "Authentication",
+                        "detail": "The server refused the credentials (HTTP {status}). Check the token or the headers."
+                    },
+                    "notFound": {
+                        "label": "Not found",
+                        "detail": "The server answered HTTP {status}: check the address."
+                    },
+                    "timeout": {
+                        "label": "No answer",
+                        "detail": "The server did not answer in time."
+                    },
+                    "network": {
+                        "label": "Unreachable",
+                        "detail": "The server could not be reached or closed the connection."
+                    },
+                    "protocol": {
+                        "label": "Protocol error",
+                        "detail": "The server answered, but not as an MCP server should."
+                    }
+                }
             }
         }
     },
@@ -482,6 +760,21 @@
         "runningSummaryLabel": "Cumulative summary of the previous parts:\n\n{summary}",
         "partialAnalysisHeader": "--- Analysis of part {index} ---",
         "synthesisUserTemplate": "User request:\n{demand}\n\nPartial analyses:\n\n{body}",
-        "quoteReply": "{content}\n\nIn reply to this passage:\n\n{quoted}"
+        "quoteReply": "{content}\n\nIn reply to this passage:\n\n{quoted}",
+        "toolDenied": "The user denied this tool call. Do not retry it; continue without it.",
+        "toolCancelled": "This tool call was cancelled before it ran.",
+        "toolSkipped": "Not executed: the step limit was reached. Answer with the information you already have.",
+        "toolUnknown": "Unknown tool \"{name}\". Use only the tools provided.",
+        "toolBadArguments": "Invalid arguments: {error}. Send a JSON object matching the tool schema.",
+        "toolFailed": "The tool failed: {message}",
+        "toolTimeout": "The tool did not answer within {seconds} s.",
+        "toolTruncated": "[Result truncated: {omitted} characters omitted.]",
+        "toolTooMany": "Too many tool calls in one step; at most {max} are run.",
+        "speakerTool": "Tool {name}",
+        "toolCallLine": "[called {calls}]"
+    },
+    "tools": {
+        "clock": "Clock",
+        "clockCurrentTime": "Current time"
     }
 }

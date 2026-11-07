@@ -1,7 +1,7 @@
 import { streamChatCompletion } from "@/lib/api/chat";
-import { buildApiMessages, chunkSourceIds } from "@/lib/conversation";
+import { buildApiMessages, type BuildMessagesOptions, chunkSourceIds } from "@/lib/conversation";
 import { getTranslator } from "@/lib/i18n";
-import type { ApiMessage, ChatRequestParams } from "@/types/api";
+import { ApiError, type ApiMessage, type ChatRequestParams } from "@/types/api";
 import type { CompactionState, MessageNode } from "@/types/chat";
 import type { ModelConfig } from "@/types/server";
 
@@ -16,6 +16,9 @@ const SUMMARY_OUTPUT_FRACTION = 0.15;
 const MIN_SUMMARY_TOKENS = 256;
 const MIN_NODES_TO_SUMMARIZE = 2;
 
+// Characters of a tool result kept in the transcript fed to the summarizer.
+const SUMMARY_TOOL_RESULT_CHARS = 2000;
+
 /**
  * A branch slice selected for summarization plus the node it anchors on.
  *
@@ -28,9 +31,24 @@ export interface CompactionPlan {
 }
 
 /**
+ * Whether a turn is still being worked on: it ends on a tool call or a tool
+ * result, so the model has not answered yet.
+ *
+ * @param turn - Nodes of one turn
+ * @returns true when the turn is open
+ */
+function isOpenTurn(turn: MessageNode[]): boolean {
+    const last = turn[turn.length - 1];
+    return last.role === "tool" || (last.toolCalls?.length ?? 0) > 0;
+}
+
+/**
  * Decide which branch nodes to fold into the rolling summary. The most recent
- * keepRecentTurns exchanges stay verbatim, and anything already covered by a
+ * keepRecentTurns turns stay verbatim (a turn is a user message and everything
+ * that answers it, tool calls included), and anything already covered by a
  * previous anchor is skipped so summaries roll forward instead of overlapping.
+ * A turn still waiting on a tool is never summarized, and the anchor always ends
+ * a turn, so a call is never separated from its result.
  *
  * @param path - Root-first branch nodes, as returned by getPath
  * @param keepRecentTurns - Latest user/assistant turns kept untouched
@@ -45,7 +63,7 @@ export function planCompaction(
     const sources = chunkSourceIds(path);
     const messages = path.filter(
         (node) =>
-            (node.role === "user" || node.role === "assistant") &&
+            (node.role === "user" || node.role === "assistant" || node.role === "tool") &&
             node.chunk?.kind !== "chunk" &&
             !sources.has(node.id),
     );
@@ -54,9 +72,14 @@ export function planCompaction(
         const anchorPos = messages.findIndex((node) => node.id === priorAnchorId);
         if (anchorPos >= 0) startIndex = anchorPos + 1;
     }
-    const keepCount = Math.max(0, keepRecentTurns) * 2;
-    const endIndex = Math.max(startIndex, messages.length - keepCount);
-    const candidates = messages.slice(startIndex, endIndex);
+    const turns: MessageNode[][] = [];
+    for (const node of messages.slice(startIndex)) {
+        if (node.role === "user" || turns.length === 0) turns.push([node]);
+        else turns[turns.length - 1].push(node);
+    }
+    let keepTurns = Math.max(0, keepRecentTurns);
+    if (turns.length > 0 && isOpenTurn(turns[turns.length - 1])) keepTurns = Math.max(keepTurns, 1);
+    const candidates = turns.slice(0, Math.max(0, turns.length - keepTurns)).flat();
     if (candidates.length < MIN_NODES_TO_SUMMARIZE) return null;
     return { toSummarize: candidates, anchorId: candidates[candidates.length - 1].id };
 }
@@ -70,12 +93,21 @@ export function planCompaction(
  */
 function renderNode(node: MessageNode): string {
     const t = getTranslator("prompts");
+    if (node.role === "tool") {
+        const result =
+            node.content.length > SUMMARY_TOOL_RESULT_CHARS
+                ? `${node.content.slice(0, SUMMARY_TOOL_RESULT_CHARS)}...`
+                : node.content;
+        return `${t("speakerTool", { name: node.tool?.name ?? "tool" })} : ${result}`;
+    }
     const speaker = node.role === "assistant" ? t("speakerAssistant") : t("speakerUser");
+    const calls = (node.toolCalls ?? []).map((call) => `${call.name}(${call.arguments})`);
+    const callLine = calls.length > 0 ? `\n${t("toolCallLine", { calls: calls.join(", ") })}` : "";
     const names = (node.attachments ?? [])
         .map((attachment) => attachment.name)
         .filter((name): name is string => Boolean(name));
     const suffix = names.length > 0 ? t("attachmentsLabel", { names: names.join(", ") }) : "";
-    return `${speaker} : ${node.content}${suffix}`;
+    return `${speaker} : ${node.content}${callLine}${suffix}`;
 }
 
 /**
@@ -102,7 +134,8 @@ export function buildSummaryTranscript(priorSummary: string, nodes: MessageNode[
 /**
  * Summarize a branch slice through the same server, out of band. The call reuses
  * streamChatCompletion (which also covers non-streaming endpoints) and a tight
- * output budget so the summary itself stays small relative to the window.
+ * output budget so the summary itself stays small relative to the window. A
+ * stream cut before its end throws: half a summary must not replace the history.
  *
  * @param entry - Model entry to call
  * @param model - Resolved upstream model id
@@ -110,7 +143,7 @@ export function buildSummaryTranscript(priorSummary: string, nodes: MessageNode[
  * @param nodes - Branch nodes to summarize
  * @param nCtx - Context window used to size the summary output budget
  * @param signal - Abort signal cancelling the request
- * @returns The trimmed summary text
+ * @returns The trimmed summary text, which is never a cut-off one
  */
 export async function summarizeNodes(
     entry: ModelConfig,
@@ -138,6 +171,8 @@ export async function summarizeNodes(
             summary += event.text;
         } else if (event.type === "error") {
             throw event.error;
+        } else if (event.type === "finish" && event.reason === "truncated") {
+            throw new ApiError("stream", "the stream closed before the summary was complete");
         }
     }
     return summary.trim();
@@ -151,19 +186,21 @@ export async function summarizeNodes(
  * @param path - Root-first branch nodes, as returned by getPath
  * @param systemPrompt - System prompt prepended when non-blank
  * @param compaction - Active rolling summary, or null
+ * @param options - Whether tools are offered and whether the saved reasoning is sent in the unsummarized tail
  * @returns Messages ready for a /v1/chat/completions request
  */
 export function buildCompactedMessages(
     path: MessageNode[],
     systemPrompt: string,
     compaction: CompactionState | null,
+    options?: BuildMessagesOptions,
 ): ApiMessage[] {
-    if (!compaction) return buildApiMessages(path, systemPrompt);
+    if (!compaction) return buildApiMessages(path, systemPrompt, options);
 
     const anchorPos = path.findIndex((node) => node.id === compaction.anchorId);
-    if (anchorPos < 0) return buildApiMessages(path, systemPrompt);
+    if (anchorPos < 0) return buildApiMessages(path, systemPrompt, options);
 
-    const messages = buildApiMessages(path.slice(anchorPos + 1), systemPrompt);
+    const messages = buildApiMessages(path.slice(anchorPos + 1), systemPrompt, options);
     const summaryMessage: ApiMessage = {
         role: "user",
         content: getTranslator("prompts")("summaryPrefix") + compaction.summary,

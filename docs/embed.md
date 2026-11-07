@@ -1,6 +1,6 @@
-# Embedding HYOAI
+# Embedding ZALEANAI
 
-HYOAI ships an embeddable widget. The same static build, loaded in an iframe
+ZALEANAI ships an embeddable widget. The same static build, loaded in an iframe
 with `?embed=1`, renders a compact chat surface instead of the full
 application: there is no second bundle to deploy and still no server side. A
 host page points an iframe at the deployed app, configures the look and the
@@ -48,7 +48,7 @@ working widget. Booleans accept `1`/`true` and `0`/`false`.
 | `theme`       | `light`, `dark`, `system`                           | `system` | Forces the colour theme                                                                                     |
 | `skin`        | `flat`, `soft`, `contrast`, `warm`, `forest`, `dim` | `soft`   | Forces the UI skin                                                                                          |
 | `lang`        | `fr`, `en`, `zh`                                    | `fr`     | Forces the UI locale, which unlike the full app does not follow the browser                                 |
-| `model`       | a `models` entry id from `config.json`              | —        | Preselects that entry; ignored when no entry carries the id                                                 |
+| `model`       | a `models` entry id from `config.json`              | —        | Preselects that [entry](models.md#keys-of-a-models-entry); ignored when no entry carries the id             |
 | `upstream`    | upstream model id                                   | —        | Upstream model to use within the preselected entry                                                          |
 | `lock`        | boolean                                             | `0`      | Hides the model selector. A display hint, not a security boundary                                           |
 | `temperature` | number                                              | —        | Sampling override                                                                                           |
@@ -80,19 +80,40 @@ gate installed at boot:
 
 - **Minimal variant**: every write is dropped. The URL-driven look, locale and
   sampling live in memory only and the widget is fully ephemeral.
-- **Sidebar variant**: only the conversation index and the `conversation:` keys
-  are admitted, so history persists while settings still do not.
+- **Sidebar variant**: only the conversation index (`lc:convs`) and the
+  `lc:conv:` keys are admitted, so history persists while settings still do not.
 
 The gate filters writes only, reads are untouched. In the sidebar variant the widget also listens for
 cross-tab `storage` events, so a full-app tab open next to it follows along as
 the widget generates and persists.
+
+## What the widget leaves out
+
+Embed mode does more than shrink the layout: some parts of the full application
+are never mounted and others are switched off. None of the following exists in
+an embed, except where noted.
+
+- **Tools and MCP servers**: the wrench button is not shown, every turn is sent
+  without tools and no MCP server is registered or contacted. See
+  [Tool calling](tools.md) and [MCP servers](mcp.md).
+- **Settings tabs**: the Settings dialog has no **Tools** and no **Config** tab.
+  **Data** is there only in the sidebar variant.
+- **Compare models**: the conversation menu of the sidebar variant does not offer
+  it, so [compare mode](compare.md#compare-mode) cannot be started from a widget.
+- **Global shortcuts**: Ctrl/Cmd+K, Ctrl/Cmd+B and Ctrl/Cmd+Shift+O are
+  registered by the full application shell only, see
+  [Keyboard shortcuts](features.md#keyboard-shortcuts).
+- **The availability watcher**: the full app probes the models in use in the
+  background, the widget does not, so a server is judged down only from a failed
+  chat request, from **Retry** or from the silent-server watch. See
+  [How a server is judged down, and up again](compare.md#how-a-server-is-judged-down-and-up-again).
 
 ## The postMessage bridge
 
 ### Allowing your host origin
 
 The widget only accepts messages from its own origin and from the origins
-declared in `config.json`:
+declared in `config.json` (the [`embedOrigins`](models.md#root-keys) root key):
 
 ```json
 {

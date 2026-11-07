@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { EditableCard } from "@/components/settings/fields/EditableCard";
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
 import { JsonField } from "@/components/settings/fields/JsonField";
+import { McpScopeField } from "@/components/settings/fields/McpScopeField";
 import { TextField } from "@/components/settings/fields/TextField";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -19,8 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { Capability, DraftModel } from "@/lib/draft";
-import { SERVER_TYPES } from "@/types/server";
-import type { ServerType } from "@/types/server";
+import { listServerTypes } from "@/lib/plugins/registry";
 
 /**
  * DOM id of a model card, so the config tab can scroll one entry into view and
@@ -30,6 +30,94 @@ import type { ServerType } from "@/types/server";
  */
 export function modelAnchorId(index: number): string {
     return `config-model-${index}`;
+}
+
+/**
+ * Parse the JSON text held by the draft's modalities field. An empty value
+ * means "use the defaults" (both attachment kinds enabled).
+ *
+ * @param value - JSON text from the draft
+ * @returns The parsed flags, or an empty object when absent/invalid
+ */
+function parseModalities(value: string): { image?: boolean; audio?: boolean } {
+    if (!value.trim()) return {};
+    try {
+        const parsed: unknown = JSON.parse(value);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? (parsed as { image?: boolean; audio?: boolean })
+            : {};
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * Serialize modality flags back to the draft's JSON text. Enabled kinds are
+ * omitted, so the generated config stays empty when both are on (the default).
+ *
+ * @param flags - Flags to serialize
+ * @returns Compact JSON text, or an empty string when nothing is disabled
+ */
+function serializeModalities(flags: { image?: boolean; audio?: boolean }): string {
+    return Object.keys(flags).length > 0 ? JSON.stringify(flags) : "";
+}
+
+/**
+ * Graphical switches for the attachment capabilities of one model entry.
+ * Both kinds are on unless explicitly disabled; disabling writes `false` into
+ * the modalities JSON, which the config schema already understands.
+ *
+ * @param value - JSON text from the draft
+ * @param onChange - Called with the next JSON text
+ */
+function ModalityToggles({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    const t = useTranslations("settings");
+    const flags = parseModalities(value);
+
+    const setFlag = (key: "image" | "audio", enabled: boolean) => {
+        const next = { ...flags };
+        if (enabled) delete next[key];
+        else next[key] = false;
+        onChange(serializeModalities(next));
+    };
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+                <div className="min-w-0">
+                    <p className="text-sm font-medium">{t("config.modalityImage")}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {t("config.modalityImageDescription")}
+                    </p>
+                </div>
+                <Switch
+                    checked={flags.image !== false}
+                    onCheckedChange={(checked) => setFlag("image", checked)}
+                    aria-label={t("config.modalityImage")}
+                />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+                <div className="min-w-0">
+                    <p className="text-sm font-medium">{t("config.modalityAudio")}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {t("config.modalityAudioDescription")}
+                    </p>
+                </div>
+                <Switch
+                    checked={flags.audio !== false}
+                    onCheckedChange={(checked) => setFlag("audio", checked)}
+                    aria-label={t("config.modalityAudio")}
+                />
+            </div>
+            <p className="text-xs text-muted-foreground">{t("config.modalityHint")}</p>
+        </div>
+    );
 }
 
 /**
@@ -46,6 +134,7 @@ export function modelAnchorId(index: number): string {
  * @param onMoveDown - Move the entry one position down
  * @param canMoveUp - Whether an up move is possible (not already first)
  * @param canMoveDown - Whether a down move is possible (not already last)
+ * @param mcpServers - The MCP servers of the catalog, for the scope of the entry
  */
 export function ModelEditor({
     index,
@@ -56,6 +145,7 @@ export function ModelEditor({
     onMoveDown,
     canMoveUp,
     canMoveDown,
+    mcpServers,
 }: {
     index: number;
     model: DraftModel;
@@ -65,9 +155,11 @@ export function ModelEditor({
     onMoveDown: () => void;
     canMoveUp: boolean;
     canMoveDown: boolean;
+    mcpServers: { id: string; label: string }[];
 }) {
     const t = useTranslations("settings");
     const title = model.id || t("config.modelUntitled");
+    const serverTypes = listServerTypes().map((definition) => definition.id);
 
     return (
         <EditableCard
@@ -139,19 +231,21 @@ export function ModelEditor({
                 <div className="space-y-1.5">
                     <Label>{t("config.serverType")}</Label>
                     <p className="text-xs text-muted-foreground">{t("config.serverTypeHint")}</p>
-                    <Select
-                        value={model.type}
-                        onValueChange={(value) => onChange({ type: value as ServerType })}
-                    >
+                    <Select value={model.type} onValueChange={(value) => onChange({ type: value })}>
                         <SelectTrigger className="w-full">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {SERVER_TYPES.map((type) => (
+                            {serverTypes.map((type) => (
                                 <SelectItem key={type} value={type}>
                                     {type}
                                 </SelectItem>
                             ))}
+                            {!serverTypes.includes(model.type) && (
+                                <SelectItem value={model.type}>
+                                    {t("config.serverTypeNotInstalled", { type: model.type })}
+                                </SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
@@ -188,6 +282,14 @@ export function ModelEditor({
                 </Label>
             </div>
 
+            <div className="space-y-1.5">
+                <Label>{t("config.modelModalities")}</Label>
+                <ModalityToggles
+                    value={model.modalities}
+                    onChange={(value) => onChange({ modalities: value })}
+                />
+            </div>
+
             <Collapsible>
                 <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                     <ChevronDown aria-hidden="true" className="size-3.5" />
@@ -209,11 +311,6 @@ export function ModelEditor({
                         value={model.effort}
                         onChange={(value) => onChange({ effort: value })}
                     />
-                    <JsonField
-                        label={t("config.modelModalities")}
-                        value={model.modalities}
-                        onChange={(value) => onChange({ modalities: value })}
-                    />
                     <div className="grid gap-3 sm:grid-cols-2">
                         <CapabilityField
                             label={t("config.supportsThinking")}
@@ -225,7 +322,45 @@ export function ModelEditor({
                             value={model.runtimeProps}
                             onChange={(value) => onChange({ runtimeProps: value })}
                         />
+                        <CapabilityField
+                            label={t("config.tools")}
+                            hint={t("config.toolsHint")}
+                            value={model.tools}
+                            onChange={(value) => onChange({ tools: value })}
+                        />
+                        <CapabilityField
+                            label={t("config.parallelToolCalls")}
+                            value={model.parallelToolCalls}
+                            onChange={(value) => onChange({ parallelToolCalls: value })}
+                        />
+                        <CapabilityField
+                            label={t("config.supportsToolChoice")}
+                            hint={t("config.supportsToolChoiceHint")}
+                            value={model.supportsToolChoice}
+                            onChange={(value) => onChange({ supportsToolChoice: value })}
+                        />
                     </div>
+                    <div className="space-y-1.5">
+                        <Label className="flex items-center gap-2 font-normal cursor-pointer">
+                            <Switch
+                                id={`${modelAnchorId(index)}-recover-tool-calls`}
+                                checked={model.recoverToolCalls}
+                                onCheckedChange={(checked) =>
+                                    onChange({ recoverToolCalls: checked })
+                                }
+                            />
+                            {t("config.recoverToolCalls")}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                            {t("config.recoverToolCallsHint")}
+                        </p>
+                    </div>
+                    <McpScopeField
+                        servers={mcpServers}
+                        value={model.mcpServers}
+                        onChange={(value) => onChange({ mcpServers: value })}
+                        toolsOff={model.tools === "off"}
+                    />
                 </CollapsibleContent>
             </Collapsible>
         </EditableCard>
@@ -237,15 +372,18 @@ export function ModelEditor({
  * omitted (derived from the backend type), "on"/"off" force it.
  *
  * @param label - Field label
+ * @param hint - Helper text shown under the select
  * @param value - Current tri-state value
  * @param onChange - Called with the next tri-state value
  */
 function CapabilityField({
     label,
+    hint,
     value,
     onChange,
 }: {
     label: string;
+    hint?: string;
     value: Capability;
     onChange: (value: Capability) => void;
 }) {
@@ -265,6 +403,7 @@ function CapabilityField({
                     <SelectItem value="off">{t("config.capabilityOff")}</SelectItem>
                 </SelectContent>
             </Select>
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
     );
 }

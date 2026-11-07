@@ -1,5 +1,8 @@
+import { getTranslator } from "@/lib/i18n";
 import { buildExport, remapConversationIds } from "@/lib/storage/io";
 import { toLlamaCppExport } from "@/lib/storage/llamacpp";
+import { toMarkdownExport } from "@/lib/storage/markdown";
+import { toOpenAiExport } from "@/lib/storage/openai";
 import { readConversation, writeConversationNow } from "@/lib/storage/persistence";
 import { conversationsStore, getMeta, upsertMeta } from "@/lib/stores/conversations";
 import { settingsStore, updateSettings } from "@/lib/stores/settings";
@@ -74,6 +77,34 @@ export async function exportConversationsLlamaCpp(ids: string[]): Promise<unknow
 }
 
 /**
+ * Build a markdown document of the given conversations, limited to the branch
+ * shown on screen. Speaker headings follow the active UI language.
+ *
+ * @param ids - Conversation ids to include
+ * @returns The markdown text
+ */
+export async function exportConversationsMarkdown(ids: string[]): Promise<string> {
+    const prompts = getTranslator("prompts");
+
+    return toMarkdownExport(await loadFullConversations(ids), {
+        user: prompts("speakerUser"),
+        assistant: prompts("speakerAssistant"),
+        untitled: getTranslator("sidebar")("untitled"),
+    });
+}
+
+/**
+ * Build OpenAI chat-format JSON Lines of the given conversations, one line per
+ * conversation with the messages of its active branch.
+ *
+ * @param ids - Conversation ids to include
+ * @returns The JSONL text
+ */
+export async function exportConversationsOpenAi(ids: string[]): Promise<string> {
+    return toOpenAiExport(await loadFullConversations(ids));
+}
+
+/**
  * Build an export file with all conversations and, optionally, the settings.
  *
  * @param options - What to include beyond conversations
@@ -123,18 +154,30 @@ export async function applyImport(
 }
 
 /**
+ * Trigger a browser download of a text payload.
+ *
+ * @param filename - Suggested file name
+ * @param text - File content
+ * @param type - MIME type of the file
+ */
+export function downloadText(filename: string, text: string, type: string): void {
+    if (typeof document === "undefined") return;
+
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const anchor = document.createElement("a");
+
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+}
+
+/**
  * Trigger a browser download of a JSON payload.
  *
  * @param filename - Suggested file name
  * @param data - JSON-serializable value
  */
 export function downloadJson(filename: string, data: unknown): void {
-    if (typeof document === "undefined") return;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadText(filename, JSON.stringify(data, null, 2), "application/json");
 }

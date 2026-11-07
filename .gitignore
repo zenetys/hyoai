@@ -5,4 +5,12 @@ public/config.json
 node_modules/
 .next/
 /out/
+/dist/
 .env
+desktop/build-exe.rsp
+desktop/build-setup.rsp
+desktop/setup/BuildInfo.g.cs
+
+# Build-time plugins: drop a folder here (see plugins/README.md)
+/plugins/*
+!/plugins/README.md

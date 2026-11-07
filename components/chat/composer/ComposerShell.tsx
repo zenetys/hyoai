@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
 import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
+import { ComposerImageTools } from "@/components/chat/composer/ComposerImageTools";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,6 +15,7 @@ import { useCompactFit } from "@/hooks/useCompactFit";
 import { useFlip } from "@/hooks/useFlip";
 import { useIsNarrow } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "@/lib/chat/handoff";
 import { settingsStore } from "@/lib/stores/settings";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
@@ -26,8 +28,10 @@ interface ComposerShellProps {
     disabledReason?: string | null;
     visionBlocked?: boolean;
     audioBlocked?: boolean;
+    imageMode?: boolean;
     onSystemMessage?: () => void;
     banner?: React.ReactNode;
+    notice?: React.ReactNode;
     reply?: React.ReactNode;
     rightControls?: React.ReactNode;
     placeholder?: string;
@@ -37,6 +41,7 @@ interface ComposerShellProps {
     focusSignal?: number;
     replyKey?: MessageQuote | null;
     history?: string[];
+    carryDraft?: boolean;
 }
 
 /**
@@ -51,6 +56,9 @@ interface ComposerShellProps {
  * bubble, so a compact composer stays small at rest without cramping a long
  * message.
  *
+ * With carryDraft, the handed-over draft is consumed once at mount, and the
+ * latest draft is kept in a ref so the next composer can pick it up.
+ *
  * @param onSubmit - Receives the trimmed text and attachments on send
  * @param onStop - Aborts the current generation while busy
  * @param busy - A generation is in progress (shows the stop button)
@@ -58,8 +66,10 @@ interface ComposerShellProps {
  * @param disabledReason - Tooltip explaining why sending is unavailable
  * @param visionBlocked - The model rejects images
  * @param audioBlocked - The model rejects audio
+ * @param imageMode - The active model generates images, so hide chat-only attachments and reasoning
  * @param onSystemMessage - Opens the system message dialog when provided
  * @param banner - Indicator rendered above the input, e.g. the system chip
+ * @param notice - Strip at the top of the input card, e.g. why the model cannot answer
  * @param reply - Quoted excerpt chip rendered just above the input
  * @param rightControls - Controls rendered left of the send button
  * @param placeholder - Textarea placeholder override
@@ -69,6 +79,7 @@ interface ComposerShellProps {
  * @param focusSignal - A nonce that refocuses the textarea on each change (e.g. dismissing a sidebar menu)
  * @param replyKey - The pending reply quote; refocuses the textarea when a new reply is set
  * @param history - Past user messages (newest first) for arrow-up recall
+ * @param carryDraft - Hand the unsent draft over to the composer that replaces this one when the compare opens or closes, and start from the one handed over
  */
 export function ComposerShell({
     onSubmit,
@@ -78,8 +89,10 @@ export function ComposerShell({
     disabledReason,
     visionBlocked = false,
     audioBlocked = false,
+    imageMode = false,
     onSystemMessage,
     banner,
+    notice,
     reply,
     rightControls,
     placeholder,
@@ -89,10 +102,13 @@ export function ComposerShell({
     focusSignal,
     replyKey,
     history,
+    carryDraft = false,
 }: ComposerShellProps) {
     const t = useTranslations("composer");
-    const [text, setText] = useState("");
-    const att = useAttachments({ visionBlocked, audioBlocked });
+    const [handoff] = useState(() => (carryDraft ? peekDraft() : null));
+    const [text, setText] = useState(handoff?.text ?? "");
+    const att = useAttachments({ visionBlocked, audioBlocked, initial: handoff?.attachments });
+    const draftRef = useRef<ComposerDraft>({ text: "", attachments: [] });
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const boxRef = useRef<HTMLDivElement>(null);
     const rowRef = useRef<HTMLDivElement>(null);
@@ -121,6 +137,19 @@ export function ComposerShell({
     useEffect(() => {
         if (autoFocus) focusInput();
     }, [autoFocus, focusInput]);
+
+    useEffect(() => {
+        if (handoff) clearDraft();
+    }, [handoff]);
+
+    useEffect(() => {
+        draftRef.current = { text, attachments: att.attachments };
+    });
+
+    useEffect(
+        () => (carryDraft ? registerDraftSource(() => draftRef.current) : undefined),
+        [carryDraft],
+    );
 
     useEffect(() => {
         if (focusKey === undefined || focusKey === lastFocusKey.current) return;
@@ -154,7 +183,15 @@ export function ComposerShell({
         el.style.height = `${el.scrollHeight}px`;
     }, [text]);
 
-    const hasInput = Boolean(text.trim()) || att.attachments.length > 0;
+    // Image models take a text prompt only; drop attachments left over from a
+    // chat model when the selector moves to an image model.
+    const attachmentCount = att.attachments.length;
+    const setAttachments = att.setAttachments;
+    useEffect(() => {
+        if (imageMode && attachmentCount > 0) setAttachments([]);
+    }, [imageMode, attachmentCount, setAttachments]);
+
+    const hasInput = Boolean(text.trim()) || (!imageMode && att.attachments.length > 0);
     const canSend = ready && !busy && hasInput;
 
     const submit = () => {
@@ -263,7 +300,7 @@ export function ComposerShell({
                 setText(event.target.value);
             }}
             onKeyDown={handleKeyDown}
-            onPaste={att.handlePaste}
+            onPaste={imageMode ? undefined : att.handlePaste}
             placeholder={placeholder ?? t("placeholder")}
             rows={1}
             className={cn(
@@ -276,11 +313,13 @@ export function ComposerShell({
     return (
         <div
             className={wrapperClassName}
-            onDrop={handleDrop}
+            onDrop={imageMode ? (event) => event.preventDefault() : handleDrop}
             onDragOver={(event) => event.preventDefault()}
         >
-            {banner}
-            <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
+            {!imageMode && banner}
+            {!imageMode && (
+                <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
+            )}
             <div
                 ref={boxRef}
                 className={cn(
@@ -288,7 +327,17 @@ export function ComposerShell({
                     compact ? "p-1.5" : "p-2",
                 )}
             >
-                {reply}
+                {!imageMode && notice && (
+                    <div
+                        className={cn(
+                            "overflow-hidden border-b border-input/60",
+                            compact ? "-mx-1.5 -mt-1.5 mb-1.5" : "-mx-2 -mt-2 mb-2",
+                        )}
+                    >
+                        {notice}
+                    </div>
+                )}
+                {!imageMode && reply}
                 <div
                     ref={rowRef}
                     className={cn(
@@ -296,7 +345,14 @@ export function ComposerShell({
                         compactRow ? "gap-1" : "flex-wrap gap-x-1.5",
                     )}
                 >
-                    {attachmentMenu}
+                    {!imageMode && attachmentMenu}
+                    {!imageMode && (
+                        <ComposerImageTools
+                            blocked={visionBlocked}
+                            onImages={att.addImageFiles}
+                            onAdded={focusInput}
+                        />
+                    )}
                     {textareaEl}
                     <div
                         className={cn(

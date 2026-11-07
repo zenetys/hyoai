@@ -1,6 +1,6 @@
 import { getTranslator } from "@/lib/i18n";
 import { condenseDocumentText } from "@/lib/tabular";
-import type { ApiContentPart, ApiMessage } from "@/types/api";
+import type { ApiContentPart, ApiMessage, ApiToolDefinition } from "@/types/api";
 import type { Attachment } from "@/types/chat";
 import type { ChunkingStrategy } from "@/types/settings";
 
@@ -36,12 +36,24 @@ export function estimateTokens(text: string): number {
  * their token cost is opaque and they are never chunked.
  *
  * @param messages - Messages to measure
+ * @param tools - Tool definitions sent with the request, counted by their JSON schema
  * @returns Approximate token count
  */
-export function estimateMessagesTokens(messages: ApiMessage[]): number {
-    let total = 0;
+export function estimateMessagesTokens(
+    messages: ApiMessage[],
+    tools?: ApiToolDefinition[],
+): number {
+    let total = tools && tools.length > 0 ? estimateTokens(JSON.stringify(tools)) : 0;
     for (const message of messages) {
         total += 4;
+        if (message.role === "assistant") {
+            if (message.reasoning_content) total += estimateTokens(message.reasoning_content);
+            if (message.tool_calls) {
+                for (const call of message.tool_calls) {
+                    total += estimateTokens(call.function.name + call.function.arguments) + 8;
+                }
+            }
+        }
         if (typeof message.content === "string") {
             total += estimateTokens(message.content);
             continue;

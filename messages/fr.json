@@ -1,6 +1,6 @@
 {
     "common": {
-        "appName": "HYOAI",
+        "appName": "ZALEANAI",
         "cancel": "Annuler",
         "save": "Enregistrer",
         "close": "Fermer",
@@ -10,7 +10,8 @@
         "copyLink": "Copier le lien",
         "linkCopied": "Lien copié",
         "edit": "Modifier",
-        "loading": "Chargement"
+        "loading": "Chargement",
+        "downloadSvg": "Télécharger le SVG"
     },
     "sidebar": {
         "newChat": "Nouvelle conversation",
@@ -31,7 +32,9 @@
         "stopGeneration": "Arrêter la génération",
         "generationDone": "Génération terminée, cliquez pour voir",
         "deleteTitle": "Supprimer la conversation",
-        "deleteDescription": "Cette conversation et toutes ses branches seront définitivement supprimées."
+        "deleteDescription": "Cette conversation et toutes ses branches seront définitivement supprimées.",
+        "awaitingApproval": "En attente de ton approbation",
+        "runningTool": "Exécution d'un outil…"
     },
     "header": {
         "selectModel": "Choisir un modèle",
@@ -61,11 +64,17 @@
         "configMissing": "Aucun modèle disponible : vérifie le fichier config.json déployé avec l'application.",
         "modelUnavailable": "Modèle injoignable : vérifie que son endpoint est démarré et que CORS autorise cette origine.",
         "modelDisabled": "Modèle désactivé",
+        "modelUnknownType": "Aucun plugin installé ne gère le type « {type} ».",
+        "modelRequiresPin": "Ce type de serveur ne liste pas ses modèles : renseigne le champ « model » de l'entrée.",
         "reasoning": "Raisonnement",
         "thinking": "Réflexion",
         "thinkingDescription": "Peut réfléchir aux tâches plus complexes",
         "effortDescription": "Un effort plus élevé donne des réponses plus complètes mais plus lentes",
-        "default": "Défaut"
+        "default": "Défaut",
+        "effortAuto": "Auto",
+        "effortHigh": "Élevé",
+        "effortLow": "Faible",
+        "effortMedium": "Moyen"
     },
     "chat": {
         "emptyTitle": "Discute avec les modèles {name}",
@@ -75,10 +84,8 @@
         "thinking": "Réflexion en cours",
         "search": "Recherche",
         "searching": "Recherche en cours",
-        "subQueries": "Sous-requêtes",
-        "retrievedDense": "Recherche dense ({count})",
-        "retrievedSparse": "Recherche lexicale ({count})",
-        "rerankedDocs": "Reclassement ({count})",
+        "activity": "Étapes",
+        "activityRunning": "Étapes en cours",
         "sources": "{count, plural, one {# source} other {# sources}}",
         "relevanceScore": "Score de pertinence",
         "copyMessage": "Copier le message",
@@ -92,15 +99,8 @@
         "forkSuccess": "Nouvelle conversation créée à partir de ce message",
         "statsReading": "Lecture (traitement du prompt)",
         "statsGeneration": "Génération (sortie de tokens)",
-        "statsPipeline": "Pipeline (latence par étape)",
+        "statsStages": "Étapes (durée de chaque étape)",
         "statsStorage": "Stockage (cette conversation · total)",
-        "pipelineIntent": "Intention",
-        "pipelineDecomposition": "Décomposition",
-        "pipelineEmbedding": "Embedding",
-        "pipelineVectorSearch": "Recherche vectorielle",
-        "pipelineReranking": "Reclassement",
-        "pipelineGeneration": "Génération",
-        "pipelineTotal": "Total",
         "feedbackUp": "Bonne réponse",
         "feedbackDown": "Mauvaise réponse",
         "feedbackCommentPlaceholder": "Ajoute un commentaire (facultatif)...",
@@ -123,7 +123,43 @@
         "errorNetwork": "Impossible de joindre le modèle. Vérifie que son endpoint est démarré et que CORS autorise cette origine.",
         "errorAuth": "Authentification refusée : vérifie la clé API du serveur.",
         "errorHttp": "Le serveur a renvoyé une erreur : {message}",
-        "errorStream": "Le flux a été interrompu : {message}"
+        "errorStream": "Le flux a été interrompu : {message}",
+        "errorTruncated": "Le serveur a fermé la connexion avant la fin de la réponse. Régénère la réponse.",
+        "errorCallCutOff": "La réponse a atteint la limite de tokens pendant que le modèle écrivait un appel d'outil, qui a donc été abandonné. Augmente le nombre maximal de tokens et régénère la réponse.",
+        "errorCallMissing": "Le serveur a annoncé un appel d'outil sans l'envoyer. Régénère la réponse, ou vérifie le parseur d'appels d'outils du serveur.",
+        "errorEmptyAnswer": "Le modèle a terminé son tour sans écrire de réponse après les résultats des outils. Régénère la réponse.",
+        "errorReasoningOnly": "Après les résultats des outils, le modèle n'a fait que raisonner sans écrire de réponse. Régénère la réponse, ou augmente le nombre maximal de tokens si le raisonnement les consomme tous.",
+        "errorTimeout": "Le serveur n'a pas commencé à répondre à temps et semble injoignable.",
+        "toolCalls": "{count, plural, one {# appel d'outil} other {# appels d'outils}}",
+        "toolStatusPending": "En attente d'approbation",
+        "toolStatusRunning": "En cours…",
+        "toolStatusDone": "Terminé",
+        "toolStatusError": "Échec",
+        "toolStatusDenied": "Refusé",
+        "toolStatusCancelled": "Annulé",
+        "toolStatusNotRun": "Non exécuté",
+        "toolArguments": "Arguments",
+        "toolResult": "Résultat",
+        "toolTruncated": "Tronqué : {omitted} caractères n'ont pas été envoyés au modèle",
+        "toolPreparing": "Préparation de {name}…",
+        "toolApprovalTitle": "Autoriser {tool} à s'exécuter ?",
+        "toolNoArguments": "Aucun argument",
+        "toolApprovalDescription": "{provider} recevra les arguments ci-dessous.",
+        "toolApprovalNoArguments": "{provider} ne recevra aucun argument.",
+        "toolApprovalName": "Nom de l'outil : {name}",
+        "toolApprovalReadOnly": "Déclaré en lecture seule par son fournisseur",
+        "toolAllowOnce": "Autoriser une fois",
+        "toolAllowAlways": "Toujours autoriser",
+        "toolDeny": "Refuser",
+        "toolStepLimit": "Arrêt après {steps} étapes.",
+        "toolInterrupted": "Certains appels d'outils n'ont pas été exécutés.",
+        "toolContinue": "Continuer",
+        "toolAnswerNow": "Répondre sans outils",
+        "flowStepStage": "Étape {step}",
+        "imageBlocked": "Image non chargée : {url}",
+        "toolProviderFailed": "Les outils de {provider} sont indisponibles pour cette réponse.",
+        "errorToolsRejected": "Le serveur a refusé les outils ({message}). Lance llama.cpp avec --jinja ou vLLM avec --enable-auto-tool-choice, ou mets « tools » à false sur cette entrée.",
+        "generatedImage": "Image générée"
     },
     "composer": {
         "placeholder": "Envoie un message...",
@@ -146,7 +182,62 @@
         "systemMessageDescription": "Envoyé en tête de cette conversation, remplace le prompt système global des paramètres.",
         "systemMessagePlaceholder": "Tu es un assistant utile...",
         "enterHint": "<kbd>Entrée</kbd> pour envoyer, <kbd>Maj + Entrée</kbd> pour une nouvelle ligne",
-        "disabledNoModel": "Aucun modèle disponible (config.json)"
+        "disabledNoModel": "Aucun modèle disponible (config.json)",
+        "tools": "Outils",
+        "toolsEnabledState": "Activés pour cette conversation",
+        "toolsDisabledState": "Désactivés pour cette conversation",
+        "toolsMaster": "Outils pour cette conversation",
+        "toolsProviders": "Fournisseurs",
+        "toolsGlobal": "Réglage global",
+        "toolsProviderSwitch": "Proposer les outils de {provider} aux modèles",
+        "toolsCount": "{count, plural, one {# outil} other {# outils}}",
+        "toolsCountHidden": "{count, plural, one {# outil} other {# outils}} · {hidden, plural, one {# masqué} other {# masqués}}",
+        "toolsListFailed": "Impossible de lister les outils",
+        "toolsPending": "Un appel attend ton accord dans la conversation.",
+        "toolsManage": "Gérer dans les réglages",
+        "toolsUnsupported": "Ce modèle ne gère pas les outils.",
+        "toolsOffNotice": "Cette conversation a utilisé des outils, désactivés pour l'instant.",
+        "toolsOffEnable": "Activer",
+        "toolsMcp": "MCP",
+        "toolsOutOfScope": "Non proposé à ce modèle",
+        "toolsRetry": "Réessayer",
+        "toolsRetryLabel": "Réessayer la connexion à {provider}",
+        "toolsCorsDetail": "Le navigateur a bloqué la requête : le serveur est peut-être arrêté, ou il n'autorise pas cette page. Le détail est dans les réglages.",
+        "toolsLocalNetworkDetail": "Le serveur est sur le réseau local : autorise ce site à y accéder dans le navigateur, puis réessaie. Le détail est dans les réglages.",
+        "camera": "Prendre une photo",
+        "cameraBusy": "La caméra est utilisée par une autre application.",
+        "cameraCapture": "Prendre la photo",
+        "cameraDescription": "La photo est ajoutée à ton message ; tu peux encore écrire du texte avant l'envoi.",
+        "cameraFromDevice": "Choisir sur l'appareil",
+        "cameraInsecure": "La caméra nécessite HTTPS ou localhost. Choisis plutôt une photo sur ton appareil.",
+        "cameraPermission": "L'accès à la caméra a été refusé. Autorise-le dans les réglages du navigateur, ou choisis une photo sur ton appareil.",
+        "cameraRetake": "Reprendre",
+        "cameraStarting": "Démarrage de la caméra...",
+        "cameraSwitch": "Changer de caméra",
+        "cameraTitle": "Caméra",
+        "cameraTryAgain": "Réessayer",
+        "cameraUnavailable": "Aucune caméra n'a été trouvée sur cet appareil.",
+        "cameraUse": "Utiliser la photo",
+        "draw": "Dessiner",
+        "drawClear": "Effacer",
+        "drawColor": "Couleur",
+        "drawColorBlack": "Noir",
+        "drawColorBlue": "Bleu",
+        "drawColorGreen": "Vert",
+        "drawColorRed": "Rouge",
+        "drawDescription": "Écris ou dessine, puis ajoute le résultat à ton message. La zone blanche est ce qui sera envoyé.",
+        "drawEmpty": "Dessine ou écris d'abord quelque chose",
+        "drawEraser": "Gomme",
+        "drawExportFailed": "Impossible d'exporter le dessin",
+        "drawGrid": "Afficher ou masquer la grille",
+        "drawPen": "Stylo",
+        "drawRedo": "Rétablir",
+        "drawThickness": "Épaisseur du trait",
+        "drawTitle": "Tableau blanc",
+        "drawUndo": "Annuler",
+        "drawUse": "Ajouter au message",
+        "imagePrompt": "Décris l'image à générer...",
+        "thinkingEffort": "Effort de réflexion"
     },
     "contextBar": {
         "context": "Contexte : {used}/{total} ({percent} %)",
@@ -184,7 +275,26 @@
         "maxPanes": "Maximum de panneaux atteint",
         "removePane": "Fermer le panneau",
         "newConversation": "Nouvelle conversation",
-        "stopGeneration": "Arrêter la génération"
+        "stopGeneration": "Arrêter la génération",
+        "sendingTo": "{count, plural, one {Envoi à # panneau sur {total}} other {Envoi à # panneaux sur {total}}}",
+        "skippedList": "Ignorés : {names}",
+        "noTarget": "Aucun panneau ne peut recevoir ce message pour le moment.",
+        "closedRunning": "La réponse continue de se générer en arrière-plan. Tu la retrouveras dans la barre latérale.",
+        "awaitingApproval": "Un appel d'outil attend ton approbation dans ce panneau",
+        "closedAwaitingApproval": "Cette réponse attend ton approbation d'un appel d'outil. Ouvre-la depuis la barre latérale pour décider."
+    },
+    "availability": {
+        "unavailable": "Indisponible",
+        "unreachable": "Injoignable",
+        "checking": "Vérification…",
+        "retry": "Réessayer",
+        "reasonMissing": "Ce modèle n'est plus dans la configuration. Choisis-en un autre.",
+        "reasonDisabled": "Ce modèle est désactivé dans la configuration.",
+        "reasonNotListed": "Le serveur ne propose plus ce modèle.",
+        "reasonUnreachable": "Le serveur ne répond pas. Le modèle redevient disponible dès qu'il est joignable.",
+        "reasonTimeout": "Le serveur n'a pas commencé à répondre à temps.",
+        "skippedHint": "Ce panneau est ignoré par l'envoi groupé tant que son modèle est indisponible.",
+        "keptHint": "La désactivation automatique est coupée : ce modèle reçoit quand même les messages."
     },
     "modelInfo": {
         "title": "Informations du modèle",
@@ -216,7 +326,9 @@
         "parallelSlots": "Slots parallèles",
         "buildInfo": "Build",
         "chatTemplate": "Template de chat",
-        "tokensUnit": "tokens"
+        "tokensUnit": "tokens",
+        "toolCalling": "Appel d'outils",
+        "toolCallingDetected": "Oui (détecté via le modèle de chat)"
     },
     "settings": {
         "title": "Paramètres",
@@ -226,7 +338,8 @@
             "general": "Général",
             "generation": "Génération",
             "data": "Données",
-            "config": "Config"
+            "config": "Config",
+            "tools": "Outils"
         },
         "general": {
             "appearanceTitle": "Apparence",
@@ -245,7 +358,7 @@
             "expandGroup": "Déplier après la réponse",
             "expandReasoning": "Déplier le raisonnement",
             "expandReasoningDescription": "Garde le bloc de réflexion ouvert une fois la réponse terminée.",
-            "expandSearch": "Déplier la recherche",
+            "expandSearch": "Déplier la recherche et l'activité des outils",
             "expandSearchDescription": "Garde le panneau de recherche ouvert une fois la réponse terminée.",
             "expandSources": "Déplier les sources",
             "expandSourcesDescription": "Affiche les sources dépliées sous la réponse.",
@@ -263,7 +376,13 @@
             "imageMaxDimensionDescription": "Les images sont réduites avant envoi et stockage local.",
             "visionRequired": "Nécessite un modèle de vision",
             "mobileUnavailable": "Non disponible sur mobile",
-            "narrowUnavailable": "Non disponible à cette largeur de fenêtre"
+            "narrowUnavailable": "Non disponible à cette largeur de fenêtre",
+            "availabilityTitle": "Disponibilité des modèles",
+            "availabilityDescription": "Ce que fait l'application quand un modèle ne répond plus.",
+            "autoDisable": "Désactiver automatiquement les modèles indisponibles",
+            "autoDisableDescription": "Un modèle qui ne répond plus est grisé et ignoré par l'envoi groupé ; il revient dès que son serveur répond. Coupé : il reste sélectionnable et l'erreur s'affiche à l'envoi.",
+            "connectCheck": "Vérifier un serveur silencieux après (secondes)",
+            "connectCheckDescription": "Si un serveur n'a rien renvoyé après ce délai, l'application vérifie qu'il est joignable et abandonne la requête s'il ne l'est pas. Un serveur lent mais joignable n'est jamais interrompu. 0 : jamais."
         },
         "sampling": {
             "description": "Les champs vides utilisent les valeurs par défaut du serveur.",
@@ -319,13 +438,16 @@
         },
         "data": {
             "exportTitle": "Exporter",
-            "exportDescription": "Télécharge tes conversations en JSON, au format natif ou compatible avec l'interface web llama.cpp.",
+            "exportDescription": "Télécharge tes conversations en JSON natif, en JSONL au format OpenAI, en Markdown ou au format de l'interface web llama.cpp.",
             "exportOpen": "Exporter des conversations...",
             "exportDialogTitle": "Exporter des conversations",
             "exportDialogDescription": "Choisis les conversations à inclure dans le fichier téléchargé.",
             "exportFormat": "Format",
             "exportFormatNative": "HYOAI",
             "exportFormatLlamaCpp": "llama.cpp webui",
+            "exportFormatMarkdown": "Markdown",
+            "exportFormatOpenAi": "OpenAI (JSONL)",
+            "exportBranchOnly": "Seule la branche affichée de chaque conversation est exportée, sans le raisonnement des modèles.",
             "selectAll": "{count}/{total} sélectionnées",
             "exportSelected": "Exporter ({count})",
             "exporting": "Export en cours...",
@@ -381,6 +503,7 @@
             "baseUrlHint": "Adresse de base du serveur du modèle.",
             "serverType": "Type de serveur",
             "serverTypeHint": "Type de backend ; ajuste le format des requêtes.",
+            "serverTypeNotInstalled": "{type} (non installé)",
             "pinnedModel": "Identifiant du modèle",
             "pinnedModelHint": "Identifiant technique envoyé au serveur.",
             "pinnedModelPlaceholder": "Vide : découverte via /v1/models",
@@ -443,7 +566,8 @@
                 "general": "Général",
                 "models": "Modèles",
                 "effort": "Effort",
-                "integrations": "Intégrations"
+                "integrations": "Intégrations",
+                "mcp": "Serveurs MCP"
             },
             "itemAppName": "Nom de l'application",
             "itemDefaultModel": "Modèle par défaut",
@@ -453,11 +577,165 @@
             "itemModel": "Modèle : {name}",
             "itemLevel": "Niveau d'effort : {name}",
             "itemIntegration": "Intégration : {name}",
+            "itemMcpServer": "Serveur MCP : {name}",
             "itemRemoved": "Restaurer : {name}",
             "mode": {
                 "added": "ajouté",
                 "modified": "modifié",
                 "removed": "supprimé"
+            },
+            "tools": "Appel d'outils",
+            "toolsHint": "Auto : actif seulement si le modèle de chat llama.cpp gère les outils. vLLM exige --enable-auto-tool-choice --tool-call-parser.",
+            "parallelToolCalls": "Appels d'outils parallèles",
+            "recoverToolCalls": "Récupérer les appels d'outils écrits en texte",
+            "recoverToolCallsHint": "Pour les serveurs dont le parseur laisse un appel fuiter dans la réponse. Un appel complet en fin de texte s'exécute comme les autres, après ton accord.",
+            "supportsToolChoice": "Envoyer tool_choice",
+            "supportsToolChoiceHint": "Désactivé pour les serveurs qui refusent ce champ (ex. Ollama).",
+            "mcpScope": "Serveurs MCP",
+            "mcpScopeHint": "Quels serveurs du catalogue ce modèle peut utiliser.",
+            "mcpScopeAll": "Tous les serveurs activés",
+            "mcpScopeNone": "Aucun serveur n'est encore configuré. Ajoutes-en un dans l'onglet Outils.",
+            "mcpScopeMissing": "{id} (absent du catalogue)",
+            "mcpScopeOff": "L'appel d'outils est désactivé pour ce modèle.",
+            "modalityAudio": "Audio",
+            "modalityAudioDescription": "Autoriser les pièces jointes audio.",
+            "modalityHint": "Les deux sont activés par défaut ; désactivez uniquement ce que le modèle ne prend pas en charge.",
+            "modalityImage": "Images (vision)",
+            "modalityImageDescription": "Autoriser la caméra, le tableau blanc et les pièces jointes image."
+        },
+        "tools": {
+            "title": "Appel d'outils",
+            "description": "Permet aux modèles d'appeler des outils pendant une réponse. Chaque appel est affiché et demande ton accord, sauf si tu l'autorises.",
+            "enabledByDefault": "Activer les outils dans les nouvelles conversations",
+            "enabledByDefaultDescription": "Le bouton du champ de saisie reste réglable par conversation.",
+            "maxSteps": "Étapes maximales par réponse",
+            "maxStepsDescription": "Requêtes au modèle dans une réponse avant de demander de continuer (1 à 50).",
+            "defaultPolicy": "Approbation par défaut",
+            "policyAsk": "Demander à chaque fois",
+            "policyAllow": "Toujours autoriser",
+            "policyHint": "Masqué au modèle : l'outil n'est pas proposé, le modèle ne peut donc pas le demander.",
+            "policyDeny": "Masqué au modèle",
+            "defaultPolicyWarning": "Les outils s'exécuteront sans demander. Un résultat d'outil peut contenir des instructions qui orientent le modèle.",
+            "maxResultChars": "Taille maximale d'un résultat",
+            "maxResultCharsDescription": "Caractères d'un résultat envoyés au modèle ; le reste est coupé.",
+            "providers": "Fournisseurs d'outils",
+            "noProviders": "Aucun fournisseur d'outils n'est installé.",
+            "listFailed": "Les outils de ce fournisseur n'ont pas pu être listés.",
+            "providerEnabled": "Proposer les outils de {provider} aux modèles",
+            "resetApprovals": "Réinitialiser les autorisations",
+            "resetApprovalsDone": "Chaque outil redemandera.",
+            "mcp": {
+                "title": "Serveurs MCP",
+                "description": "Un serveur MCP donne des outils de plus aux modèles. Ses appels demandent ton accord comme les autres outils, sauf si tu les autorises.",
+                "storedHere": "Les jetons et les en-têtes restent dans ce navigateur comme les clés d'API, et sont envoyés au serveur à chaque requête.",
+                "none": "Aucun serveur MCP n'est configuré.",
+                "add": "Ajouter un serveur",
+                "newServer": "Nouveau serveur",
+                "enable": "Proposer les outils de {name} aux modèles",
+                "edit": "Modifier {name}",
+                "remove": "Supprimer {name}",
+                "removedDone": "{name} supprimé.",
+                "restoredDone": "{name} rétabli.",
+                "undo": "Annuler",
+                "save": "Enregistrer",
+                "cancel": "Annuler",
+                "saved": "{name} enregistré.",
+                "saveFailed": "La modification a été refusée : {detail}",
+                "refresh": "Actualiser",
+                "refreshLabel": "Actualiser {name}",
+                "resetServer": "Revenir à config.json",
+                "resetServerDone": "{name} est revenu à config.json.",
+                "origin": {
+                    "file": "config.json",
+                    "modified": "Modifié ici",
+                    "local": "Ajouté ici"
+                },
+                "removedTitle": "Retirés de config.json",
+                "restore": "Rétablir {name}",
+                "fields": {
+                    "label": "Nom",
+                    "labelPlaceholder": "Affiché dans la liste",
+                    "id": "Identifiant",
+                    "idHint": "Lettres, chiffres, - et _ (30 au plus). Il ne change plus une fois enregistré.",
+                    "url": "Adresse",
+                    "urlHint": "Le point d'accès MCP, ou un chemin sur ce site.",
+                    "transport": "Transport",
+                    "transportAuto": "Automatique",
+                    "transportHttp": "Streamable HTTP",
+                    "transportSse": "SSE",
+                    "transportHint": "Automatique : Streamable HTTP, puis SSE si le serveur ne le connaît pas.",
+                    "token": "Jeton Bearer",
+                    "tokenHint": "Envoyé en Authorization: Bearer. Laisse vide si le serveur n'en demande pas.",
+                    "showToken": "Afficher le jeton",
+                    "hideToken": "Masquer le jeton",
+                    "copyToken": "Copier le jeton",
+                    "headers": "Autres en-têtes (JSON, non masqués)"
+                },
+                "problems": {
+                    "id": "L'identifiant doit compter de 1 à 30 lettres, chiffres, - ou _.",
+                    "idTaken": "Un autre serveur utilise déjà cet identifiant.",
+                    "url": "L'adresse doit être une URL http(s) ou un chemin commençant par /.",
+                    "headers": "Les en-têtes doivent être un objet JSON dont toutes les valeurs sont du texte."
+                },
+                "tools": "Outils ({count})",
+                "toolsLoading": "Liste des outils en cours…",
+                "toolsFailed": "Les outils n'ont pas pu être listés.",
+                "listError": "Le serveur est connecté, mais il n'a pas listé ses outils correctement.",
+                "noTools": "Ce serveur ne liste aucun outil.",
+                "policy": "Autorisation pour {tool}",
+                "annotations": {
+                    "readOnly": "Lecture seule",
+                    "destructive": "Destructif",
+                    "openWorld": "Accès extérieur",
+                    "unverified": "déclaré par le serveur, non vérifié"
+                },
+                "corsHeaders": "Le serveur doit envoyer ces en-têtes, et lister dans Access-Control-Allow-Headers le nom de chaque en-tête configuré ici :",
+                "status": {
+                    "disabled": {
+                        "label": "Désactivé",
+                        "detail": "Ce serveur n'est pas proposé aux modèles."
+                    },
+                    "idle": {
+                        "label": "Pas connecté",
+                        "detail": "Le serveur se connecte quand ses outils servent pour la première fois."
+                    },
+                    "connecting": {
+                        "label": "Connexion…",
+                        "detail": "En attente de la réponse du serveur."
+                    },
+                    "connected": {
+                        "label": "Connecté",
+                        "detail": "{count, plural, one {# outil proposé} other {# outils proposés}}."
+                    },
+                    "cors": {
+                        "label": "CORS bloqué",
+                        "detail": "Le navigateur a bloqué la requête sans dire pourquoi : le serveur est peut-être arrêté, ou, sur une autre origine, il doit autoriser cette page et exposer les en-têtes ci-dessous."
+                    },
+                    "localNetwork": {
+                        "label": "Réseau local",
+                        "detail": "Le serveur est sur une adresse locale. Autorise ce site à accéder au réseau local dans le navigateur, puis actualise. Si le navigateur l'autorise déjà, le serveur doit aussi envoyer les en-têtes ci-dessous."
+                    },
+                    "unauthorized": {
+                        "label": "Authentification",
+                        "detail": "Le serveur a refusé les identifiants (HTTP {status}). Vérifie le jeton ou les en-têtes."
+                    },
+                    "notFound": {
+                        "label": "Introuvable",
+                        "detail": "Le serveur a répondu HTTP {status} : vérifie l'adresse."
+                    },
+                    "timeout": {
+                        "label": "Pas de réponse",
+                        "detail": "Le serveur n'a pas répondu à temps."
+                    },
+                    "network": {
+                        "label": "Injoignable",
+                        "detail": "Le serveur est injoignable ou a fermé la connexion."
+                    },
+                    "protocol": {
+                        "label": "Erreur de protocole",
+                        "detail": "Le serveur a répondu, mais pas comme le ferait un serveur MCP."
+                    }
+                }
             }
         }
     },
@@ -482,6 +760,21 @@
         "runningSummaryLabel": "Résumé cumulatif des parties précédentes :\n\n{summary}",
         "partialAnalysisHeader": "--- Analyse de la partie {index} ---",
         "synthesisUserTemplate": "Demande de l'utilisateur :\n{demand}\n\nAnalyses partielles :\n\n{body}",
-        "quoteReply": "{content}\n\nEn réponse à ce passage :\n\n{quoted}"
+        "quoteReply": "{content}\n\nEn réponse à ce passage :\n\n{quoted}",
+        "toolDenied": "L'utilisateur a refusé cet appel d'outil. Ne le relance pas ; poursuis sans.",
+        "toolCancelled": "Cet appel d'outil a été annulé avant son exécution.",
+        "toolSkipped": "Non exécuté : la limite d'étapes est atteinte. Réponds avec les informations dont tu disposes.",
+        "toolUnknown": "Outil « {name} » inconnu. Utilise uniquement les outils fournis.",
+        "toolBadArguments": "Arguments invalides : {error}. Envoie un objet JSON conforme au schéma de l'outil.",
+        "toolFailed": "L'outil a échoué : {message}",
+        "toolTimeout": "L'outil n'a pas répondu en {seconds} s.",
+        "toolTruncated": "[Résultat tronqué : {omitted} caractères omis.]",
+        "toolTooMany": "Trop d'appels d'outils en une étape ; {max} au plus sont exécutés.",
+        "speakerTool": "Outil {name}",
+        "toolCallLine": "[a appelé {calls}]"
+    },
+    "tools": {
+        "clock": "Horloge",
+        "clockCurrentTime": "Heure actuelle"
     }
 }

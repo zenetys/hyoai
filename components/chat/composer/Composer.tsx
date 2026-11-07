@@ -3,15 +3,22 @@
 import { useTranslations } from "next-intl";
 
 import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
+import { ComposerReasoningControl } from "@/components/chat/composer/ComposerReasoningControl";
 import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
+import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
 import { SystemMessageChip } from "@/components/chat/composer/SystemMessageChip";
+import { ToolsOffNotice } from "@/components/chat/composer/ToolsOffNotice";
+import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
 import { ComposerModelSelector, PaneModelSelector } from "@/components/common/model/ModelSelector";
-import { usePendingReply, useStreamingStatus, useUserHistory } from "@/hooks/useActiveChat";
+import { useChatBusy, usePendingReply, useUserHistory } from "@/hooks/useActiveChat";
+import { useAutoDisable, useModelAvailability, useReasonText } from "@/hooks/useAvailability";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useStore } from "@/hooks/useStore";
+import { isEntryInactive } from "@/lib/chat/availability";
 import { useChatInstance } from "@/lib/chat/context";
 import { resolveModalityGate } from "@/lib/chat/modalities";
+import { isImageGenerationModel } from "@/lib/imageModels";
 import { settingsStore } from "@/lib/stores/settings";
 import { setSystemPromptOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
@@ -21,7 +28,8 @@ import { CHAT_WIDTH_CLASS } from "@/types/settings";
  * Message input for one conversation. Resolves the model from the active chat
  * instance, so it shows the global model selector for the single chat and the
  * pane selector inside a compare pane, while delegating the input mechanics
- * to the shared ComposerShell.
+ * to the shared ComposerShell. A model that cannot answer is greyed and blocked
+ * with its reason, and is never swapped for another one.
  *
  * @param home - Whether the composer is rendered on the home page, where the full
  *        app keeps a narrower centred composer under its welcome heading. A widget
@@ -33,20 +41,28 @@ export function Composer({ home = false }: { home?: boolean }) {
     const th = useTranslations("header");
     const tc = useTranslations("common");
     const chat = useChatInstance();
-    const status = useStreamingStatus();
+    const busy = useChatBusy();
     const history = useUserHistory();
     const pendingReply = usePendingReply();
     const chatWidth = useStore(settingsStore, (state) => state.settings.display.chatWidth);
     const focusNonce = useStore(uiStore, (state) => state.composerFocusNonce);
     const { entry, upstream, props, resolveFailed } = useResolvedModel();
 
+    const availability = useModelAvailability();
+    const autoDisable = useAutoDisable();
+    const reasonText = useReasonText();
+    const blocked =
+        availability.state === "unavailable" && isEntryInactive(availability, autoDisable)
+            ? availability
+            : null;
+
     const { visionBlocked, audioBlocked } = resolveModalityGate(entry, props);
+    const imageMode = isImageGenerationModel(upstream);
 
     const single = chat.controlsGlobalModel;
     const embed = useStore(uiStore, (state) => state.embed);
     const modelLocked = useStore(uiStore, (state) => state.embedModelLock);
 
-    const busy = status !== "idle";
     const hasModel = upstream !== null;
     const disabledReason = !entry
         ? t("disabledNoModel")
@@ -54,11 +70,14 @@ export function Composer({ home = false }: { home?: boolean }) {
           ? resolveFailed
               ? th("modelUnavailable")
               : tc("loading")
-          : null;
+          : blocked
+            ? reasonText(blocked)
+            : null;
 
     return (
         <div className="px-4 pb-4">
             <ComposerShell
+                carryDraft
                 wrapperClassName={cn(
                     "mx-auto",
                     CHAT_WIDTH_CLASS[home && !embed ? "medium" : chatWidth],
@@ -72,24 +91,39 @@ export function Composer({ home = false }: { home?: boolean }) {
                 onSubmit={(text, attachments) => void chat.sendMessage(text, attachments)}
                 onStop={chat.stopGeneration}
                 busy={busy}
-                ready={hasModel}
+                ready={hasModel && !blocked}
                 disabledReason={disabledReason}
                 visionBlocked={Boolean(visionBlocked)}
                 audioBlocked={Boolean(audioBlocked)}
+                imageMode={imageMode}
+                placeholder={imageMode ? t("imagePrompt") : undefined}
                 onSystemMessage={
                     chat.controlsGlobalModel ? () => setSystemPromptOpen(true) : undefined
                 }
-                banner={chat.controlsGlobalModel ? <SystemMessageChip /> : undefined}
-                rightControls={
+                notice={blocked ? <ModelUnavailable availability={blocked} /> : null}
+                banner={
                     <>
-                        <ChunkingControl />
-                        {!modelLocked &&
-                            (single ? (
-                                <ComposerModelSelector />
-                            ) : (
-                                <PaneModelSelector align="end" />
-                            ))}
+                        <ToolsOffNotice />
+                        {chat.controlsGlobalModel && <SystemMessageChip />}
                     </>
+                }
+                rightControls={
+                    imageMode ? (
+                        !modelLocked &&
+                        (single ? <ComposerModelSelector /> : <PaneModelSelector align="end" />)
+                    ) : (
+                        <>
+                            <ComposerReasoningControl />
+                            <ToolsToggle />
+                            <ChunkingControl />
+                            {!modelLocked &&
+                                (single ? (
+                                    <ComposerModelSelector />
+                                ) : (
+                                    <PaneModelSelector align="end" />
+                                ))}
+                        </>
+                    )
                 }
             />
         </div>
