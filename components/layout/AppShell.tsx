@@ -10,6 +10,7 @@ import { StorageWatcher } from "@/components/chat/view/StorageWatcher";
 import { CompareView } from "@/components/compare/CompareView";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { AppHeader } from "@/components/layout/header/AppHeader";
+import { NoticeBar } from "@/components/layout/NoticeBar";
 import { AppSidebar } from "@/components/layout/sidebar/AppSidebar";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -72,43 +73,46 @@ export function AppShell() {
     }, []);
 
     return (
-        <div className="flex h-dvh">
-            <aside
-                className={cn(
-                    "hidden shrink-0 overflow-hidden border-r border-sidebar-border transition-[width] duration-200 md:block",
-                    sidebarOpen ? "w-62 lg:w-72" : "w-0 border-r-0",
-                )}
-            >
-                <div className="h-full w-62 lg:w-72">
-                    <AppSidebar />
-                </div>
-            </aside>
-            <Sheet open={mobileOpen} onOpenChange={setMobileSidebarOpen}>
-                <SheetContent
-                    side="left"
-                    className="w-72 p-0"
-                    showCloseButton={false}
-                    aria-describedby={undefined}
+        <div className="flex h-dvh flex-col">
+            <NoticeBar />
+            <div className="flex min-h-0 flex-1">
+                <aside
+                    className={cn(
+                        "hidden shrink-0 overflow-hidden border-r border-sidebar-border transition-[width] duration-200 md:block",
+                        sidebarOpen ? "w-62 lg:w-72" : "w-0 border-r-0",
+                    )}
                 >
-                    <SheetTitle className="sr-only">{t("appName")}</SheetTitle>
-                    <AppSidebar />
-                </SheetContent>
-            </Sheet>
-            <main className="flex min-w-0 flex-1 flex-col">
-                <AppHeader />
-                {compareEnabled ? (
-                    <CompareView />
-                ) : (
-                    <ForegroundChatProvider key={foregroundEpoch}>
-                        <ChatView />
-                    </ForegroundChatProvider>
-                )}
-            </main>
-            <SettingsDialog />
-            <CommandPalette />
-            <ModelInfoDialog />
-            <SystemMessageDialog />
-            <StorageWatcher />
+                    <div className="h-full w-62 lg:w-72">
+                        <AppSidebar />
+                    </div>
+                </aside>
+                <Sheet open={mobileOpen} onOpenChange={setMobileSidebarOpen}>
+                    <SheetContent
+                        side="left"
+                        className="w-72 p-0"
+                        showCloseButton={false}
+                        aria-describedby={undefined}
+                    >
+                        <SheetTitle className="sr-only">{t("appName")}</SheetTitle>
+                        <AppSidebar />
+                    </SheetContent>
+                </Sheet>
+                <main className="flex min-w-0 flex-1 flex-col">
+                    <AppHeader />
+                    {compareEnabled ? (
+                        <CompareView />
+                    ) : (
+                        <ForegroundChatProvider key={foregroundEpoch}>
+                            <ChatView />
+                        </ForegroundChatProvider>
+                    )}
+                </main>
+                <SettingsDialog />
+                <CommandPalette />
+                <ModelInfoDialog />
+                <SystemMessageDialog />
+                <StorageWatcher />
+            </div>
         </div>
     );
 }
