@@ -132,6 +132,25 @@ export interface IntegrationConfig {
 }
 
 /**
+ * A banner above the app, set by the deployment: the text by language, a
+ * shorter one for narrow screens, whether the reader may close it, how loud it
+ * is and the last day it is shown.
+ *
+ * @param text - Message by language code
+ * @param short - Shorter message for narrow screens, by language code
+ * @param dismissible - Whether the reader may close it (closed for good until the text changes)
+ * @param level - "info" is a quiet strip, "warning" an amber one
+ * @param until - Last day shown, as an ISO date (to the end of that day) or date-time
+ */
+export interface NoticeConfig {
+    text: Record<string, string>;
+    short?: Record<string, string>;
+    dismissible: boolean;
+    level: "info" | "warning";
+    until?: string;
+}
+
+/**
  * Shape of the public/config.json file fetched at boot. The "mcpServers" field is
  * the MCP server catalog, disabled servers included, and "mcpIssues" says why
  * catalog entries were dropped, one English line each.
@@ -139,6 +158,7 @@ export interface IntegrationConfig {
 export interface AppConfig {
     models: ModelConfig[];
     appName?: string;
+    notice?: NoticeConfig;
     defaultModel?: string;
     embedOrigins: string[];
     integrations?: IntegrationConfig[];

@@ -13,6 +13,7 @@ import type {
     IntegrationConfig,
     ModelConfig,
     ModelListState,
+    NoticeConfig,
     PropsState,
     ServerProps,
 } from "@/types/server";
@@ -32,6 +33,7 @@ interface ModelsState {
     integrations: IntegrationConfig[];
     mcpServers: McpServerConfig[];
     appName?: string;
+    notice?: NoticeConfig;
     configStatus: ConfigStatus;
     configError?: string;
     configDraftError?: string;
@@ -115,7 +117,7 @@ export async function initModels(): Promise<void> {
         return;
     }
 
-    const { models, defaultModel, integrations, mcpServers, appName } = result.config;
+    const { models, defaultModel, integrations, mcpServers, appName, notice } = result.config;
     const selectable = (id: string) => models.some((entry) => entry.id === id && !entry.disabled);
     const stored = persisted?.activeEntryId;
     const activeEntryId =
@@ -142,6 +144,7 @@ export async function initModels(): Promise<void> {
         integrations: integrations ?? [],
         mcpServers,
         appName,
+        notice,
         configStatus: "ready",
         hasOverride,
     });

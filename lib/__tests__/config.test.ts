@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loadAppConfig, normalizeConfig } from "@/lib/config";
+import { loadAppConfig, normalizeConfig, noticeText } from "@/lib/config";
 import { readModelScope } from "@/lib/mcp/config";
 import type { AppConfig } from "@/types/server";
 
@@ -65,6 +65,59 @@ describe("normalizeConfig with MCP servers", () => {
         const config = ready({ models: [model], mcp: 3 });
         expect(config.mcpServers).toEqual([]);
         expect(config.mcpIssues).toHaveLength(1);
+    });
+});
+
+describe("notice", () => {
+    it("is absent by default", () => {
+        expect(ready({ models: [model] }).notice).toBeUndefined();
+    });
+
+    it("keeps the texts and can be closed unless the config says otherwise", () => {
+        const notice = ready({
+            models: [model],
+            notice: { text: { en: "Demo", fr: "Démo" } },
+        }).notice;
+        expect(notice).toEqual({
+            text: { en: "Demo", fr: "Démo" },
+            short: undefined,
+            dismissible: true,
+            level: "info",
+            until: undefined,
+        });
+        const pinned = ready({
+            models: [model],
+            notice: { text: { en: "Demo" }, dismissible: false },
+        }).notice;
+        expect(pinned?.dismissible).toBe(false);
+    });
+
+    it("does not fail the config over a notice of the wrong shape or without text", () => {
+        expect(ready({ models: [model], notice: "demo" }).notice).toBeUndefined();
+        expect(ready({ models: [model], notice: { text: {} } }).notice).toBeUndefined();
+    });
+
+    it("reads the level and the end, and drops a value it cannot read", () => {
+        const notice = ready({
+            models: [model],
+            notice: { text: { en: "Demo" }, level: "warning", until: "2026-12-01" },
+        }).notice;
+        expect(notice?.level).toBe("warning");
+        expect(notice?.until).toBe("2026-12-01");
+        const loose = ready({
+            models: [model],
+            notice: { text: { en: "Demo" }, level: "loud", until: "soon" },
+        }).notice;
+        expect(loose?.level).toBe("info");
+        expect(loose?.until).toBeUndefined();
+    });
+
+    it("picks the language, then English, then the first text written", () => {
+        const texts = { en: "Demo", fr: "Démo" };
+        expect(noticeText(texts, "fr")).toBe("Démo");
+        expect(noticeText(texts, "de")).toBe("Demo");
+        expect(noticeText({ fr: "Démo" }, "de")).toBe("Démo");
+        expect(noticeText(undefined, "fr")).toBeUndefined();
     });
 });
 

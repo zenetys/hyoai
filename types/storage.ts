@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
     models: "lc:models",
     configOverride: "lc:config",
     compare: "lc:compare",
+    notice: "lc:notice",
     conversationsIndex: "lc:convs",
     conversation: (id: string) => `lc:conv:${id}`,
     conversationPrefix: "lc:conv:",

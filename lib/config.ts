@@ -9,6 +9,7 @@ import type {
     IntegrationConfig,
     ModalityFlags,
     ModelIssue,
+    NoticeConfig,
     ServerType,
     ThinkingConfig,
 } from "@/types/server";
@@ -72,9 +73,25 @@ const integrationSchema = z.object({
     models: z.array(z.string()).optional(),
 });
 
+const textsSchema = z.record(z.string(), z.string().min(1));
+
+// Unreadable options fall back; an end the config cannot read is dropped: the notice then has none.
+const noticeSchema = z.object({
+    text: textsSchema,
+    short: textsSchema.optional().catch(undefined),
+    dismissible: z.boolean().catch(true),
+    level: z.enum(["info", "warning"]).catch("info"),
+    until: z
+        .string()
+        .refine((value) => noticeEnd(value) !== null)
+        .optional()
+        .catch(undefined),
+});
+
 const configSchema = z.object({
     models: z.array(modelSchema).default([]),
     appName: z.string().min(1).optional(),
+    notice: noticeSchema.optional().catch(undefined),
     defaultModel: z.string().optional(),
     embedOrigins: z.array(z.string().min(1)).default([]),
     integrations: z.array(z.unknown()).optional(),
@@ -226,6 +243,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
             };
         }),
         appName: parsed.data.appName,
+        notice: Object.keys(parsed.data.notice?.text ?? {}).length ? parsed.data.notice : undefined,
         defaultModel: parsed.data.defaultModel,
         embedOrigins: normalizeEmbedOrigins(parsed.data.embedOrigins),
         integrations,
@@ -235,6 +253,74 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         effort: parsed.data.effort,
     };
     return { status: "ready", config };
+}
+
+/**
+ * The text of a notice in a language: the exact one, else English, else the
+ * first one written.
+ *
+ * @param texts - Text by language code
+ * @param locale - Interface language
+ * @returns The text, or undefined when there is none
+ */
+export function noticeText(
+    texts: Record<string, string> | undefined,
+    locale: string,
+): string | undefined {
+    return texts?.[locale] ?? texts?.en ?? Object.values(texts ?? {})[0];
+}
+
+/**
+ * When a notice ends, as a timestamp. A date alone runs to the end of that day in the
+ * reader's time zone; a date-time is taken as written.
+ *
+ * @param until - The "until" value of the notice
+ * @returns The end in milliseconds, or null when there is none or it cannot be read
+ */
+export function noticeEnd(until: string | undefined): number | null {
+    if (!until) return null;
+    const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(until);
+    if (day) {
+        const [year, month, date] = [Number(day[1]), Number(day[2]), Number(day[3])];
+        const end = new Date(year, month - 1, date, 23, 59, 59, 999);
+
+        // new Date rolls 2026-02-31 over to March: such a day is not a day.
+        return end.getMonth() === month - 1 && end.getDate() === date ? end.getTime() : null;
+    }
+    const time = Date.parse(until);
+    return Number.isNaN(time) ? null : time;
+}
+
+/**
+ * Whether a notice is past its end.
+ *
+ * @param notice - The notice of the config
+ * @param now - The current time, in milliseconds
+ */
+export function noticeExpired(notice: NoticeConfig, now: number = Date.now()): boolean {
+    const end = noticeEnd(notice.until);
+    return end !== null && now > end;
+}
+
+/**
+ * A short key standing for the words of a notice, so that a reader who closed it does not
+ * see it again until its text changes. The level, the end and the closable flag do not count.
+ *
+ * @param notice - The notice of the config
+ * @returns A hash of the texts, the same for the same words in any key order
+ */
+export function noticeKey(notice: NoticeConfig): string {
+    const sorted = (texts: Record<string, string> | undefined) =>
+        Object.entries(texts ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const source = JSON.stringify([sorted(notice.text), sorted(notice.short)]);
+
+    // FNV-1a, 32 bits: enough to tell two announcements apart.
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < source.length; i++) {
+        hash ^= source.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16);
 }
 
 // Allowed origins and host tokens for the embed widget.
