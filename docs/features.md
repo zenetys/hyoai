@@ -659,7 +659,7 @@ intercepted even while the cursor is in the composer.
 | Setting (Settings → Appearance)                                               | Values and default                                                            |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | **Theme**                                                                     | **Light**, **Dark** or **System**, which follows the operating system         |
-| **Appearance** (skin)                                                         | **Soft** (default), **Flat**, **Contrast**, **Warm**, **Forest** or **Dim**   |
+| **Style** (skin)                                                              | **Soft** (default), **Flat**, **Contrast**, **Warm**, **Forest** or **Dim**   |
 | **Interface language**                                                        | Français or English; the saved choice, else the browser language, else French |
 | **Chat width**                                                                | **Medium** (default), **Large** or **Extra large**; not available on mobile   |
 | **Compact input**                                                             | Off by default; not available at narrow window widths                         |
