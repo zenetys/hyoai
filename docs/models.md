@@ -22,8 +22,8 @@ This page walks through, in order:
 - [Reasoning: `thinking` and `effort`](#reasoning-thinking-and-effort).
 - [Picking a model and a reasoning level](#picking-a-model-and-a-reasoning-level): the desktop
   dropdown and the compact drawer.
-- [Adding or editing a model in the app](#adding-or-editing-a-model-in-the-app): the **Config** tab,
-  the JSON preview, local overrides and the Reset dialog.
+- [Adding or editing a model in the app](#adding-or-editing-a-model-in-the-app): the **Models** and
+  **Configuration** pages, the JSON preview, local overrides and the Reset dialog.
 
 ## Local models
 
@@ -224,7 +224,7 @@ config (see [Reasoning](#reasoning-thinking-and-effort)).
 `config.json` is the source of truth for the model list: on startup the application loads a
 `config.json` file served next to it (in dev: `public/config.json`; in prod: dropped at the site
 root, editable without a rebuild). Each entry describes a model and the endpoint serving it. The
-in-app **Config** tab (Settings) edits the same fields as local overrides, stored in `localStorage`
+in-app **Models** and **Configuration** pages (Settings) edit the same fields as local overrides, stored in `localStorage`
 on top of the deployed file and revertable from the Reset dialog.
 
 `public/config.json` is gitignored (it holds deployment-specific endpoints): copy
@@ -233,7 +233,7 @@ and OpenRouter recipes above plus the different `type`s, a minimal entry (boolea
 disabled entry, an API key, and a relative URL behind a reverse proxy.
 
 A missing `config.json` is a supported state: the model list is then empty, and models can still be
-added from the **Config** tab, which starts from an empty configuration.
+added from the **Models** page, which starts from an empty configuration.
 
 ### Root keys
 
@@ -458,12 +458,12 @@ along with them. See [tools.md](tools.md#reasoning-during-a-flow) for how it beh
 
 While the model is reasoning and has not written any answer text yet, the block above the answer
 reads **Thinking** and is open. As soon as the answer text starts to stream, it reads **Reasoning**
-and collapses, unless the **Expand reasoning** option of Settings → General is on ("Keep the
+and collapses, unless the **Expand reasoning** option of Settings → Appearance is on ("Keep the
 thinking block open once the answer is done."). Under the answer, the model chip carries a brain
 icon when the model offers the Thinking switch and it was on for that answer, the model's short name
 (the entry's **Short name**, else the base name of the upstream model id) and the label of the
 effort level used, when the model declares levels. Next to the chip come the token, time and speed
-figures, unless **Message statistics** is turned off in Settings → General.
+figures, unless **Message statistics** is turned off in Settings → Appearance.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/thinking.png">
@@ -507,7 +507,7 @@ short name of the active model and the label of its active effort level.
   model size, parameters, chat template, ...), as far as the server provides them.
 - **Unreachable endpoint.** By default an unreachable model is greyed out as **Unavailable** with a
   retry button (see **Greyed rows** below). A single-row entry shows a red triangle instead when
-  **Automatically disable unavailable models** is off (Settings → General → **Model availability**),
+  **Automatically disable unavailable models** is off (Settings → **Models**, **Model availability**),
   or, for an entry without a pinned `model`, when a refresh of its model list failed while the
   models fetched before are still kept. On hover the triangle shows
   `Model unreachable: check that its endpoint is running and that CORS allows this origin.` with the
@@ -563,9 +563,10 @@ mouse keeps the dropdown.
 
 ## Adding or editing a model in the app
 
-You do not need to touch the server's files to add a model: **Settings → Config** edits the same
-fields as `config.json`. Open Settings from the header (or from the command palette) and pick the
-**Config** tab. The tab is [not available in an embed](embed.md#what-the-widget-leaves-out).
+You do not need to touch the server's files to add a model: **Settings → Models** and **Settings →
+Configuration** edit the same fields as `config.json`. Open Settings from the header (or from the
+command palette) and pick the **Models** page, or the **Configuration** page for everything that is
+not a model. Neither page is [available in an embed](embed.md#what-the-widget-leaves-out).
 
 What you change there is saved in this browser as a local override on top of the deployed file, and
 applied immediately: about 600 ms after your last edit the model list is rebuilt, with no page
@@ -573,35 +574,39 @@ reload. The deployed `config.json` is left untouched.
 
 ### The form
 
-The tab opens on a short description, then the fields of the configuration, in this order:
+The configuration is split over two pages. **Models** opens on the model availability settings
+(see [Model availability](compare.md#model-availability)), then lists the models, one row per entry
+with its name, its type and host, an on/off switch and a chevron that opens the detail of the model,
+and ends with an **Add a model** button.
+
+**Configuration** opens on a short description, then holds the other fields, in this order:
 
 1. **Application name** (`appName`) and **Default model** (`defaultModel`, a choice among the
    entries that have an identifier, or **None**). Emptying **Application name** or choosing **None**
    does not clear a value set in the deployed file (see [Local overrides](#local-overrides)).
-2. **Models**, with an **Add a model** button: one card per entry.
-3. **Global thinking** (**On (JSON)** and **Off (JSON)**) and **Global effort** (**Default level**,
+2. **Global thinking** (**On (JSON)** and **Off (JSON)**) and **Global effort** (**Default level**,
    **Add a level**, and one card per level with **Identifier**, **Label** and **Request body
    (JSON)**): the top-level `thinking` and `effort` of [Reasoning](#reasoning-thinking-and-effort).
-4. **Integrations**, with **Add an integration** (see [Integrations](../README.md#integrations)).
-5. The **Generated JSON** preview, with a **Copy** button, and the **Reset…** button.
+3. **Integrations**, with **Add an integration** (see [Integrations](../README.md#integrations)).
+4. The **Generated JSON** preview, with a **Copy** button, and the **Reset…** button.
 
-MCP servers are not edited here but in Settings → Tools (see [mcp.md](mcp.md)); this tab only sets
-which servers a model uses. The root key `embedOrigins` ([embed.md](embed.md)) is not edited in this
-tab either and is not part of the generated JSON: keep it in the deployed file when you paste.
+MCP servers are not edited here but in Settings → MCP servers (see [mcp.md](mcp.md)); the model
+detail only sets which servers a model uses. The root key `embedOrigins` ([embed.md](embed.md)) is
+not edited in these pages either and is not part of the generated JSON: keep it in the deployed file when you paste.
 
 ### Adding a model
 
-Click **Add a model**: a blank card is added at the top of the list, headed **New model** until it
-has an identifier. It starts as a `llama.cpp` entry with **Streaming** and **Send context** on and
+Click **Add a model**, at the end of the **Models** page: a blank entry is added at the top of the
+list and opens its detail, headed **New model** until it has an identifier. It starts as a `llama.cpp` entry with **Streaming** and **Send context** on and
 everything else empty, off or on **Auto** (note that a `type` missing from a hand-written
 `config.json` defaults to `vllm`, not to `llama.cpp`).
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/config.png">
-    <img alt="The Config tab in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/light/config.png" width="716">
+    <img alt="The Models page in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/light/config.png" width="716">
 </picture>
 
-The screenshot shows a `claude` entry modelled on the Anthropic recipe above, with a different
+The detail of a model shows the entry as a form. The screenshot shows a `claude` entry modelled on the Anthropic recipe above, with a different
 display name and a short name added; the **Advanced settings** row, below the switches, is shown
 folded. Each field maps to a key of the [entry table](#keys-of-a-models-entry). The text fields and
 the server type list carry a short hint under their label; the two switches have none:
@@ -619,7 +624,7 @@ the server type list carry a short hint under their label; the two switches have
 | **Send context** | `sendContext` | Switch                                                                                                                         |
 
 An entry is applied only once the configuration is valid, which requires an identifier and a base
-URL for every card: until then the new card is just a draft in the form. If the entry's type is not
+URL for every card: until then the new entry is just a draft in the form. If the entry's type is not
 served by any installed plugin, the **Server type** list keeps it and labels it
 `{type} (not installed)`, with `{type}` replaced by the type; the entry is then kept but disabled.
 
@@ -627,7 +632,7 @@ Once saved, the new model is in the model menu straight away, and `defaultModel`
 
 ### Advanced settings
 
-Under the switches, **Advanced settings** unfolds the less common keys.
+In the detail of a model, under the switches, the collapsible **Advanced settings** section unfolds the less common keys.
 
 | Form field                             | Key                  | Notes                                                                                                                                                       |
 | -------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -655,28 +660,28 @@ first; the ticked ones become the list, and unticking all of them gives `[]`. A 
 names but that is no longer in the catalog stays listed as `{id} (not in the catalog)` (with `{id}`
 replaced by its identifier) so it can be unticked, and when **Tool calling** is set to **No** the
 field notes "Tool calling is off for this model." While **Every enabled server** is on and no server
-exists yet, the field says "No server is set up yet. Add one in the Tools tab." See
+exists yet, the field says "No server is set up yet. Add one in the MCP servers page." See
 [mcp.md](mcp.md).
 
 A text field that is not valid JSON does not break the rest of the form: the preview is replaced by
 the message `Invalid JSON in field {field}.`, where `{field}` is the path of the offending field
 (for example `models[0].headers`), and the draft is not applied until the text is fixed.
 
-### The card header
+### The model controls
 
-Each model card has a small header, with the entry's identifier on the left (and **· Disabled**
-after it when the entry is disabled) and four controls on the right:
+The list shows a **Disabled** badge on a disabled entry. The detail of a model has its controls
+around the fields:
 
-- The up and down arrows (**Move model up**, **Move model down**) reorder the list. The order is the
-  order of the model menu, and decides the first enabled entry when nothing else picks one.
-- The power button (**Disable model** / **Enable model**) toggles `disabled`. A disabled entry stays
-  in the file and in the form, but is greyed out in the model menu and cannot be picked; see
-  [An entry that cannot be used](#an-entry-that-cannot-be-used).
-- The bin (**Remove model**) removes the entry from the list.
+- The **Enable model** switch, at the top, toggles `disabled`; the switch of the row in the list
+  does the same. A disabled entry stays in the file and in the form, but is greyed out in the model
+  menu and cannot be picked; see [An entry that cannot be used](#an-entry-that-cannot-be-used).
+- **Move model up** and **Move model down**, at the bottom, reorder the list. The order is the order
+  of the model menu, and decides the first enabled entry when nothing else picks one.
+- **Remove model** removes the entry from the list.
 
 ### The JSON preview
 
-At the bottom, **Generated JSON** shows the configuration the form currently builds, as it would be
+At the bottom of the **Configuration** page, **Generated JSON** shows the configuration the form currently builds, as it would be
 written in `config.json` (4-space indentation; optional fields that are empty, switched off or on
 **Auto** are left out, while `id`, `baseUrl`, `type`, `streaming` and `sendContext` are always
 written). **Copy** puts that JSON on the clipboard ("Configuration copied to clipboard."), ready to
@@ -709,7 +714,7 @@ it. At startup, anything in the override that the file now says too is dropped, 
 reset list always agree with the file. If the file cannot be read, the local overrides still apply
 over an empty configuration.
 
-While the **Config** tab is open and an override exists, a badge appears at the right of the
+While the **Configuration** page is open and an override exists, a badge appears at the right of the
 Settings header. It reads **Override active**, and **Override inactive** when the configuration is
 invalid and was not applied. Its colour follows the health of the configuration: green for
 `Configuration valid and applied.`, amber for
@@ -723,7 +728,7 @@ lines) are tagged **added**, **modified** or **removed**; the **App name**, **De
 
 ### The Reset dialog
 
-**Reset…** at the bottom of the tab (disabled while there is no override) opens the **Reset
+**Reset…** at the bottom of the **Configuration** page (disabled while there is no override) opens the **Reset
 settings** dialog: "Pick which overrides to reset back to the deployed config.json. Unchecked ones
 are kept." The dialog says "No override to reset." when it has nothing to list, for example while a
 JSON field of the form is invalid.

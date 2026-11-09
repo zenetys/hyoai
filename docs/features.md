@@ -54,12 +54,38 @@ The **More** menu (a vertical-dots button next to **Settings**) exists only belo
 breakpoint (768 px). From 768 px up the switchers and **Copy link** stay in the header, a landscape
 touch tablet included.
 
-The Settings dialog has five tabs, in this order: **General** (behaviour, model availability,
-appearance), **Generation** (chunking of oversized inputs, conversation compaction, sampling,
-penalties), **Tools** (see [tools.md](tools.md)), **Data** (export, import, storage gauge) and
-**Config** (the model list, see [models.md](models.md)). The full application shows all five. The
-[embedded widget](embed.md#what-the-widget-leaves-out) hides **Tools** and **Config**, and also
-**Data** unless its sidebar variant is on.
+The Settings dialog is one dialog with a navigation on the left and one page at a time on the
+right. The navigation has nine pages in four groups: **Appearance** and **Behavior**; **Models**,
+**MCP servers** and **Tools**; **Data** and **Configuration**; **Sampling** and **Chunking**. Each
+setting is a row of its page. A search box above the navigation filters the settings by name or by
+explanation; choosing a result opens its page and puts the focus on its control. On a phone the
+navigation and the page are two screens, and a back arrow leads from the page to the navigation. The
+pages hold:
+
+- **Appearance**: theme, skin, language, chat width, compact input, message statistics and the
+  **Expand after the answer** switches (see [Appearance and display](#appearance-and-display)).
+- **Behavior**: the system prompt, **Send on Enter**, **PDF as images** and **Max image size (px)**.
+- **Models**: the model list, with a detail page per model (see [models.md](models.md)), and, at the
+  top, the model availability settings.
+- **MCP servers**: the servers and their tools (see [mcp.md](mcp.md)).
+- **Tools**: the global settings of the tool loop (see [tools.md](tools.md)).
+- **Data**: export, import and the storage gauge.
+- **Configuration**: the global settings of the configuration (app name, default model, thinking,
+  integrations), the generated JSON and **Reset…** (see [models.md](models.md)).
+- **Sampling**: the sampling parameters and the **Penalties** group.
+- **Chunking**: the chunking of oversized inputs and the **Conversation compaction** group.
+
+The full application shows all nine. The [embedded widget](embed.md#what-the-widget-leaves-out)
+hides **Models**, **MCP servers**, **Tools** and **Configuration**, and also **Data** unless its
+sidebar variant is on.
+
+Once a page is open, the address bar carries `?settings=<page>` (`appearance`, `behavior`,
+`models`, `servers`, `tools`, `data`, `config`, `sampling` or `chunking`) and closing the dialog
+removes it. Opening Settings from the header or the command palette shows **Appearance** on a wide
+screen, or the list of pages on a phone, without a parameter until a page is picked. A link with
+the parameter opens Settings on that page: use it to send someone straight to the **Models** page,
+say. An unknown value is ignored, and a page the view hides (the widget has no **Models**) opens
+on **Appearance** on a wide screen and on the list of pages on a phone.
 
 ## Conversations and the sidebar
 
@@ -197,10 +223,10 @@ hint under the list reads "Conversations are compressed in the browser localStor
 
 - At 90 % of the quota the gauge text turns red and adds "almost full, export or delete
   conversations", and a toast warns once: "Local storage is {percent}% full — export or delete
-  conversations to free space." Clicking the toast opens this tab. The warning rearms once usage is
+  conversations to free space." Clicking the toast opens this page. The warning rearms once usage is
   back under 90 %.
 - If a write is refused because the quota is exceeded, a toast says "Storage full: saving failed.
-  Export your conversations then free up space.", also leading to this tab. The write stays queued
+  Export your conversations then free up space.", also leading to this page. The write stays queued
   for a later retry.
 - Images and files attached to messages are stored with the conversation, and images are downscaled
   before they are sent and saved (see [Attachments](#attachments)).
@@ -357,7 +383,7 @@ excerpt as a Markdown blockquote, so the instruction leads and the quote does no
 When the server streams reasoning (the `reasoning_content` field, or `reasoning`), it is shown in a
 collapsible block above the answer, as plain text. While the model reasons the block is labelled
 **Thinking** with a pulsing brain icon and opens by itself; when the answer starts it collapses and
-reads **Reasoning**, unless **Expand reasoning** is on (**Settings → General → Expand after the
+reads **Reasoning**, unless **Expand reasoning** is on (**Settings → Appearance → Expand after the
 answer**: "Keep the thinking block open once the answer is done."). Click the label to open or close
 it at any time.
 
@@ -378,7 +404,7 @@ id) and the effort level used, when an effort level was sent.
 ### Per-message stats
 
 Under a finished answer, a footer holds the model chip (when the model is known) and, unless
-**Message statistics** is turned off in **Settings → General** ("Tokens, speed and duration under
+**Message statistics** is turned off in **Settings → Appearance** ("Tokens, speed and duration under
 each answer."), a small group of toggle buttons. Each one swaps the figures shown next to it:
 
 | Toggle                                  | Figures                                                                                                                                                                                                         |
@@ -400,7 +426,7 @@ composer zone. Hovering the bar (or tapping it on touch) opens a card with "Cont
 `t/s`; when the context size of the model is not known it says "Context not computed with this
 model". The bar turns red once the context reaches the compaction trigger threshold, a fraction of
 the window that is 0.8 by default. That threshold is the **Trigger threshold** field of the
-**Conversation compaction** group in **Settings → Generation** (0.1 to 0.95), next to **Enable
+**Conversation compaction** group in **Settings → Chunking** (0.1 to 0.95), next to **Enable
 automatic compaction** and **Recent turns kept**. The card also holds the actions of conversation
 compaction: **Compact conversation** when at least two messages older than the **Recent turns kept**
 can be summarised, and **Free storage** once a summary exists. With a summary but nothing more to
@@ -432,7 +458,7 @@ listed once.
 When the backend sends no citations, the row falls back to the external links the answer itself
 contains, whether written as Markdown links or as bare URLs, ignoring fenced code, images and inline
 code other than a lone URL, each labelled with its link text or its host name. The row starts
-collapsed unless **Expand sources** is on (**Settings → General → Expand after the answer**).
+collapsed unless **Expand sources** is on (**Settings → Appearance → Expand after the answer**).
 
 ### Backend steps
 
@@ -490,7 +516,7 @@ gives the reason, for example "No model available (config.json)". Details and sh
   field has text and you are not browsing, the arrows move the cursor as usual.
 - In the single chat the composer focuses itself, except with a coarse pointer (touch), so the
   on-screen keyboard does not pop up unasked.
-- **Compact input** (Settings → General) puts the **+** button, the field and the controls on a
+- **Compact input** (Settings → Appearance) puts the **+** button, the field and the controls on a
   single line until the message wraps.
 
 ### Attachments
@@ -535,7 +561,7 @@ model" or "Audio processing requires an audio model" when the model does not acc
 one anyway, by paste or drop, shows the same text as an error. A model accepts images or audio only
 when its `modalities` entry says so or when a probed endpoint advertises it, and a `false` always
 wins (see the `modalities` row of the [key table](models.md#keys-of-a-models-entry)). **PDF as
-images** and **Max image size (px)** are in **Settings → General → Behavior**. Both are disabled,
+images** and **Max image size (px)** are in **Settings → Behavior**. Both are disabled,
 with the text "Requires a vision model", when the model has no image modality, and a PDF is then
 attached as extracted text even if **PDF as images** was on. A file that cannot be read shows a
 toast, "Could not read "{name}"" or a short message with the cause.
@@ -547,7 +573,7 @@ system message: "Sent at the top of this conversation, overriding the global sys
 Once saved, a **System message** chip appears above the composer: click it to edit (hovering shows
 the full text), or use its **Remove the system message** button; saving an empty text clears it. The
 global **System prompt** ("Sent at the top of every conversation. Empty: no system prompt.") is in
-**Settings → General → Behavior**. The entry is offered in the single chat only, not in compare
+**Settings → Behavior**. The entry is offered in the single chat only, not in compare
 panes.
 
 ## Model availability
@@ -557,15 +583,15 @@ When a model's server stops answering, HYOAI, with **Automatically disable unava
 answers again. With the setting off, the model stays selectable and the error is shown when you
 send. An entry that is unavailable for a reason other than an unreachable server stays greyed out
 whatever the setting says. The two settings that control this, **Automatically disable unavailable
-models** and **Check a silent server after (seconds)**, are in **Settings → General → Model
-availability**. The behaviour, the settings and what you see in the menus, the composer and the
+models** and **Check a silent server after (seconds)**, are at the top of **Settings → Models**. The behaviour, the settings and what you see in the menus, the composer and the
 compare panes are described in [Model availability](compare.md#model-availability); the entries that
 can never be used are described in [models.md](models.md#an-entry-that-cannot-be-used).
 
 ## Sampling and penalty settings
 
 Sampling and penalties are global: they apply to every model and conversation, and are edited in the
-**Generation** tab of the Settings dialog. An empty field is not sent, so the endpoint applies its
+**Sampling** page of the Settings dialog (the repetition penalties and DRY are its **Penalties**
+group). An empty field is not sent, so the endpoint applies its
 own defaults (the placeholder reads **Server default**); to go back to them, clear the field. The
 names sent to the endpoint are adapted to its `type`:
 
@@ -586,8 +612,8 @@ DRY group is labelled "DRY parameters: ignored by endpoints that do not support 
 takes -1 for unlimited. The embedded widget can override the temperature and the maximum number of
 tokens from its URL ([embed.md](embed.md)).
 
-The same **Generation** tab holds two groups of settings for conversations that outgrow the context
-window, above the sampling fields:
+The **Chunking** page of the Settings dialog holds two groups of settings for conversations that
+outgrow the context window:
 
 - **Over-context input chunking** splits an input (your message plus text and PDF attachments) that
   exceeds the context window into chapters analysed one by one, then synthesised into a final
@@ -630,7 +656,7 @@ intercepted even while the cursor is in the composer.
 
 ## Appearance and display
 
-| Setting (Settings → General)                                                  | Values and default                                                            |
+| Setting (Settings → Appearance)                                               | Values and default                                                            |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | **Theme**                                                                     | **Light**, **Dark** or **System**, which follows the operating system         |
 | **Appearance** (skin)                                                         | **Soft** (default), **Flat**, **Contrast**, **Warm**, **Forest** or **Dim**   |

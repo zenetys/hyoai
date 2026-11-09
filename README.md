@@ -134,15 +134,15 @@ rebuild.
 The sections below give the essentials. The guides in [docs/](docs/) go further, with a walkthrough of the
 interface and the reference for every option:
 
-| Guide                                       | What it covers                                                                                                                       |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| [Models](docs/models.md)                    | Adding a model (Ollama, llama.cpp, vLLM, OpenRouter, OpenAI, Anthropic), every `config.json` key, the Config tab, reasoning controls |
-| [Tool calling](docs/tools.md)               | Letting a model call tools: approvals, the flow, server flags, safety limits, the Tools settings                                     |
-| [MCP servers](docs/mcp.md)                  | Plugging MCP servers in: the catalog, states, scope per model, CORS, reverse proxy, secrets                                          |
-| [Compare and availability](docs/compare.md) | Side-by-side panes, and what happens when a model's server stops answering                                                           |
-| [Using HYOAI](docs/features.md)             | A tour of conversations, quoting, branches, attachments, search, export, math and mobile                                             |
-| [Embedding](docs/embed.md)                  | The iframe widget and its `postMessage` bridge                                                                                       |
-| [Plugins](plugins/README.md)                | Build-time plugins for backends with their own protocol                                                                              |
+| Guide                                       | What it covers                                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [Models](docs/models.md)                    | Adding a model (Ollama, llama.cpp, vLLM, OpenRouter, OpenAI, Anthropic), every `config.json` key, the Models page, reasoning controls |
+| [Tool calling](docs/tools.md)               | Letting a model call tools: approvals, the flow, server flags, safety limits, the Tools settings                                      |
+| [MCP servers](docs/mcp.md)                  | Plugging MCP servers in: the catalog, states, scope per model, CORS, reverse proxy, secrets                                           |
+| [Compare and availability](docs/compare.md) | Side-by-side panes, and what happens when a model's server stops answering                                                            |
+| [Using HYOAI](docs/features.md)             | A tour of conversations, quoting, branches, attachments, search, export, math and mobile                                              |
+| [Embedding](docs/embed.md)                  | The iframe widget and its `postMessage` bridge                                                                                        |
+| [Plugins](plugins/README.md)                | Build-time plugins for backends with their own protocol                                                                               |
 
 ## Model configuration: `config.json`
 
@@ -150,12 +150,12 @@ interface and the reference for every option:
 application loads a `config.json` file served next to it (in dev:
 `public/config.json`; in prod: dropped at the site root, editable without a
 rebuild). Each entry describes a model and the endpoint serving it. The in-app
-**Config** tab (Settings) edits the same fields as local overrides, stored in
+**Models** and **Configuration** pages (Settings) edit the same fields as local overrides, stored in
 `localStorage` on top of the deployed file and revertable from the Reset dialog.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/config.png">
-    <img alt="The Config tab in Settings, editing a model entry" src="docs/images/light/config.png" width="716">
+    <img alt="The Models page in Settings, editing a model entry" src="docs/images/light/config.png" width="716">
 </picture>
 
 `public/config.json` is gitignored (it holds deployment-specific endpoints):
@@ -321,7 +321,7 @@ The catalog of servers is the `mcp.servers` list of `config.json`:
 ```
 
 A server that is not valid is skipped with a warning in the browser console; the other servers and the models
-are not affected. Settings → Tools shows one card per server: its state (off, not connected, connecting, connected,
+are not affected. Settings → MCP servers lists the servers, and the detail of each shows its state (off, not connected, connecting, connected,
 authentication refused (401 or 403), address not found, no answer, unreachable, blocked by CORS or by the local
 network permission, or a protocol error), its address, an on/off switch, and the tools it lists, each with its own
 approval (Ask each time, Always allow or Hidden from the model; the default is Ask each time). The wrench panel in the composer lists the servers too, and
@@ -329,7 +329,7 @@ approval (Ask each time, Always allow or Hidden from the model; the default is A
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/mcp-servers-short.png">
-    <img alt="MCP servers in Settings: one connected, one blocked by CORS with the headers to add, one refusing the credentials" src="docs/images/light/mcp-servers-short.png" width="716">
+    <img alt="MCP servers page in Settings: one connected, one blocked by CORS with the headers to add, one refusing the credentials" src="docs/images/light/mcp-servers-short.png" width="716">
 </picture>
 
 The key table, the CORS headers a server must send, the reverse-proxy recipes (Caddy, nginx), how secrets are

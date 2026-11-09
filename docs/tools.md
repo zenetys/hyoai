@@ -89,7 +89,7 @@ Four keys of a `models` entry in `config.json` drive this (the full table is in
 | `supportsToolChoice` | Whether the server accepts the `tool_choice` field. Defaults from `type` (`false` for `openai`, which covers Ollama), overridable     |
 | `recoverToolCalls`   | Off unless `true`. Runs a tool call the model wrote as text instead of the structured channel, through the usual approval (see below) |
 
-The same options are in Settings → Config, under ["Advanced settings"](models.md#advanced-settings)
+The same options are in Settings → Models, under ["Advanced settings"](models.md#advanced-settings)
 of a model: "Tool calling" (Auto means on only when llama.cpp's chat template supports tools; vLLM
 needs `--enable-auto-tool-choice --tool-call-parser`), "Parallel tool calls", "Send tool_choice"
 (off for servers that reject the field, such as Ollama) and "Recover tool calls written as text".
@@ -208,7 +208,7 @@ one step.
 
 Above the answer, the calls of the flow are grouped under a foldable line, "1 tool call" or "N tool
 calls". It opens by itself while the answer is produced, then folds once the answer is done, unless
-"Expand search and tool activity" is on in Settings → General.
+"Expand search and tool activity" is on in Settings → Appearance.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-flow.png">
@@ -234,7 +234,7 @@ flow ended with is a message under the trace, with its actions and footer. The f
 (time per step)" view that lists the duration of each model request ("Step 1", "Step 2", ...) and of
 each tool call that ran (a call that was denied, or never reached, has no duration); it belongs to
 the [message statistics](features.md#per-message-stats), which "Message statistics" in Settings →
-General switches on and off. The sources the tools returned, when they return any, are gathered on
+Appearance switches on and off. The sources the tools returned, when they return any, are gathered on
 that final answer.
 
 Regenerating the answer re-runs the whole flow, deleting it removes the whole flow, and the branch
@@ -283,12 +283,12 @@ as it came.
 
 ## Settings → Tools
 
-The Tools tab of the settings holds the global settings of the tool loop: the defaults for new
+The Tools page of the settings holds the global settings of the tool loop: the defaults for new
 conversations, the limits, the providers and the approval of each tool.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-settings.png">
-    <img alt="The Tools tab of the settings, with tools enabled for new conversations and Current time set to Always allow, which are not the defaults: Tool calling options, the Clock provider with its approval, an MCP server card and the Reset approvals button" src="images/light/tool-settings.png" width="716">
+    <img alt="The Tools page of the settings, with tools enabled for new conversations and Current time set to Always allow, which are not the defaults: Tool calling options, the Clock provider with its approval, an MCP server and the Reset approvals button" src="images/light/tool-settings.png" width="716">
 </picture>
 
 In this picture, tools are enabled for new conversations and "Current time" is set to "Always
@@ -312,8 +312,8 @@ same global setting as in the panel of the wrench) and, for each of its tools, a
   for.
 
 The built-in `clock` provider is always in the list. A provider that fails to list its tools reads
-"The tools of this provider could not be listed." The MCP servers have their own section further
-down the same tab, covered in [mcp.md](mcp.md).
+"The tools of this provider could not be listed." The MCP servers, with the
+approval of each of their tools, have their own page, **MCP servers**, covered in [mcp.md](mcp.md).
 
 "Reset approvals" at the bottom clears every per-tool decision, "Always allow" and "Hidden from the model" alike,
 so each tool follows "Default approval" again. The button confirms with "Every tool asks again."

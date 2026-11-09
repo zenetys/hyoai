@@ -345,12 +345,12 @@ of the configuration reasons listed in [What you see](#what-you-see).
 
 ### The settings
 
-Both settings live in **Settings → General → Model availability**, under the description "What the
+Both settings live at the top of **Settings → Models**, in the **Model availability** group, under the description "What the
 app does when a model stops answering."
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/unavailable-settings.png">
-    <img alt="Settings, Model availability section with the Automatically disable unavailable models switch on and the silent server delay set to 20" src="images/light/unavailable-settings.png" width="716">
+    <img alt="Settings, Models page, Model availability group with the Automatically disable unavailable models switch on and the silent server delay set to 20" src="images/light/unavailable-settings.png" width="716">
 </picture>
 
 | Setting                                      | Default | Range             | Effect                                                                                                                                                                                                                                                                               |

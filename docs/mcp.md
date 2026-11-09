@@ -16,18 +16,19 @@ limits, and what the server and the network in front of it must allow. It is the
 A server is handled in four places:
 
 - **`config.json`** holds the catalog an operator ships, in the `mcp.servers` list.
-- **Settings → Tools** has one card per server, with its state, its tools and the approval of each
-  tool. It also adds, edits, switches and removes servers in the browser.
+- **Settings → MCP servers** lists the servers, and opens the detail of each one: its state, its
+  fields, its tools and the approval of each tool. It also adds, edits, switches and removes servers
+  in the browser.
 - **The wrench panel** of the composer lists the servers next to the other tool providers, with the
   same on/off switch, when the model can take tools (see [The wrench panel](#the-wrench-panel)).
-- **Settings → Config** narrows which servers a model may use.
+- **Settings → Models** narrows which servers a model may use, in the detail of the model.
 
-In an [embed](embed.md#what-the-widget-leaves-out) the settings have no Tools or Config tab and the
+In an [embed](embed.md#what-the-widget-leaves-out) the settings have no MCP servers or Models page and the
 wrench is not shown, so the last three places do not exist there and no MCP tool is offered.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-servers-short.png">
-    <img alt="Settings, Tools tab: three MCP server cards, Product docs (Connected), Metrics (CORS blocked, with the headers the server must send) and Tickets (Authentication, HTTP 401)" src="images/light/mcp-servers-short.png" width="716">
+    <img alt="Settings, MCP servers page: three MCP servers, Product docs (Connected), Metrics (CORS blocked, with the headers the server must send) and Tickets (Authentication, HTTP 401)" src="images/light/mcp-servers-short.png" width="716">
 </picture>
 
 ## Declaring servers in `config.json`
@@ -66,9 +67,9 @@ The catalog of servers is the `mcp.servers` list of `config.json`:
 
 A server that is not valid (bad `id`, missing or unusable `url`, headers that are not strings, an
 `id` already used) is skipped with a warning in the browser console; the other servers and the
-models are not affected. Settings → Tools edits the same fields as
+models are not affected. Settings → MCP servers edits the same fields as
 [local overrides](models.md#local-overrides), so a server of `config.json` can be changed, removed
-and reset like a model entry; the Config tab only sets which servers a model uses.
+and reset like a model entry; the Models page only sets which servers a model uses.
 
 The checks behind "unusable" are these:
 
@@ -85,13 +86,12 @@ The transport `auto` falls back to SSE when the server answers the Streamable HT
 comes back, unless the failure is a header the browser refuses to send (that one ends as **Protocol
 error**, see [the state pill](#the-state-pill)).
 
-## Adding a server from Settings → Tools
+## Adding a server from Settings → MCP servers
 
-A server does not have to be in `config.json`: Settings → Tools can add one in this browser. Open
-the **Tools** tab and go to the **MCP servers** section, which opens with "An MCP server gives
-models more tools. Its calls ask for your approval like any other tool, unless you allow them." When
-no server is set up it says "No MCP server is set up." Click **Add a server**: a **New server**
-block opens with the form below.
+A server does not have to be in `config.json`: Settings → MCP servers can add one in this browser.
+Open the **MCP servers** page, which opens with "An MCP server gives models more tools. Its calls
+ask for your approval like any other tool, unless you allow them." When no server is set up it says
+"No MCP server is set up." Click **Add a server**: a **New server** page opens with the form below.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-add.png">
@@ -125,44 +125,44 @@ tried. Once you have typed something, the form says what is wrong:
 - "The address must be an http(s) URL or a path starting with /."
 - "The headers must be a JSON object whose values are all text."
 
-A successful save shows "{name} saved.", the card appears in the list, and the server connects when
-its tools are first needed, which the card itself triggers when it is shown. If the config refuses
+A successful save shows "{name} saved.", the server appears in the list, and it connects when its
+tools are first needed, which its detail itself triggers when it is shown. If the config refuses
 the change, a message says "The change was refused:" followed by the reason. The new server is
 switched on; the Name, Address, Transport, Bearer token and Other headers fields stay editable later
-from the pencil button of its card.
+from its detail, which the chevron of its row opens.
 
 ### Editing, switching, removing and resetting
 
-Every card has three controls in its header: the switch, a pencil that opens the same form (without
-the Identifier field, which cannot change), and a bin that removes the server. None of them has a
-visible label (the pencil and the bin are icons); their accessible names are "Offer the tools of
-{name} to models", "Edit {name}" and "Remove {name}".
+Every row of the list has two controls: the switch, and a chevron that opens the detail of the
+server. The detail holds the same form (without the Identifier field, which cannot change) and a
+**Remove {name}** button. The accessible names of the controls are "Offer the tools of {name} to
+models" and "Edit {name}".
 
-- Saving the form of an existing server changes only the fields of the form, so what the card
-  changed since the form opened, such as its switch, is kept.
+- Saving the form of an existing server changes only the fields of the form, so what changed since
+  the form opened, such as its switch, is kept.
 - Removing a server shows "{name} removed." with an **Undo** button.
 - A server of `config.json` that you removed is listed under **Removed from config.json**, with its
   address and a **Restore {name}** button.
-- A server of `config.json` that you changed shows **Back to config.json** on its card, which puts
+- A server of `config.json` that you changed shows **Back to config.json** in its detail, which puts
   it back as the file declares it.
-- Settings → Config has a [**Reset…** dialog](models.md#the-reset-dialog) that lists "MCP servers"
+- Settings → Configuration has a [**Reset…** dialog](models.md#the-reset-dialog) that lists "MCP servers"
   among the overrides it can reset to the deployed `config.json`. The heading appears once at least
   one MCP server was changed, added or removed here; **Reset…** is disabled while there is no
   override at all, and the dialog says "No override to reset." when it has nothing to list.
 
-Each of these changes goes through the same local override as the Config tab, so it applies live and
+Each of these changes goes through the same local override as the Configuration page, so it applies live and
 is kept in this browser only.
 
-## Reading a server card
+## Reading a server
 
-Settings → Tools shows one card per server: its state, its address, an on/off switch, and the tools
-it lists, each with its own approval (Ask each time, Always allow or Hidden from the model; the default is Ask
-each time). The state tells you what to fix: connected, authentication refused (401 or 403), address
+Settings → MCP servers lists the servers with their name, their address, their state and an on/off
+switch; the detail of a server adds the tools it lists, each with its own approval (Ask each time,
+Always allow or Hidden from the model; the default is Ask each time). The state tells you what to fix: connected, authentication refused (401 or 403), address
 not found, no answer, server unreachable, blocked by CORS, or blocked by the local network
-permission. The server connects the first time its tools are needed (or when the Tools tab shows
-it), the tool list is kept for 30 seconds, and **Refresh** lists again or reconnects. A server that
-is connected but answers its tool listing wrongly (no tools support, a malformed list) says so on
-its card.
+permission. The server connects the first time its tools are needed (or when its detail is
+shown), the tool list is kept for 30 seconds, and **Refresh** lists again or reconnects. A server that
+is connected but answers its tool listing wrongly (no tools support, a malformed list) says so in
+its detail.
 
 ### The state pill
 
@@ -172,7 +172,7 @@ for a failure it also repeats, in monospace, the message the connection reported
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-servers.png">
-    <img alt="Five MCP server cards in five states: Product docs (Connected, Tools (4)), Metrics (CORS blocked), Tickets (Authentication, HTTP 401), Wiki (Not found, HTTP 404) and Legacy search (Off, switched off)" src="images/light/mcp-servers.png" width="716">
+    <img alt="Five MCP servers in five states: Product docs (Connected, Tools (4)), Metrics (CORS blocked), Tickets (Authentication, HTTP 401), Wiki (Not found, HTTP 404) and Legacy search (Off, switched off)" src="images/light/mcp-servers.png" width="716">
 </picture>
 
 | Pill               | What it says                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -212,11 +212,11 @@ says so below: "The server is connected, but it did not list its tools correctly
 
 Next to the pill, a badge says where the entry comes from:
 
-| Badge            | Meaning                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| **config.json**  | The server is as `config.json` declares it.                                                                     |
-| **Changed here** | `config.json` declares it, and an override in this browser changed it. The card offers **Back to config.json**. |
-| **Added here**   | `config.json` does not declare it: it was added from the form.                                                  |
+| Badge            | Meaning                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **config.json**  | The server is as `config.json` declares it.                                                                       |
+| **Changed here** | `config.json` declares it, and an override in this browser changed it. The detail offers **Back to config.json**. |
+| **Added here**   | `config.json` does not declare it: it was added from the form.                                                    |
 
 ### Tools, approvals and annotations
 
@@ -230,7 +230,7 @@ connection and connects from scratch. The button spins while the listing runs.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-tools.png">
-    <img alt="An expanded server card listing four tools with an approval select each (Always allow, Ask each time, Ask each time, Disabled), three marked Read-only and one marked Destructive, each followed by 'declared by the server, not verified'" src="images/light/mcp-tools.png" width="716">
+    <img alt="The detail of a server with its tools expanded, listing four tools with an approval select each (Always allow, Ask each time, Ask each time, Disabled), three marked Read-only and one marked Destructive, each followed by 'declared by the server, not verified'" src="images/light/mcp-tools.png" width="716">
 </picture>
 
 Each tool of the list shows:
@@ -239,7 +239,7 @@ Each tool of the list shows:
   the tool or, failing that, the title in its annotations, cut at 200 characters.
 - Its **approval**, a select named "Approval for {tool}" with three values: **Ask each time**,
   **Always allow** and **Hidden from the model**. A tool without an entry of its own follows
-  **Default approval** of the Tools tab, which is **Ask each time** unless you changed it. A tool
+  **Default approval** of the Tools page, which is **Ask each time** unless you changed it. A tool
   set to **Hidden from the model** is not offered to the model at all; the wrench panel still lists
   it in the tool count, followed by "· 1 hidden".
 - Its description, cut after three lines.
@@ -250,7 +250,7 @@ Each tool of the list shows:
   the server is the only one that claims it.
 
 In the screenshot, the first tool is set to **Always allow**, two ask each time, and the last,
-marked **Destructive**, is **Hidden from the model**. **Reset approvals**, at the bottom of the Tools tab, clears
+marked **Destructive**, is **Hidden from the model**. **Reset approvals**, at the bottom of the Tools page, clears
 every per-tool approval, so each tool follows **Default approval** again.
 
 An **Always allow** is kept for the tool _and the address of the server_ (see
@@ -259,7 +259,7 @@ An **Always allow** is kept for the tool _and the address of the server_ (see
 ## The wrench panel
 
 The wrench panel in the composer lists the servers too, tagged **MCP**, with their tool count and
-the same on/off switch as the card, so there is one setting for a server. It is there when the model
+the same on/off switch as the server row, so there is one setting for a server. It is there when the model
 can take tools: otherwise the wrench is greyed out and the panel cannot be opened. With the mouse
 over it or the keyboard focus on it, its tooltip says "This model does not support tools."; on a
 touch screen there is no tooltip, so read the "Tool calling" row of Model Information instead. In an
@@ -329,8 +329,8 @@ instead.
 ## Which models see which servers
 
 With tools on, a model gets every enabled server. Set `mcpServers` on a `models` entry to narrow
-that down (`"mcpServers": ["docs"]`, or `[]` for none); the Config tab has the same choice in the
-model's advanced options. A list that is not an array of strings counts as `[]`, never as "all".
+that down (`"mcpServers": ["docs"]`, or `[]` for none); the Models page has the same choice in the
+advanced options of a model. A list that is not an array of strings counts as `[]`, never as "all".
 Tools still have to be on for the model (see [Tool calling](../README.md#tool-calling)).
 
 In `config.json`, the entry of a model that may only use the `docs` server reads:
@@ -348,25 +348,25 @@ In `config.json`, the entry of a model that may only use the `docs` server reads
 
 To do the same from the browser:
 
-1. Open Settings → **Config** and find the entry of the model.
-2. Open its **Advanced settings**. The **MCP servers** block, at the end, reads "Which servers of
+1. Open Settings → **Models** and open the detail of the model.
+2. Unfold its **Advanced settings**. The **MCP servers** block, at the end, reads "Which servers of
    the catalog this model may use."
 3. **Every enabled server** is on by default, which is the absence of `mcpServers`. Turn it off:
    every server of the catalog is ticked, and you untick the ones this model must not see. The ticks
    are the `mcpServers` list, and unticking everything gives `[]`.
 4. The change is saved in this browser and applied live. The
-   [**Generated JSON** preview](models.md#the-json-preview) of the tab shows the resulting
+   [**Generated JSON** preview](models.md#the-json-preview) of the **Configuration** page shows the resulting
    `mcpServers`, ready to copy into `config.json`.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-scope.png">
-    <img alt="Advanced settings of a model in the Config tab: Tool calling set to Yes, and the MCP servers block with Every enabled server switched off, Product docs and Metrics ticked and Tickets not ticked" src="images/light/mcp-scope.png" width="690">
+    <img alt="Advanced settings of a model in the Models page: Tool calling set to Yes, and the MCP servers block with Every enabled server switched off, Product docs and Metrics ticked and Tickets not ticked" src="images/light/mcp-scope.png" width="690">
 </picture>
 
 A few details of the block:
 
 - With no server in the catalog and **Every enabled server** on, it says "No server is set up yet.
-  Add one in the Tools tab."
+  Add one in the MCP servers page."
 - A server that the model's list names but the catalog no longer holds stays listed as "{id} (not in
   the catalog)", so it can be unticked.
 - When **Tool calling** is set to **No** on the entry, the block says "Tool calling is off for this
@@ -379,7 +379,7 @@ A few details of the block:
 
 The session is kept while it works and recovers from an expired session by connecting again once; it
 is dropped after a network failure (the next use connects again), when the server closes it (the
-card goes back to **Not connected**), or when the server is removed or switched off, or its `url`,
+server goes back to **Not connected**), or when the server is removed or switched off, or its `url`,
 `transport` or `headers` change. A connection attempt is cut after 15 seconds and listing the tools
 after 10 seconds; a call is cut after 60 seconds like any tool. A second tool with a name already
 seen, or a tool without a name, is ignored (the first one is kept). A server that does not answer
@@ -438,7 +438,7 @@ first. Reaching a server on a local address from a public page may also need the
 network permission, which Settings explains when it applies.
 
 A header you add in `headers` or in the form is sent with every request, so its name must be listed
-in `Access-Control-Allow-Headers` too, for the preflight; when the card shows **CORS blocked** or
+in `Access-Control-Allow-Headers` too, for the preflight; when the server shows **CORS blocked** or
 **Local network**, it prints the list with those names already added.
 
 ## Behind a reverse proxy
@@ -477,11 +477,11 @@ location /mcps/docs/ {
 
 `headers` (and the bearer token field of the form) are stored exactly like a model `apiKey`: those
 declared in `config.json` sit in that file, which anyone who can open the page can fetch, and those
-added or changed in Settings → Tools sit in the local overrides in `localStorage`. They are sent to
+added or changed in Settings → MCP servers sit in the local overrides in `localStorage`. They are sent to
 the server on every request. Use a token that can only do what the tools need, or let a reverse
 proxy add the credential as above. Settings exports never contain the servers or their headers. The
-Config tab masks the header values in its JSON preview (Copy gives the real config); the "Other
-headers" field of the server form in Settings → Tools does not mask them, since they are typed as
+Configuration page masks the header values in its JSON preview (Copy gives the real config); the "Other
+headers" field of the server form in Settings → MCP servers does not mask them, since they are typed as
 they are stored.
 
 ## Not supported
