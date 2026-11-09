@@ -319,6 +319,10 @@
             "sampling": "Sampling",
             "chunking": "Chunking"
         },
+        "search": {
+            "placeholder": "Search settings",
+            "noResult": "No setting matches “{query}”."
+        },
         "back": "Back",
         "general": {
             "appearanceTitle": "Appearance",

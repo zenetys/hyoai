@@ -319,6 +319,10 @@
             "sampling": "Échantillonnage",
             "chunking": "Découpage"
         },
+        "search": {
+            "placeholder": "Rechercher un réglage",
+            "noResult": "Aucun réglage ne correspond à « {query} »."
+        },
         "back": "Retour",
         "general": {
             "appearanceTitle": "Apparence",
