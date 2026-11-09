@@ -84,6 +84,10 @@
             }
         ]
     },
+    "placeholders": {
+        "en": ["Translate a text...", "Explain a concept...", "Write a function..."],
+        "fr": ["Traduis un texte...", "Explique un concept...", "Écris une fonction..."]
+    },
     "integrations": [
         {
             "id": "feedback",
