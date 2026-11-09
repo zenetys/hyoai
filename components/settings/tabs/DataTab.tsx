@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
 import { formatBytes } from "@/lib/format";
 import { buildExport, parseImport } from "@/lib/storage/io";
@@ -67,6 +68,7 @@ export function DataTab() {
     const locale = useLocale();
     const [exportOpen, setExportOpen] = useState(false);
     const [importing, setImporting] = useState(false);
+    const phone = useIsMobile();
     const usage = useStore(storageStore, (state) => state.usage);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,14 +108,22 @@ export function DataTab() {
 
     return (
         <SettingGroup>
-            <SettingRow label={t("data.exportTitle")} description={t("data.exportDescription")}>
+            <SettingRow
+                label={t("data.exportTitle")}
+                description={t("data.exportDescription")}
+                stacked={phone}
+            >
                 <Button type="button" variant="outline" onClick={() => setExportOpen(true)}>
                     <Download aria-hidden="true" />
                     {t("data.exportOpen")}
                 </Button>
                 <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
             </SettingRow>
-            <SettingRow label={t("data.importTitle")} description={t("data.importDescription")}>
+            <SettingRow
+                label={t("data.importTitle")}
+                description={t("data.importDescription")}
+                stacked={phone}
+            >
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -170,7 +180,11 @@ export function DataTab() {
                     )}
                 </div>
             </SettingRow>
-            <SettingRow label={t("data.clearAllTitle")} description={t("data.clearAllDescription")}>
+            <SettingRow
+                label={t("data.clearAllTitle")}
+                description={t("data.clearAllDescription")}
+                stacked={phone}
+            >
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button type="button" variant="destructive">
