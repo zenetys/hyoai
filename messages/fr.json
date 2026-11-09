@@ -377,6 +377,7 @@
             "maxTokensDescription": "Longueur maximale de la réponse (-1 : illimitée)."
         },
         "penalties": {
+            "title": "Pénalités",
             "repeatPenalty": "Pénalité de répétition",
             "repeatPenaltyDescription": "Atténue les répétitions ; le nom du paramètre est adapté au type d'endpoint.",
             "presencePenalty": "Pénalité de présence",
