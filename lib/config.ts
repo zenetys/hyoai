@@ -88,10 +88,14 @@ const noticeSchema = z.object({
         .catch(undefined),
 });
 
+// Rotating placeholders by language: a bad shape drops the key, never the config.
+const placeholdersSchema = z.record(z.string(), z.unknown());
+
 const configSchema = z.object({
     models: z.array(modelSchema).default([]),
     appName: z.string().min(1).optional(),
     notice: noticeSchema.optional().catch(undefined),
+    placeholders: placeholdersSchema.optional().catch(undefined),
     defaultModel: z.string().optional(),
     embedOrigins: z.array(z.string().min(1)).default([]),
     integrations: z.array(z.unknown()).optional(),
@@ -244,6 +248,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         }),
         appName: parsed.data.appName,
         notice: Object.keys(parsed.data.notice?.text ?? {}).length ? parsed.data.notice : undefined,
+        placeholders: normalizePlaceholders(parsed.data.placeholders),
         defaultModel: parsed.data.defaultModel,
         embedOrigins: normalizeEmbedOrigins(parsed.data.embedOrigins),
         integrations,
@@ -253,6 +258,43 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         effort: parsed.data.effort,
     };
     return { status: "ready", config };
+}
+
+/**
+ * Keep the usable placeholders of the config: non-empty strings, by language,
+ * and no language left without one.
+ *
+ * @param raw - The placeholders key as parsed
+ * @returns Placeholders by language, or undefined when none is usable
+ */
+function normalizePlaceholders(
+    raw: Record<string, unknown> | undefined,
+): Record<string, string[]> | undefined {
+    const kept: Record<string, string[]> = {};
+    for (const [lang, list] of Object.entries(raw ?? {})) {
+        if (!Array.isArray(list)) continue;
+        const texts = list
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim())
+            .filter(Boolean);
+        if (texts.length) kept[lang] = texts;
+    }
+    return Object.keys(kept).length ? kept : undefined;
+}
+
+/**
+ * The placeholders to rotate in a language: the exact one, else English, else the
+ * first language written.
+ *
+ * @param placeholders - Placeholders by language code
+ * @param locale - Interface language
+ * @returns The placeholders, empty when the config has none
+ */
+export function placeholdersFor(
+    placeholders: Record<string, string[]> | undefined,
+    locale: string,
+): string[] {
+    return placeholders?.[locale] ?? placeholders?.en ?? Object.values(placeholders ?? {})[0] ?? [];
 }
 
 /**

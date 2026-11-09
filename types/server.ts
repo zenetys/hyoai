@@ -159,6 +159,7 @@ export interface AppConfig {
     models: ModelConfig[];
     appName?: string;
     notice?: NoticeConfig;
+    placeholders?: Record<string, string[]>;
     defaultModel?: string;
     embedOrigins: string[];
     integrations?: IntegrationConfig[];

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loadAppConfig, normalizeConfig, noticeText } from "@/lib/config";
+import { loadAppConfig, normalizeConfig, noticeText, placeholdersFor } from "@/lib/config";
 import { readModelScope } from "@/lib/mcp/config";
 import type { AppConfig } from "@/types/server";
 
@@ -118,6 +118,39 @@ describe("notice", () => {
         expect(noticeText(texts, "de")).toBe("Demo");
         expect(noticeText({ fr: "Démo" }, "de")).toBe("Démo");
         expect(noticeText(undefined, "fr")).toBeUndefined();
+    });
+});
+
+describe("placeholders", () => {
+    it("are absent by default", () => {
+        expect(ready({ models: [model] }).placeholders).toBeUndefined();
+    });
+
+    it("keep the texts by language and drop what is not usable", () => {
+        const config = ready({
+            models: [model],
+            placeholders: {
+                en: ["Translate a text...", "  ", 3, "Explain a concept..."],
+                fr: [],
+                de: "x",
+            },
+        });
+        expect(config.placeholders).toEqual({
+            en: ["Translate a text...", "Explain a concept..."],
+        });
+    });
+
+    it("do not fail the config over a key of the wrong shape", () => {
+        expect(ready({ models: [model], placeholders: "hi" }).placeholders).toBeUndefined();
+        expect(ready({ models: [model], placeholders: ["hi"] }).placeholders).toBeUndefined();
+    });
+
+    it("pick the language, then English, then the first language written", () => {
+        const all = { en: ["a"], fr: ["b"] };
+        expect(placeholdersFor(all, "fr")).toEqual(["b"]);
+        expect(placeholdersFor(all, "de")).toEqual(["a"]);
+        expect(placeholdersFor({ fr: ["b"] }, "de")).toEqual(["b"]);
+        expect(placeholdersFor(undefined, "fr")).toEqual([]);
     });
 });
 

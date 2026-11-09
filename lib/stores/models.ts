@@ -34,6 +34,7 @@ interface ModelsState {
     mcpServers: McpServerConfig[];
     appName?: string;
     notice?: NoticeConfig;
+    placeholders?: Record<string, string[]>;
     configStatus: ConfigStatus;
     configError?: string;
     configDraftError?: string;
@@ -117,7 +118,8 @@ export async function initModels(): Promise<void> {
         return;
     }
 
-    const { models, defaultModel, integrations, mcpServers, appName, notice } = result.config;
+    const { models, defaultModel, integrations, mcpServers, appName, notice, placeholders } =
+        result.config;
     const selectable = (id: string) => models.some((entry) => entry.id === id && !entry.disabled);
     const stored = persisted?.activeEntryId;
     const activeEntryId =
@@ -145,6 +147,7 @@ export async function initModels(): Promise<void> {
         mcpServers,
         appName,
         notice,
+        placeholders,
         configStatus: "ready",
         hasOverride,
     });
