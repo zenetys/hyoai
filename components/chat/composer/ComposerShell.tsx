@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
 import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
+import { RollingPlaceholder } from "@/components/chat/composer/RollingPlaceholder";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,6 +34,7 @@ interface ComposerShellProps {
     reply?: React.ReactNode;
     rightControls?: React.ReactNode;
     placeholder?: string;
+    rollingPlaceholder?: { placeholder?: string; leaving: string | null; turn: number };
     wrapperClassName?: string;
     autoFocus?: boolean;
     focusKey?: string | number;
@@ -70,6 +72,7 @@ interface ComposerShellProps {
  * @param reply - Quoted excerpt chip rendered just above the input
  * @param rightControls - Controls rendered left of the send button
  * @param placeholder - Textarea placeholder override
+ * @param rollingPlaceholder - A rotating placeholder to roll over the field, when one is set
  * @param wrapperClassName - Class for the drop-zone wrapper
  * @param autoFocus - Focus the textarea on mount (e.g. landing on the home screen)
  * @param focusKey - When this value changes, refocus the textarea (e.g. after a model change)
@@ -92,6 +95,7 @@ export function ComposerShell({
     reply,
     rightControls,
     placeholder,
+    rollingPlaceholder,
     wrapperClassName = "mx-auto max-w-3xl",
     autoFocus,
     focusKey,
@@ -279,7 +283,8 @@ export function ComposerShell({
         />
     );
 
-    const textareaEl = (
+    const rolling = rollingPlaceholder?.placeholder !== undefined ? rollingPlaceholder : null;
+    const textarea = (
         <textarea
             ref={textareaRef}
             value={text}
@@ -289,13 +294,35 @@ export function ComposerShell({
             }}
             onKeyDown={handleKeyDown}
             onPaste={att.handlePaste}
-            placeholder={placeholder ?? t("placeholder")}
+            placeholder={rolling ? " " : (placeholder ?? t("placeholder"))}
+            aria-label={t("placeholder")}
             rows={1}
             className={cn(
-                "field-sizing-content max-h-48 min-h-8 resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:overflow-hidden placeholder:text-ellipsis placeholder:text-muted-foreground placeholder:whitespace-nowrap",
-                compactRow ? "max-h-9 flex-1 pr-0" : "order-first w-full basis-full",
+                "peer field-sizing-content max-h-48 min-h-8 resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:overflow-hidden placeholder:text-ellipsis placeholder:text-muted-foreground placeholder:whitespace-nowrap",
+                rolling
+                    ? cn("block w-full", compactRow && "max-h-9 pr-0")
+                    : compactRow
+                      ? "max-h-9 flex-1 pr-0"
+                      : "order-first w-full basis-full",
             )}
         />
+    );
+    const textareaEl = rolling ? (
+        <div
+            className={cn(
+                "relative min-w-0",
+                compactRow ? "flex-1" : "order-first w-full basis-full",
+            )}
+        >
+            {textarea}
+            <RollingPlaceholder
+                text={rolling.placeholder ?? ""}
+                leaving={rolling.leaving}
+                turn={rolling.turn}
+            />
+        </div>
+    ) : (
+        textarea
     );
 
     return (
