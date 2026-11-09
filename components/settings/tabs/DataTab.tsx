@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ExportDialog } from "@/components/settings/dialogs/ExportDialog";
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
+import { SettingRow } from "@/components/settings/fields/SettingRow";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -19,7 +21,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/hooks/useStore";
 import { formatBytes } from "@/lib/format";
 import { buildExport, parseImport } from "@/lib/storage/io";
@@ -55,7 +56,7 @@ function parseAnyImport(
 }
 
 /**
- * Data management tab: selective JSON export (native or llama.cpp webui
+ * Data page of the settings: selective JSON export (native or llama.cpp webui
  * format), import of both formats, a local storage meter with the full,
  * scrollable per-conversation breakdown and a confirmed clear-all action.
  */
@@ -104,20 +105,15 @@ export function DataTab() {
         conversationsStore.getState().index.find((meta) => meta.id === id)?.title || ts("untitled");
 
     return (
-        <div className="space-y-5">
-            <section className="space-y-3">
-                <h3 className="text-sm font-medium">{t("data.exportTitle")}</h3>
-                <p className="text-xs text-muted-foreground">{t("data.exportDescription")}</p>
+        <SettingGroup>
+            <SettingRow label={t("data.exportTitle")} description={t("data.exportDescription")}>
                 <Button type="button" variant="outline" onClick={() => setExportOpen(true)}>
                     <Download aria-hidden="true" />
                     {t("data.exportOpen")}
                 </Button>
                 <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
-            </section>
-            <Separator />
-            <section className="space-y-3">
-                <h3 className="text-sm font-medium">{t("data.importTitle")}</h3>
-                <p className="text-xs text-muted-foreground">{t("data.importDescription")}</p>
+            </SettingRow>
+            <SettingRow label={t("data.importTitle")} description={t("data.importDescription")}>
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -142,41 +138,39 @@ export function DataTab() {
                     )}
                     {importing ? t("data.importing") : t("data.importFile")}
                 </Button>
-            </section>
-            <Separator />
-            <section className="space-y-3">
-                <h3 className="text-sm font-medium">{t("data.storageTitle")}</h3>
-                <Progress value={usedPercent} />
-                {usage && (
-                    <p
-                        className={cn(
-                            "text-xs",
-                            nearFull ? "text-destructive" : "text-muted-foreground",
-                        )}
-                    >
-                        {t("data.storageUsage", {
-                            used: formatBytes(usage.usedBytes, locale),
-                            quota: formatBytes(usage.quotaBytes, locale),
-                        })}
-                        {nearFull && ` — ${t("data.storageNearFull")}`}
-                    </p>
-                )}
-                {usage && usage.conversations.length > 0 && (
-                    <ul className="max-h-40 space-y-1 overflow-y-auto pr-1 text-xs text-muted-foreground">
-                        {usage.conversations.map((entry) => (
-                            <li key={entry.id} className="flex justify-between gap-3">
-                                <span className="truncate">{titleOf(entry.id)}</span>
-                                <span className="shrink-0 tabular-nums">
-                                    {formatBytes(entry.bytes, locale)}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-                <p className="text-xs text-muted-foreground">{t("data.storageHint")}</p>
-            </section>
-            <Separator />
-            <section>
+            </SettingRow>
+            <SettingRow label={t("data.storageTitle")} description={t("data.storageHint")} stacked>
+                <div className="space-y-2">
+                    <Progress value={usedPercent} />
+                    {usage && (
+                        <p
+                            className={cn(
+                                "text-xs",
+                                nearFull ? "text-destructive" : "text-muted-foreground",
+                            )}
+                        >
+                            {t("data.storageUsage", {
+                                used: formatBytes(usage.usedBytes, locale),
+                                quota: formatBytes(usage.quotaBytes, locale),
+                            })}
+                            {nearFull && ` — ${t("data.storageNearFull")}`}
+                        </p>
+                    )}
+                    {usage && usage.conversations.length > 0 && (
+                        <ul className="max-h-40 space-y-1 overflow-y-auto pr-1 text-xs text-muted-foreground">
+                            {usage.conversations.map((entry) => (
+                                <li key={entry.id} className="flex justify-between gap-3">
+                                    <span className="truncate">{titleOf(entry.id)}</span>
+                                    <span className="shrink-0 tabular-nums">
+                                        {formatBytes(entry.bytes, locale)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </SettingRow>
+            <SettingRow label={t("data.clearAllTitle")} description={t("data.clearAllDescription")}>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button type="button" variant="destructive">
@@ -202,7 +196,7 @@ export function DataTab() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </section>
-        </div>
+            </SettingRow>
+        </SettingGroup>
     );
 }
