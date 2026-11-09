@@ -3,9 +3,10 @@
 import { Server } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
-import { ToggleField } from "@/components/settings/fields/ToggleField";
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
+import { SettingRow } from "@/components/settings/fields/SettingRow";
+import { SettingToggle } from "@/components/settings/fields/SettingToggle";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -25,7 +26,7 @@ const MIN_CONTEXT_TOKENS = 1024;
 const MAX_KEEP_TURNS = 10;
 
 /**
- * Over-context settings: chunking splits an oversized single input into chapters
+ * Chunking page of the settings: chunking splits an oversized single input into chapters
  * analyzed then synthesized, while compaction summarizes the older part of a
  * long conversation so it keeps fitting the context window.
  */
@@ -76,127 +77,138 @@ export function ChunkingTab() {
     };
 
     return (
-        <div className="space-y-5">
-            <div>
-                <h3 className="text-base font-medium">{t("title")}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
-            </div>
-            <ToggleField
-                id="chunking-enabled"
-                label={t("enabled")}
-                description={t("enabledDescription")}
-                checked={settings.chunking.enabled}
-                onCheckedChange={(checked) => setChunking({ enabled: checked })}
-            />
-            <div className="flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <Label htmlFor="chunking-strategy">{t("strategy")}</Label>
-                    <p className="text-xs text-muted-foreground">{t("strategyDescription")}</p>
-                </div>
-                <Select
-                    value={settings.chunking.strategy}
-                    onValueChange={(value) => setChunking({ strategy: value as ChunkingStrategy })}
-                >
-                    <SelectTrigger id="chunking-strategy" className="w-40">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="mapreduce">{t("strategyMapreduce")}</SelectItem>
-                        <SelectItem value="rolling">{t("strategyRolling")}</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor="chunking-fallback-context">{t("fallbackContext")}</Label>
-                <p className="text-xs text-muted-foreground">{t("fallbackContextDescription")}</p>
-                <Input
-                    id="chunking-fallback-context"
-                    type="number"
-                    min={MIN_CONTEXT_TOKENS}
-                    step={1024}
-                    value={settings.chunking.fallbackContextTokens}
-                    onChange={handleFallbackContext}
+        <>
+            <SettingGroup description={t("description")}>
+                <SettingToggle
+                    id="chunking-enabled"
+                    label={t("enabled")}
+                    description={t("enabledDescription")}
+                    checked={settings.chunking.enabled}
+                    onCheckedChange={(checked) => setChunking({ enabled: checked })}
                 />
+                <SettingRow
+                    label={t("strategy")}
+                    description={t("strategyDescription")}
+                    htmlFor="chunking-strategy"
+                >
+                    <Select
+                        value={settings.chunking.strategy}
+                        onValueChange={(value) =>
+                            setChunking({ strategy: value as ChunkingStrategy })
+                        }
+                    >
+                        <SelectTrigger id="chunking-strategy" className="w-40">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="mapreduce">{t("strategyMapreduce")}</SelectItem>
+                            <SelectItem value="rolling">{t("strategyRolling")}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </SettingRow>
+                <SettingRow
+                    label={t("fallbackContext")}
+                    description={t("fallbackContextDescription")}
+                    htmlFor="chunking-fallback-context"
+                >
+                    <Input
+                        id="chunking-fallback-context"
+                        type="number"
+                        className="w-40"
+                        min={MIN_CONTEXT_TOKENS}
+                        step={1024}
+                        value={settings.chunking.fallbackContextTokens}
+                        onChange={handleFallbackContext}
+                    />
+                </SettingRow>
                 {nCtx !== undefined && (
-                    <div className="mt-1 flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
-                        <Server className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                        <div className="min-w-0 space-y-0.5 text-xs">
-                            <p className="flex flex-wrap items-baseline gap-x-1.5">
-                                <span className="font-medium text-foreground">
-                                    {t("serverContextTitle")}
-                                </span>
-                                <span className="font-semibold text-primary">
-                                    {format.number(nCtx)}
-                                </span>
-                                <span className="text-muted-foreground">
-                                    {t("serverContextUnit")}
-                                </span>
-                                {slots !== undefined && slots > 1 && (
-                                    <span className="text-muted-foreground">
-                                        &middot;{" "}
-                                        {t("serverContextSlots", {
-                                            total: format.number(nCtx * slots),
-                                            slots,
-                                        })}
+                    <div className="py-3.5">
+                        <div className="flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
+                            <Server className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                            <div className="min-w-0 space-y-0.5 text-xs">
+                                <p className="flex flex-wrap items-baseline gap-x-1.5">
+                                    <span className="font-medium text-foreground">
+                                        {t("serverContextTitle")}
                                     </span>
-                                )}
-                            </p>
-                            <p className="text-muted-foreground">{t("serverContextNote")}</p>
+                                    <span className="font-semibold text-primary">
+                                        {format.number(nCtx)}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                        {t("serverContextUnit")}
+                                    </span>
+                                    {slots !== undefined && slots > 1 && (
+                                        <span className="text-muted-foreground">
+                                            &middot;{" "}
+                                            {t("serverContextSlots", {
+                                                total: format.number(nCtx * slots),
+                                                slots,
+                                            })}
+                                        </span>
+                                    )}
+                                </p>
+                                <p className="text-muted-foreground">{t("serverContextNote")}</p>
+                            </div>
                         </div>
                     </div>
                 )}
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor="chunking-safety-fraction">{t("safetyFraction")}</Label>
-                <p className="text-xs text-muted-foreground">{t("safetyFractionDescription")}</p>
-                <Input
-                    id="chunking-safety-fraction"
-                    type="number"
-                    min={0.1}
-                    max={0.95}
-                    step={0.05}
-                    value={settings.chunking.safetyFraction}
-                    onChange={handleSafetyFraction}
+                <SettingRow
+                    label={t("safetyFraction")}
+                    description={t("safetyFractionDescription")}
+                    htmlFor="chunking-safety-fraction"
+                >
+                    <Input
+                        id="chunking-safety-fraction"
+                        type="number"
+                        className="w-40"
+                        min={0.1}
+                        max={0.95}
+                        step={0.05}
+                        value={settings.chunking.safetyFraction}
+                        onChange={handleSafetyFraction}
+                    />
+                </SettingRow>
+            </SettingGroup>
+            <SettingGroup title={tc("title")} description={tc("description")}>
+                <SettingToggle
+                    id="compaction-enabled"
+                    label={tc("enabled")}
+                    description={tc("enabledDescription")}
+                    checked={settings.compaction.enabled}
+                    onCheckedChange={(checked) => setCompaction({ enabled: checked })}
                 />
-            </div>
-
-            <div className="border-t pt-5">
-                <h3 className="text-base font-semibold">{tc("title")}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">{tc("description")}</p>
-            </div>
-            <ToggleField
-                id="compaction-enabled"
-                label={tc("enabled")}
-                description={tc("enabledDescription")}
-                checked={settings.compaction.enabled}
-                onCheckedChange={(checked) => setCompaction({ enabled: checked })}
-            />
-            <div className="space-y-1.5">
-                <Label htmlFor="compaction-threshold">{tc("threshold")}</Label>
-                <p className="text-xs text-muted-foreground">{tc("thresholdDescription")}</p>
-                <Input
-                    id="compaction-threshold"
-                    type="number"
-                    min={0.1}
-                    max={0.95}
-                    step={0.05}
-                    value={settings.compaction.thresholdFraction}
-                    onChange={handleThreshold}
-                />
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor="compaction-keep-turns">{tc("keepTurns")}</Label>
-                <p className="text-xs text-muted-foreground">{tc("keepTurnsDescription")}</p>
-                <Input
-                    id="compaction-keep-turns"
-                    type="number"
-                    min={0}
-                    max={MAX_KEEP_TURNS}
-                    step={1}
-                    value={settings.compaction.keepRecentTurns}
-                    onChange={handleKeepTurns}
-                />
-            </div>
-        </div>
+                <SettingRow
+                    label={tc("threshold")}
+                    description={tc("thresholdDescription")}
+                    htmlFor="compaction-threshold"
+                >
+                    <Input
+                        id="compaction-threshold"
+                        type="number"
+                        className="w-40"
+                        min={0.1}
+                        max={0.95}
+                        step={0.05}
+                        value={settings.compaction.thresholdFraction}
+                        onChange={handleThreshold}
+                    />
+                </SettingRow>
+                <SettingRow
+                    label={tc("keepTurns")}
+                    description={tc("keepTurnsDescription")}
+                    htmlFor="compaction-keep-turns"
+                >
+                    <Input
+                        id="compaction-keep-turns"
+                        type="number"
+                        className="w-40"
+                        min={0}
+                        max={MAX_KEEP_TURNS}
+                        step={1}
+                        value={settings.compaction.keepRecentTurns}
+                        onChange={handleKeepTurns}
+                    />
+                </SettingRow>
+            </SettingGroup>
+        </>
     );
 }
