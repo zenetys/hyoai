@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { SettingRow } from "@/components/settings/fields/SettingRow";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 
 /**
  * A text setting: a flat row with the input on the right, or under the text for a long value
@@ -16,7 +17,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
  * @param value - Current text
  * @param onChange - Called with the next text
  * @param placeholder - Shown while the input is empty
- * @param wide - Put the input under the text, over the full width
+ * @param wide - Put the input under the text, over the full width (a phone always does)
  * @param mono - Show the value in a monospace font
  * @param action - Control inside the input, on the right
  */
@@ -42,10 +43,14 @@ export function SettingText({
     action?: ReactNode;
 }) {
     const className = mono ? "font-mono text-xs" : undefined;
-    const width = wide ? "w-full" : "w-64";
+
+    // A fixed-width input would squeeze the text on a narrow screen: it goes under it instead.
+    const phone = useIsMobile();
+    const stacked = wide || phone;
+    const width = stacked ? "w-full" : "w-64";
 
     return (
-        <SettingRow label={label} description={description} htmlFor={id} stacked={wide}>
+        <SettingRow label={label} description={description} htmlFor={id} stacked={stacked}>
             {action ? (
                 <InputGroup className={width}>
                     <InputGroupInput

@@ -50,6 +50,9 @@ export function SettingsDialog() {
 
     const [query, setQuery] = useState("");
     const [pendingFocus, setPendingFocus] = useState<string | null>(null);
+
+    // Bumped by each result picked, so the page mounts afresh on its list even when it is open.
+    const [visit, setVisit] = useState(0);
     const searching = query.trim() !== "";
 
     const openPage = (id: SettingsPage) => {
@@ -58,6 +61,7 @@ export function SettingsDialog() {
     };
     const openResult = (entry: SettingsSearchEntry) => {
         openPage(entry.page);
+        setVisit((count) => count + 1);
         setPendingFocus(entry.id ?? null);
     };
 
@@ -166,7 +170,7 @@ export function SettingsDialog() {
                                                 </div>
                                             )}
                                             <div className="space-y-8">
-                                                <Content />
+                                                <Content key={visit} />
                                             </div>
                                         </>
                                     )
