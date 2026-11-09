@@ -1,9 +1,6 @@
 import { createStore } from "@/lib/store";
 import { type EmbedTheme, getSettingsFromUrl, setSettingsInUrl } from "@/lib/url";
 
-// Settings dialog tabs, kept in sync with the dialog triggers until it moves to pages.
-export type SettingsTab = "general" | "generation" | "tools" | "data" | "config";
-
 // Settings pages, in navigation order: preferences, customization, platform, then generation.
 export type SettingsPage =
     | "appearance"
@@ -39,28 +36,6 @@ export function parseSettingsPage(raw: string | null): SettingsPage | null {
     return SETTINGS_PAGES.find((page) => page === raw) ?? null;
 }
 
-// Transitional: the tab a page lives in until the dialog stops using tabs.
-const TAB_OF_PAGE: Record<SettingsPage, SettingsTab> = {
-    appearance: "general",
-    behavior: "general",
-    models: "config",
-    servers: "tools",
-    tools: "tools",
-    data: "data",
-    config: "config",
-    sampling: "generation",
-    chunking: "generation",
-};
-
-// Transitional: the page a tab opens on.
-const PAGE_OF_TAB: Record<SettingsTab, SettingsPage> = {
-    general: "appearance",
-    generation: "sampling",
-    tools: "tools",
-    data: "data",
-    config: "config",
-};
-
 /**
  * Which model the info dialog describes; null means the active model.
  *
@@ -75,7 +50,6 @@ export interface ModelInfoTarget {
 // Cross-component UI state: dialogs, palette and sidebar visibility.
 interface UiState {
     settingsOpen: boolean;
-    settingsTab: SettingsTab;
     settingsPage: SettingsPage | null;
     settingsFocus: string | null;
     commandOpen: boolean;
@@ -95,7 +69,6 @@ interface UiState {
 
 export const uiStore = createStore<UiState>({
     settingsOpen: false,
-    settingsTab: "general",
     settingsPage: null,
     settingsFocus: null,
     commandOpen: false,
@@ -126,15 +99,6 @@ export function setSettingsOpen(open: boolean): void {
 }
 
 /**
- * Set the active tab of the settings dialog. Transitional, with the page the tab opens on.
- *
- * @param tab - The tab to show in the settings dialog
- */
-export function setSettingsTab(tab: SettingsTab): void {
-    uiStore.setState({ settingsTab: tab, settingsPage: PAGE_OF_TAB[tab] });
-}
-
-/**
  * Set the active page of the settings dialog. This is a global state because the
  * settings can be opened from multiple places, and the dialog should stay on
  * the same page when switching between them. No page is the list of pages: the
@@ -143,7 +107,7 @@ export function setSettingsTab(tab: SettingsTab): void {
  * @param page - The page to show in the settings dialog, or null for the list
  */
 export function setSettingsPage(page: SettingsPage | null): void {
-    uiStore.setState({ settingsPage: page, settingsTab: page ? TAB_OF_PAGE[page] : "general" });
+    uiStore.setState({ settingsPage: page });
 }
 
 /**
@@ -163,7 +127,6 @@ export function openSettings(page: SettingsPage | null = null, focus: string | n
     uiStore.setState({
         settingsOpen: true,
         settingsPage: page,
-        settingsTab: page ? TAB_OF_PAGE[page] : "general",
         settingsFocus: focus,
     });
 }
