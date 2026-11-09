@@ -19,7 +19,6 @@ import { DataTab } from "@/components/settings/tabs/DataTab";
 import { PenaltiesTab } from "@/components/settings/tabs/PenaltiesTab";
 import { SamplingTab } from "@/components/settings/tabs/SamplingTab";
 import { ToolsTab } from "@/components/settings/tabs/ToolsTab";
-import { Separator } from "@/components/ui/separator";
 import type { SettingsPage } from "@/lib/stores/ui";
 
 /**
@@ -52,21 +51,19 @@ export interface SettingsGroupDef {
  */
 function BehaviorContent() {
     return (
-        <div className="space-y-6">
+        <>
             <BehaviorTab />
-            <Separator />
             <AvailabilityTab />
-        </div>
+        </>
     );
 }
 
 function SamplingContent() {
     return (
-        <div className="space-y-5">
+        <>
             <SamplingTab />
-            <Separator />
             <PenaltiesTab />
-        </div>
+        </>
     );
 }
 

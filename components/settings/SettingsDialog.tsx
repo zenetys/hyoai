@@ -101,7 +101,9 @@ export function SettingsDialog() {
                                         )}
                                     </div>
                                 )}
-                                <Content />
+                                <div className="space-y-8">
+                                    <Content />
+                                </div>
                             </div>
                         </div>
                     )}

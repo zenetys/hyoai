@@ -2,10 +2,11 @@
 
 import { useTranslations } from "next-intl";
 
-import { ToggleField } from "@/components/settings/fields/ToggleField";
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
+import { SettingRow } from "@/components/settings/fields/SettingRow";
+import { SettingToggle } from "@/components/settings/fields/SettingToggle";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsCoarsePointer, useIsMobile } from "@/hooks/useMediaQuery";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
@@ -18,9 +19,8 @@ import { cn } from "@/lib/utils";
 const MIN_IMAGE_DIMENSION = 256;
 
 /**
- * Behaviour section of the general settings tab: system prompt, send-on-enter
- * with its revealable composer hint, and attachment handling (PDF as images,
- * max image size).
+ * Behavior page of the settings: system prompt, send-on-enter with its composer hint, and
+ * attachment handling (PDF as images, max image size), as flat rows.
  */
 export function BehaviorTab() {
     const t = useTranslations("settings.general");
@@ -28,6 +28,7 @@ export function BehaviorTab() {
     const settings = useStore(settingsStore, (state) => state.settings);
     const noKeyboard = useIsCoarsePointer();
     const hintHidden = useIsMobile();
+    const hintShown = settings.sendOnEnter && !noKeyboard;
     const { entry, props } = useResolvedModel();
     const { visionBlocked } = resolveModalityGate(entry, props);
 
@@ -38,14 +39,13 @@ export function BehaviorTab() {
     };
 
     return (
-        <div className="space-y-5">
-            <div>
-                <h3 className="text-base font-medium">{t("behaviorTitle")}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{t("behaviorDescription")}</p>
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor="behavior-system-prompt">{t("systemPrompt")}</Label>
-                <p className="text-xs text-muted-foreground">{t("systemPromptDescription")}</p>
+        <SettingGroup>
+            <SettingRow
+                label={t("systemPrompt")}
+                description={t("systemPromptDescription")}
+                htmlFor="behavior-system-prompt"
+                stacked
+            >
                 <Textarea
                     id="behavior-system-prompt"
                     value={settings.systemPrompt}
@@ -53,25 +53,26 @@ export function BehaviorTab() {
                     onChange={(event) => updateSettings({ systemPrompt: event.target.value })}
                     growCap="max-h-64"
                 />
-            </div>
-            <div>
-                <ToggleField
-                    id="behavior-send-on-enter"
-                    label={t("sendOnEnter")}
-                    description={noKeyboard ? t("mobileUnavailable") : t("sendOnEnterDescription")}
-                    checked={settings.sendOnEnter}
-                    disabled={noKeyboard}
-                    onCheckedChange={(checked) => updateSettings({ sendOnEnter: checked })}
-                    className={cn(noKeyboard && "opacity-50")}
-                />
-                <div
-                    className={cn(
-                        "grid transition-[grid-template-rows] duration-200 ease-out",
-                        settings.sendOnEnter && !noKeyboard ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                    )}
-                >
-                    <div className="overflow-hidden">
-                        <ToggleField
+            </SettingRow>
+            <SettingToggle
+                id="behavior-send-on-enter"
+                label={t("sendOnEnter")}
+                description={noKeyboard ? t("mobileUnavailable") : t("sendOnEnterDescription")}
+                checked={settings.sendOnEnter}
+                disabled={noKeyboard}
+                onCheckedChange={(checked) => updateSettings({ sendOnEnter: checked })}
+            />
+            <div
+                inert={!hintShown}
+                aria-hidden={!hintShown}
+                className={cn(
+                    "grid border-b-0! transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                    hintShown ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                )}
+            >
+                <div className="min-h-0 overflow-hidden">
+                    <div className="border-b">
+                        <SettingToggle
                             id="behavior-send-on-enter-hint"
                             label={t("sendOnEnterHint")}
                             description={
@@ -86,38 +87,38 @@ export function BehaviorTab() {
                             onCheckedChange={(checked) =>
                                 updateSettings({ sendOnEnterHint: checked })
                             }
-                            className={cn(
-                                "mt-3 ml-1 border-l-2 border-border pl-4",
-                                hintHidden && "opacity-50",
-                            )}
                         />
                     </div>
                 </div>
             </div>
-            <ToggleField
+            <SettingToggle
                 id="behavior-pdf-as-image"
                 label={t("pdfAsImage")}
                 description={visionBlocked ? t("visionRequired") : t("pdfAsImageDescription")}
                 checked={settings.pdfAsImage}
                 disabled={visionBlocked}
                 onCheckedChange={(checked) => updateSettings({ pdfAsImage: checked })}
-                className={cn(visionBlocked && "opacity-50")}
             />
-            <div className={cn("space-y-1.5", visionBlocked && "opacity-50")}>
-                <Label htmlFor="behavior-image-max-dimension">{t("imageMaxDimension")}</Label>
-                <p className="text-xs text-muted-foreground">
-                    {visionBlocked ? t("visionRequired") : t("imageMaxDimensionDescription")}
-                </p>
-                <Input
-                    id="behavior-image-max-dimension"
-                    type="number"
-                    min={MIN_IMAGE_DIMENSION}
-                    step={1}
-                    value={settings.imageMaxDimension}
-                    disabled={visionBlocked}
-                    onChange={handleImageMaxDimension}
-                />
+            <div className={cn(visionBlocked && "opacity-50")}>
+                <SettingRow
+                    label={t("imageMaxDimension")}
+                    description={
+                        visionBlocked ? t("visionRequired") : t("imageMaxDimensionDescription")
+                    }
+                    htmlFor="behavior-image-max-dimension"
+                >
+                    <Input
+                        id="behavior-image-max-dimension"
+                        type="number"
+                        min={MIN_IMAGE_DIMENSION}
+                        step={1}
+                        className="w-24"
+                        value={settings.imageMaxDimension}
+                        disabled={visionBlocked}
+                        onChange={handleImageMaxDimension}
+                    />
+                </SettingRow>
             </div>
-        </div>
+        </SettingGroup>
     );
 }
