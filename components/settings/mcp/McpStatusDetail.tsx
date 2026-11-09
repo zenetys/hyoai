@@ -59,6 +59,9 @@ export function McpStatusDetail({
     const listError = status?.state === "connected" ? status.listError : undefined;
     const shown = error ?? listError;
 
+    // The CORS and local-network states already explain themselves, in the reader's language.
+    const explained = pill === "cors" || pill === "localNetwork";
+
     return (
         <div className="space-y-1.5 rounded-md border bg-muted/30 p-2.5 text-xs text-muted-foreground">
             <p>
@@ -77,7 +80,9 @@ export function McpStatusDetail({
                     </pre>
                 </>
             )}
-            {shown && <p className="font-mono text-[11px] break-words">{shown.message}</p>}
+            {shown && !explained && (
+                <p className="font-mono text-[11px] break-words">{shown.message}</p>
+            )}
         </div>
     );
 }
