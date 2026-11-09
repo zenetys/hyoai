@@ -5,12 +5,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { ToggleField } from "@/components/settings/fields/ToggleField";
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
+import { SettingRow } from "@/components/settings/fields/SettingRow";
+import { SettingToggle } from "@/components/settings/fields/SettingToggle";
 import { ToolPolicySelect } from "@/components/settings/fields/ToolPolicySelect";
 import { McpServers } from "@/components/settings/mcp/McpServers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -18,7 +19,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useLocalizedText } from "@/hooks/useLocalizedText";
 import { useStore } from "@/hooks/useStore";
 import { mcpStore } from "@/lib/mcp/registry";
@@ -45,7 +45,7 @@ const MIN_RESULT_CHARS = 1000;
 const MAX_RESULT_CHARS = 200000;
 
 /**
- * Tool calling settings: whether new conversations start with tools, how many
+ * Tools page of the settings: whether new conversations start with tools, how many
  * model requests an answer may take, what happens to a call nobody decided on,
  * how much of a result the model sees, and per provider and tool whether it is
  * offered and whether it asks first. The tools of a provider are kept as they
@@ -95,81 +95,88 @@ export function ToolsTab() {
         };
 
     return (
-        <div className="space-y-5">
-            <div>
-                <h3 className="text-base font-medium">{t("title")}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
-            </div>
-
-            <ToggleField
-                id="tools-enabled-default"
-                label={t("enabledByDefault")}
-                description={t("enabledByDefaultDescription")}
-                checked={tools.enabledByDefault}
-                onCheckedChange={(enabledByDefault) => patch({ enabledByDefault })}
-            />
-
-            <div className="space-y-1.5">
-                <Label htmlFor="tools-max-steps">{t("maxSteps")}</Label>
-                <p className="text-xs text-muted-foreground">{t("maxStepsDescription")}</p>
-                <Input
-                    id="tools-max-steps"
-                    type="number"
-                    min={MIN_STEPS}
-                    max={MAX_STEPS}
-                    step={1}
-                    value={tools.maxSteps}
-                    onChange={handleNumber("maxSteps", MIN_STEPS, MAX_STEPS)}
+        <>
+            <SettingGroup description={t("description")}>
+                <SettingToggle
+                    id="tools-enabled-default"
+                    label={t("enabledByDefault")}
+                    description={t("enabledByDefaultDescription")}
+                    checked={tools.enabledByDefault}
+                    onCheckedChange={(enabledByDefault) => patch({ enabledByDefault })}
                 />
-            </div>
-
-            <div className="space-y-1.5">
-                <Label htmlFor="tools-default-policy">{t("defaultPolicy")}</Label>
-                <Select
-                    value={tools.defaultPolicy}
-                    onValueChange={(value) => patch({ defaultPolicy: value as "ask" | "allow" })}
+                <SettingRow
+                    label={t("maxSteps")}
+                    description={t("maxStepsDescription")}
+                    htmlFor="tools-max-steps"
                 >
-                    <SelectTrigger id="tools-default-policy" className="w-full">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ask">{t("policyAsk")}</SelectItem>
-                        <SelectItem value="allow">{t("policyAllow")}</SelectItem>
-                    </SelectContent>
-                </Select>
-                {tools.defaultPolicy === "allow" && (
-                    <p className="text-xs text-destructive">{t("defaultPolicyWarning")}</p>
-                )}
-            </div>
+                    <Input
+                        id="tools-max-steps"
+                        type="number"
+                        className="w-40"
+                        min={MIN_STEPS}
+                        max={MAX_STEPS}
+                        step={1}
+                        value={tools.maxSteps}
+                        onChange={handleNumber("maxSteps", MIN_STEPS, MAX_STEPS)}
+                    />
+                </SettingRow>
+                <SettingRow
+                    label={t("defaultPolicy")}
+                    description={
+                        tools.defaultPolicy === "allow" ? (
+                            <span className="text-destructive">{t("defaultPolicyWarning")}</span>
+                        ) : undefined
+                    }
+                    htmlFor="tools-default-policy"
+                    phoneStack
+                >
+                    <Select
+                        value={tools.defaultPolicy}
+                        onValueChange={(value) =>
+                            patch({ defaultPolicy: value as "ask" | "allow" })
+                        }
+                    >
+                        <SelectTrigger id="tools-default-policy" className="w-56">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ask">{t("policyAsk")}</SelectItem>
+                            <SelectItem value="allow">{t("policyAllow")}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </SettingRow>
+                <SettingRow
+                    label={t("maxResultChars")}
+                    description={t("maxResultCharsDescription")}
+                    htmlFor="tools-max-result"
+                >
+                    <Input
+                        id="tools-max-result"
+                        type="number"
+                        className="w-40"
+                        min={MIN_RESULT_CHARS}
+                        max={MAX_RESULT_CHARS}
+                        step={1000}
+                        value={tools.maxResultChars}
+                        onChange={handleNumber(
+                            "maxResultChars",
+                            MIN_RESULT_CHARS,
+                            MAX_RESULT_CHARS,
+                        )}
+                    />
+                </SettingRow>
+            </SettingGroup>
 
-            <div className="space-y-1.5">
-                <Label htmlFor="tools-max-result">{t("maxResultChars")}</Label>
-                <p className="text-xs text-muted-foreground">{t("maxResultCharsDescription")}</p>
-                <Input
-                    id="tools-max-result"
-                    type="number"
-                    min={MIN_RESULT_CHARS}
-                    max={MAX_RESULT_CHARS}
-                    step={1000}
-                    value={tools.maxResultChars}
-                    onChange={handleNumber("maxResultChars", MIN_RESULT_CHARS, MAX_RESULT_CHARS)}
-                />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-3">
-                <h3 className="text-sm font-medium">{t("providers")}</h3>
-                <p className="text-xs text-muted-foreground">{t("policyHint")}</p>
+            <SettingGroup title={t("providers")} description={t("policyHint")}>
                 {providers.length === 0 && (
-                    <p className="text-sm text-muted-foreground">{t("noProviders")}</p>
+                    <p className="py-3.5 text-sm text-muted-foreground">{t("noProviders")}</p>
                 )}
                 {providers.map((provider) => {
                     const list = listed[provider.id];
                     const label = localize(provider.label);
                     return (
-                        <div key={provider.id} className="space-y-2 rounded-lg border p-3">
-                            <ToggleField
+                        <div key={provider.id}>
+                            <SettingToggle
                                 id={`tools-provider-${provider.id}`}
                                 label={t("providerEnabled", { provider: label })}
                                 checked={!tools.disabledProviders.includes(provider.id)}
@@ -178,7 +185,7 @@ export function ToolsTab() {
                                 }
                             />
                             {list === null && (
-                                <p className="text-xs text-destructive">{t("listFailed")}</p>
+                                <p className="pb-3 text-xs text-destructive">{t("listFailed")}</p>
                             )}
                             {list?.map((tool) => {
                                 const key = toolPolicyKey(
@@ -189,7 +196,7 @@ export function ToolsTab() {
                                 return (
                                     <div
                                         key={key}
-                                        className="flex items-center justify-between gap-3 pl-1"
+                                        className="flex items-center justify-between gap-3 border-t border-dashed py-2 pl-4 max-md:flex-col max-md:items-stretch max-md:gap-1.5"
                                     >
                                         <span className="min-w-0 truncate text-sm">
                                             {tool.title ? localize(tool.title) : tool.name}
@@ -205,23 +212,23 @@ export function ToolsTab() {
                         </div>
                     );
                 })}
-            </div>
-
-            <Separator />
+            </SettingGroup>
 
             <McpServers />
 
-            <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                    resetToolPolicies();
-                    toast.success(t("resetApprovalsDone"));
-                }}
-            >
-                <RotateCcw aria-hidden="true" />
-                {t("resetApprovals")}
-            </Button>
-        </div>
+            <div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                        resetToolPolicies();
+                        toast.success(t("resetApprovalsDone"));
+                    }}
+                >
+                    <RotateCcw aria-hidden="true" />
+                    {t("resetApprovals")}
+                </Button>
+            </div>
+        </>
     );
 }
