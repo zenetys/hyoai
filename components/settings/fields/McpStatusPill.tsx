@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import type { McpPill } from "@/lib/mcp/status";
 
-const MUTED = "bg-muted text-muted-foreground";
+const MUTED = "bg-muted text-muted-foreground dark:bg-foreground/10";
 const FAILED = "bg-destructive/10 text-destructive dark:bg-destructive/20";
 const WARNING = "bg-amber-500/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-400";
 
