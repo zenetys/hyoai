@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 /**
  * A row that opens a detail page: a title and a subtitle, optional status content (beside the
  * title when wide, under it when narrow), an optional control that stays usable in place, and a
- * chevron.
+ * chevron. The hairline between rows is inset to the text, so the hover highlight can be rounded.
  *
  * @param title - Row title
  * @param subtitle - Secondary line
@@ -29,7 +29,7 @@ export function SettingLink({
     children?: ReactNode;
 }) {
     return (
-        <div className="@container -mx-2 flex items-center gap-3 px-2 py-3 transition-colors hover:bg-muted/40 dark:hover:bg-foreground/5">
+        <div className="@container relative -mx-2 flex items-center gap-3 rounded-md border-b-0! px-2 py-3 transition-colors not-last:after:absolute not-last:after:inset-x-2 not-last:after:bottom-0 not-last:after:h-px not-last:after:bg-border hover:bg-muted/60 dark:hover:bg-foreground/5">
             <button
                 type="button"
                 onClick={onOpen}
@@ -47,7 +47,7 @@ export function SettingLink({
                 type="button"
                 onClick={onOpen}
                 aria-label={openLabel}
-                className="rounded-md p-1 text-muted-foreground max-md:-my-2 max-md:p-3 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="rounded-md p-1 text-muted-foreground max-md:-my-2 max-md:p-3 outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
                 <ChevronRight className="size-4" aria-hidden="true" />
             </button>

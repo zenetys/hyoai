@@ -104,19 +104,22 @@ export function SettingsSearchResults({
                         <button
                             type="button"
                             onClick={() => onOpen({ page, label: `settings.nav.${page}` })}
-                            className="-mx-1 rounded-md px-1 py-0.5 text-left outline-none hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-foreground/5"
+                            className="-mx-1 rounded-md px-1 py-0.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-foreground/5"
                         >
                             {ts(`nav.${page}`)}
                         </button>
                     </h3>
                     {matches.length > 0 && (
-                        <ul className="divide-y">
+                        <ul>
                             {matches.map(({ entry, label, description }) => (
-                                <li key={entry.label}>
+                                <li
+                                    key={entry.label}
+                                    className="relative not-last:after:absolute not-last:after:inset-x-0 not-last:after:bottom-0 not-last:after:h-px not-last:after:bg-border"
+                                >
                                     <button
                                         type="button"
                                         onClick={() => onOpen(entry)}
-                                        className="-mx-2 block w-[calc(100%+1rem)] rounded-md px-2 py-3 text-left transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+                                        className="-mx-2 block w-[calc(100%+1rem)] rounded-md px-2 py-3 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-foreground/5"
                                     >
                                         <span className="block text-sm font-medium">{label}</span>
                                         {description && (

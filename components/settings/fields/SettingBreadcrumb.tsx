@@ -22,7 +22,7 @@ export function SettingBreadcrumb({
             <button
                 type="button"
                 onClick={onRoot}
-                className="-ml-1 flex shrink-0 items-center gap-0.5 rounded-md px-1 py-0.5 text-muted-foreground max-md:py-2.5 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="-ml-1 flex shrink-0 items-center gap-0.5 rounded-md px-1 py-0.5 text-muted-foreground max-md:py-2.5 outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
                 <ChevronLeft className="size-4" aria-hidden="true" />
                 {root}
