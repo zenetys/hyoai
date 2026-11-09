@@ -41,8 +41,8 @@ export function SettingsNav({
                             onClick={() => onOpen(id)}
                             aria-current={active === id ? "page" : undefined}
                             className={cn(
-                                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                                active === id && "bg-muted font-medium",
+                                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-foreground/5",
+                                active === id && "bg-muted font-medium dark:bg-foreground/10",
                                 phone && "py-2.5",
                             )}
                         >

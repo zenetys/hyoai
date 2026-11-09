@@ -89,14 +89,29 @@ export function SettingsDialog() {
         if (!open) setQuery("");
     }, [open]);
 
+    // The search box is the first thing to focus; on a phone that would raise the keyboard.
+    const focusDialogOnPhone = (event: Event) => {
+        if (!phone) return;
+        event.preventDefault();
+        (event.currentTarget as HTMLElement | null)?.focus({ preventScroll: true });
+    };
+
+    // Escape in a search first clears it, then closes the dialog.
+    const clearSearchFirst = (event: KeyboardEvent) => {
+        if (!searching) return;
+        event.preventDefault();
+        setQuery("");
+    };
+
     return (
         <Dialog open={open} onOpenChange={setSettingsOpen}>
             <DialogContent
                 className="gap-0 p-0 max-md:flex max-md:flex-col md:top-[6vh] md:h-[min(42rem,88vh)] md:grid-rows-[auto_minmax(0,1fr)] md:max-w-4xl md:translate-y-0"
                 scrollable={false}
                 aria-describedby={undefined}
+                onOpenAutoFocus={focusDialogOnPhone}
+                onEscapeKeyDown={clearSearchFirst}
             >
-                <DialogTitle className="sr-only">{t("title")}</DialogTitle>
                 <div className="flex h-12 shrink-0 items-center gap-1 border-b px-5 max-md:pr-14 max-md:pl-2">
                     {phone && current && (
                         <Button
@@ -109,14 +124,14 @@ export function SettingsDialog() {
                             <ArrowLeft aria-hidden="true" />
                         </Button>
                     )}
-                    <h2
+                    <DialogTitle
                         className={cn(
                             "truncate text-sm font-semibold",
                             phone && !current && "pl-3",
                         )}
                     >
                         {phone ? heading : t("title")}
-                    </h2>
+                    </DialogTitle>
                     {phone && hasOverride && current?.id === "config" && (
                         <OverrideBadge tick={appliedTick} health={health} />
                     )}
@@ -144,7 +159,7 @@ export function SettingsDialog() {
                     {(Content || (!phone && searching)) && (
                         <div
                             key={searching ? "search" : current?.id}
-                            className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent"
+                            className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent dark:[&_[data-slot=select-trigger]]:hover:bg-foreground/10"
                         >
                             <div className="mx-auto max-w-2xl space-y-1">
                                 {searching ? (
