@@ -1,9 +1,11 @@
 import {
+    Cpu,
     Database,
     FileJson,
     Gauge,
     type LucideIcon,
     Palette,
+    Plug,
     Scissors,
     SlidersHorizontal,
     Wrench,
@@ -11,13 +13,14 @@ import {
 import type { ComponentType } from "react";
 
 import { AppearanceTab } from "@/components/settings/tabs/AppearanceTab";
-import { AvailabilityTab } from "@/components/settings/tabs/AvailabilityTab";
 import { BehaviorTab } from "@/components/settings/tabs/BehaviorTab";
 import { ChunkingTab } from "@/components/settings/tabs/ChunkingTab";
 import { ConfigTab } from "@/components/settings/tabs/ConfigTab";
 import { DataTab } from "@/components/settings/tabs/DataTab";
+import { ModelsTab } from "@/components/settings/tabs/ModelsTab";
 import { PenaltiesTab } from "@/components/settings/tabs/PenaltiesTab";
 import { SamplingTab } from "@/components/settings/tabs/SamplingTab";
+import { ServersTab } from "@/components/settings/tabs/ServersTab";
 import { ToolsTab } from "@/components/settings/tabs/ToolsTab";
 import type { SettingsPage } from "@/lib/stores/ui";
 
@@ -47,17 +50,8 @@ export interface SettingsGroupDef {
 }
 
 /**
- * The sections of the page still gathered as they were in the tabs; each moves to rows of its own.
+ * Sampling and its repetition penalties are two groups of one page.
  */
-function BehaviorContent() {
-    return (
-        <>
-            <BehaviorTab />
-            <AvailabilityTab />
-        </>
-    );
-}
-
 function SamplingContent() {
     return (
         <>
@@ -76,12 +70,16 @@ export const SETTINGS_NAV: SettingsGroupDef[] = [
         id: "preferences",
         pages: [
             { id: "appearance", icon: Palette, embed: "always", Content: AppearanceTab },
-            { id: "behavior", icon: SlidersHorizontal, embed: "always", Content: BehaviorContent },
+            { id: "behavior", icon: SlidersHorizontal, embed: "always", Content: BehaviorTab },
         ],
     },
     {
         id: "customize",
-        pages: [{ id: "tools", icon: Wrench, embed: "never", Content: ToolsTab }],
+        pages: [
+            { id: "models", icon: Cpu, embed: "never", Content: ModelsTab },
+            { id: "servers", icon: Plug, embed: "never", Content: ServersTab },
+            { id: "tools", icon: Wrench, embed: "never", Content: ToolsTab },
+        ],
     },
     {
         id: "platform",
