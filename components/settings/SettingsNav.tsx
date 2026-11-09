@@ -8,8 +8,9 @@ import type { SettingsPage } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 /**
- * The list of settings pages, grouped. On a phone it is the first screen of the dialog, so each
- * row is taller and ends with a chevron; beside a page the current one is highlighted.
+ * The list of settings pages, grouped by hairlines rather than labels: the pages name
+ * themselves. On a phone it is the first screen of the dialog, so each row is taller and ends
+ * with a chevron; beside a page the current one is highlighted.
  *
  * @param groups - The groups to list, with the pages the view shows
  * @param active - The open page, or null on the list screen
@@ -30,12 +31,9 @@ export function SettingsNav({
     const t = useTranslations("settings");
 
     return (
-        <nav aria-label={t("title")} className="space-y-4">
-            {groups.map((group) => (
-                <div key={group.id} className="space-y-1">
-                    <p className="px-2.5 text-xs font-medium text-muted-foreground">
-                        {t(`groups.${group.id}`)}
-                    </p>
+        <nav aria-label={t("title")} className="space-y-3">
+            {groups.map((group, index) => (
+                <div key={group.id} className={cn("space-y-1", index > 0 && "border-t pt-3")}>
                     {group.pages.map(({ id, icon: Icon }) => (
                         <button
                             key={id}

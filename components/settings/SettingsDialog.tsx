@@ -14,6 +14,7 @@ import { useStore } from "@/hooks/useStore";
 import { modelsStore, selectConfigHealth } from "@/lib/stores/models";
 import { setSettingsOpen, setSettingsPage, uiStore } from "@/lib/stores/ui";
 import { getFullAppHref } from "@/lib/url";
+import { cn } from "@/lib/utils";
 
 /**
  * Application settings dialog opened from the header through the UI store. A grouped navigation
@@ -51,14 +52,33 @@ export function SettingsDialog() {
                 aria-describedby={undefined}
             >
                 <DialogTitle className="sr-only">{t("title")}</DialogTitle>
+                <div className="flex h-12 shrink-0 items-center gap-1 border-b px-5 max-md:pr-14 max-md:pl-2">
+                    {phone && current && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t("back")}
+                            onClick={() => setSettingsPage(null)}
+                        >
+                            <ArrowLeft aria-hidden="true" />
+                        </Button>
+                    )}
+                    <h2
+                        className={cn(
+                            "truncate text-sm font-semibold",
+                            phone && !current && "pl-3",
+                        )}
+                    >
+                        {phone ? heading : t("title")}
+                    </h2>
+                    {phone && hasOverride && current?.id === "config" && (
+                        <OverrideBadge tick={appliedTick} health={health} />
+                    )}
+                </div>
                 <div className="flex min-h-0 flex-1 md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
                     {(!phone || showList) && (
-                        <aside className="min-h-0 overflow-y-auto border-r bg-muted/20 p-3 max-md:flex-1 max-md:border-r-0 max-md:bg-transparent">
-                            {phone && (
-                                <h2 className="px-2.5 pt-1 pb-4 text-base font-semibold">
-                                    {heading}
-                                </h2>
-                            )}
+                        <aside className="min-h-0 overflow-y-auto border-r p-3 max-md:flex-1 max-md:border-r-0">
                             <SettingsNav
                                 groups={groups}
                                 active={current?.id ?? null}
@@ -68,31 +88,20 @@ export function SettingsDialog() {
                         </aside>
                     )}
                     {Content && (
-                        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                            <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4 md:px-6">
-                                {phone && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        aria-label={t("back")}
-                                        onClick={() => setSettingsPage(null)}
-                                    >
-                                        <ArrowLeft aria-hidden="true" />
-                                    </Button>
+                        <div
+                            key={current.id}
+                            className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent"
+                        >
+                            <div className="mx-auto max-w-2xl space-y-1">
+                                {!phone && (
+                                    <div className="flex items-center gap-2 pb-2">
+                                        <h2 className="text-sm font-medium">{heading}</h2>
+                                        {hasOverride && current?.id === "config" && (
+                                            <OverrideBadge tick={appliedTick} health={health} />
+                                        )}
+                                    </div>
                                 )}
-                                <h2 className="truncate text-base font-semibold">{heading}</h2>
-                                {hasOverride && current?.id === "config" && (
-                                    <OverrideBadge tick={appliedTick} health={health} />
-                                )}
-                            </div>
-                            <div
-                                key={current.id}
-                                className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6"
-                            >
-                                <div className="mx-auto max-w-2xl">
-                                    <Content />
-                                </div>
+                                <Content />
                             </div>
                         </div>
                     )}
