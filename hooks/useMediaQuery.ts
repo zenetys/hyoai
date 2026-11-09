@@ -78,6 +78,13 @@ export function useIsCompact(): boolean {
 }
 
 /**
+ * Whether the reader asks the system for less motion.
+ */
+export function useReducedMotion(): boolean {
+    return useMediaQuery("(prefers-reduced-motion: reduce)");
+}
+
+/**
  * Run `onCross` once each time `value` flips, to dismiss a transient mobile-only
  * overlay (drawer, sheet, overflow menu) the moment the viewport crosses the
  * breakpoint it belongs to, instead of stranding it on the wrong surface (a
