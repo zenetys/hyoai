@@ -5,7 +5,12 @@ import { useTranslations } from "next-intl";
 
 import { SETTINGS_SEARCH, type SettingsSearchEntry } from "@/components/settings/search";
 import { Input } from "@/components/ui/input";
-import type { SettingsPage } from "@/lib/stores/ui";
+import { useStore } from "@/hooks/useStore";
+import { type SettingsPage, uiStore } from "@/lib/stores/ui";
+
+// Lower-case a text and drop its accents, so "temperature" finds "Température".
+const fold = (text: string): string =>
+    text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase();
 
 /**
  * The search box of the settings: one text input with a magnifier.
@@ -59,7 +64,8 @@ export function SettingsSearchResults({
 }) {
     const t = useTranslations();
     const ts = useTranslations("settings");
-    const needle = query.trim().toLocaleLowerCase();
+    const embed = useStore(uiStore, (state) => state.embed);
+    const needle = fold(query.trim());
 
     // Message keys are built from the index, so they are looked up as plain strings.
     const text = (key: string): string => t(key as never);
@@ -67,17 +73,20 @@ export function SettingsSearchResults({
     const groups = pages
         .map((page) => ({
             page,
-            matches: SETTINGS_SEARCH.filter((entry) => entry.page === page)
+            named: fold(ts(`nav.${page}`)).includes(needle),
+            matches: SETTINGS_SEARCH.filter(
+                (entry) => entry.page === page && !(embed && entry.hiddenInEmbed),
+            )
                 .map((entry) => ({
                     entry,
                     label: text(entry.label),
                     description: entry.description ? text(entry.description) : undefined,
                 }))
                 .filter(({ label, description }) =>
-                    `${label} ${description ?? ""}`.toLocaleLowerCase().includes(needle),
+                    fold(`${label} ${description ?? ""}`).includes(needle),
                 ),
         }))
-        .filter((group) => group.matches.length > 0);
+        .filter((group) => group.named || group.matches.length > 0);
 
     if (groups.length === 0) {
         return (
@@ -91,25 +100,35 @@ export function SettingsSearchResults({
         <div className="space-y-6">
             {groups.map(({ page, matches }) => (
                 <section key={page} className="space-y-1">
-                    <h3 className="text-sm font-medium">{ts(`nav.${page}`)}</h3>
-                    <ul className="divide-y">
-                        {matches.map(({ entry, label, description }) => (
-                            <li key={entry.label}>
-                                <button
-                                    type="button"
-                                    onClick={() => onOpen(entry)}
-                                    className="-mx-2 block w-[calc(100%+1rem)] rounded-md px-2 py-3 text-left transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
-                                >
-                                    <span className="block text-sm font-medium">{label}</span>
-                                    {description && (
-                                        <span className="block text-xs text-muted-foreground">
-                                            {description}
-                                        </span>
-                                    )}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                    <h3 className="text-sm font-medium">
+                        <button
+                            type="button"
+                            onClick={() => onOpen({ page, label: `settings.nav.${page}` })}
+                            className="-mx-1 rounded-md px-1 py-0.5 text-left outline-none hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-foreground/5"
+                        >
+                            {ts(`nav.${page}`)}
+                        </button>
+                    </h3>
+                    {matches.length > 0 && (
+                        <ul className="divide-y">
+                            {matches.map(({ entry, label, description }) => (
+                                <li key={entry.label}>
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpen(entry)}
+                                        className="-mx-2 block w-[calc(100%+1rem)] rounded-md px-2 py-3 text-left transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+                                    >
+                                        <span className="block text-sm font-medium">{label}</span>
+                                        {description && (
+                                            <span className="block text-xs text-muted-foreground">
+                                                {description}
+                                            </span>
+                                        )}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </section>
             ))}
         </div>

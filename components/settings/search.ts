@@ -2,14 +2,19 @@ import type { SettingsPage } from "@/lib/stores/ui";
 
 /**
  * One setting the search can find: where it lives, the id of its control (to bring the focus
- * there once the page is open) and the message keys of its name and explanation.
+ * there once the page is open) and the message keys of its name and explanation. A row the
+ * embedded app never shows is flagged, so the search does not offer it there.
  */
 export interface SettingsSearchEntry {
     page: SettingsPage;
     id?: string;
     label: string;
     description?: string;
+    hiddenInEmbed?: boolean;
 }
+
+// Rows of the appearance page the embed leaves out: the host page owns them.
+const EMBED_HIDDEN = new Set(["appearance-theme", "appearance-skin", "appearance-language"]);
 
 // Shorthand for the entries of one message namespace.
 const entries = (
@@ -22,11 +27,12 @@ const entries = (
         id,
         label: `${namespace}.${label}`,
         description: description ? `${namespace}.${description}` : undefined,
+        hiddenInEmbed: id !== undefined && EMBED_HIDDEN.has(id),
     }));
 
 /**
- * Every setting of the pages made of plain rows, as data. The lists of models and servers are
- * found through their page name; the rows inside them are not indexed.
+ * Every setting of the pages made of plain rows, as data. A page is found by its own name, which
+ * the search handles apart; the rows inside the lists of models and servers are not indexed.
  */
 export const SETTINGS_SEARCH: SettingsSearchEntry[] = [
     ...entries("appearance", "settings.general", [
