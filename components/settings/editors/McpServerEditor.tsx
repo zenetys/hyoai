@@ -5,28 +5,22 @@ import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
-import { JsonField } from "@/components/settings/fields/JsonField";
-import { TextField } from "@/components/settings/fields/TextField";
+import { SettingJson } from "@/components/settings/fields/SettingJson";
+import { SettingRow } from "@/components/settings/fields/SettingRow";
+import { SettingSelect } from "@/components/settings/fields/SettingSelect";
+import { SettingText } from "@/components/settings/fields/SettingText";
 import {
     InputGroup,
     InputGroupAddon,
     InputGroupButton,
     InputGroupInput,
 } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import type { DraftMcpServer } from "@/lib/draft";
 
 /**
- * Fields of one MCP server of the catalog: name, address, transport, bearer
- * token and other headers. The identifier is asked only for a new server, as
- * the tool policies and the model scopes are keyed on it.
+ * Rows of one MCP server of the catalog: name, address, transport, bearer token and other
+ * headers. The identifier is asked only for a new server, as the tool policies and the model
+ * scopes are keyed on it. The rows are meant to sit in a setting group.
  *
  * @param server - The server draft being edited
  * @param isNew - Whether the server is being added
@@ -46,59 +40,52 @@ export function McpServerEditor({
     const [revealed, setRevealed] = useState(false);
 
     return (
-        <div className="space-y-4">
-            <div className="grid gap-4 @md:grid-cols-2">
-                <TextField
-                    id={`${id}-label`}
-                    label={t("label")}
-                    placeholder={t("labelPlaceholder")}
-                    value={server.label}
-                    onChange={(label) => onChange({ label })}
+        <>
+            <SettingText
+                id={`${id}-label`}
+                label={t("label")}
+                placeholder={t("labelPlaceholder")}
+                value={server.label}
+                onChange={(label) => onChange({ label })}
+            />
+            {isNew && (
+                <SettingText
+                    id={`${id}-id`}
+                    label={t("id")}
+                    description={t("idHint")}
+                    value={server.id}
+                    onChange={(value) => onChange({ id: value })}
                 />
-                {isNew && (
-                    <TextField
-                        id={`${id}-id`}
-                        label={t("id")}
-                        description={t("idHint")}
-                        value={server.id}
-                        onChange={(value) => onChange({ id: value })}
-                    />
-                )}
-            </div>
-            <div className="grid gap-4 @md:grid-cols-2">
-                <TextField
-                    id={`${id}-url`}
-                    label={t("url")}
-                    description={t("urlHint")}
-                    placeholder="https://"
-                    value={server.url}
-                    onChange={(url) => onChange({ url })}
-                />
-                <div className="space-y-1.5">
-                    <Label htmlFor={`${id}-transport`}>{t("transport")}</Label>
-                    <Select
-                        value={server.transport}
-                        onValueChange={(value) =>
-                            onChange({ transport: value as DraftMcpServer["transport"] })
-                        }
-                    >
-                        <SelectTrigger id={`${id}-transport`} className="w-full">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="auto">{t("transportAuto")}</SelectItem>
-                            <SelectItem value="http">{t("transportHttp")}</SelectItem>
-                            <SelectItem value="sse">{t("transportSse")}</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {server.transport === "auto" && (
-                        <p className="text-xs text-muted-foreground">{t("transportHint")}</p>
-                    )}
-                </div>
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor={`${id}-token`}>{t("token")}</Label>
-                <p className="text-xs text-muted-foreground">{t("tokenHint")}</p>
+            )}
+            <SettingText
+                id={`${id}-url`}
+                label={t("url")}
+                description={t("urlHint")}
+                placeholder="https://"
+                value={server.url}
+                wide
+                onChange={(url) => onChange({ url })}
+            />
+            <SettingSelect
+                id={`${id}-transport`}
+                label={t("transport")}
+                description={server.transport === "auto" ? t("transportHint") : undefined}
+                value={server.transport}
+                className="w-48"
+                wide
+                options={[
+                    ["auto", t("transportAuto")],
+                    ["http", t("transportHttp")],
+                    ["sse", t("transportSse")],
+                ]}
+                onChange={(value) => onChange({ transport: value as DraftMcpServer["transport"] })}
+            />
+            <SettingRow
+                label={t("token")}
+                description={t("tokenHint")}
+                htmlFor={`${id}-token`}
+                stacked
+            >
                 <InputGroup>
                     <InputGroupInput
                         id={`${id}-token`}
@@ -120,12 +107,13 @@ export function McpServerEditor({
                         <InputCopyButton value={server.token} label={t("copyToken")} />
                     </InputGroupAddon>
                 </InputGroup>
-            </div>
-            <JsonField
+            </SettingRow>
+            <SettingJson
+                id={`${id}-headers`}
                 label={t("headers")}
                 value={server.headers}
                 onChange={(headers) => onChange({ headers })}
             />
-        </div>
+        </>
     );
 }

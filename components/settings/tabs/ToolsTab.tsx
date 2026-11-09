@@ -9,7 +9,6 @@ import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { SettingRow } from "@/components/settings/fields/SettingRow";
 import { SettingToggle } from "@/components/settings/fields/SettingToggle";
 import { ToolPolicySelect } from "@/components/settings/fields/ToolPolicySelect";
-import { McpServers } from "@/components/settings/mcp/McpServers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -213,8 +212,6 @@ export function ToolsTab() {
                     );
                 })}
             </SettingGroup>
-
-            <McpServers />
 
             <div>
                 <Button

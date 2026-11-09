@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { McpServerEditor } from "@/components/settings/editors/McpServerEditor";
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { Button } from "@/components/ui/button";
 import type { DraftMcpServer } from "@/lib/draft";
 import { patchMcpServer, saveMcpServer } from "@/lib/mcp/edit";
@@ -15,24 +16,28 @@ import { checkMcpServer } from "@/lib/mcp/origin";
  * Save, so a server is not reconnected at every keystroke and an unfinished
  * address never gets tried.
  *
- * An existing server is patched with the form fields only, so whatever the card
- * changed since the form opened, such as its switch, is kept.
+ * An existing server is patched with the form fields only, so whatever changed
+ * since the form opened, such as its switch, is kept. Cancel puts the fields
+ * back to the server as stored.
  *
- * @param initial - The server to start from
+ * @param initial - The server to start from, and to go back to on Cancel
  * @param isNew - Whether the server is being added
  * @param otherIds - Ids of the other servers, which a new id must differ from
- * @param onDone - Called once saved or cancelled
+ * @param onSaved - Called once saved
+ * @param onCancel - Called once the fields were put back
  */
 export function McpServerForm({
     initial,
     isNew,
     otherIds,
-    onDone,
+    onSaved,
+    onCancel,
 }: {
     initial: DraftMcpServer;
     isNew: boolean;
     otherIds: string[];
-    onDone: () => void;
+    onSaved?: () => void;
+    onCancel?: () => void;
 }) {
     const t = useTranslations("settings.tools.mcp");
     const [draft, setDraft] = useState(initial);
@@ -58,7 +63,14 @@ export function McpServerForm({
         }
 
         toast.success(t("saved", { name: draft.label.trim() || draft.id.trim() }));
-        onDone();
+        setTouched(false);
+        onSaved?.();
+    };
+
+    const cancel = () => {
+        setDraft(initial);
+        setTouched(false);
+        onCancel?.();
     };
 
     return (
@@ -69,14 +81,16 @@ export function McpServerForm({
                 void save();
             }}
         >
-            <McpServerEditor
-                server={draft}
-                isNew={isNew}
-                onChange={(changes) => {
-                    setTouched(true);
-                    setDraft({ ...draft, ...changes });
-                }}
-            />
+            <SettingGroup>
+                <McpServerEditor
+                    server={draft}
+                    isNew={isNew}
+                    onChange={(changes) => {
+                        setTouched(true);
+                        setDraft({ ...draft, ...changes });
+                    }}
+                />
+            </SettingGroup>
             <p className="text-xs text-muted-foreground">{t("storedHere")}</p>
             {touched && problem && (
                 <p role="alert" className="text-xs text-destructive">
@@ -84,7 +98,7 @@ export function McpServerForm({
                 </p>
             )}
             <div className="flex flex-wrap justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={onDone}>
+                <Button type="button" variant="outline" size="sm" onClick={cancel}>
                     {t("cancel")}
                 </Button>
                 <Button type="submit" size="sm" disabled={busy || problem !== null}>
