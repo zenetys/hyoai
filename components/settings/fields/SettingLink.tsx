@@ -29,7 +29,7 @@ export function SettingLink({
     children?: ReactNode;
 }) {
     return (
-        <div className="@container flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40">
+        <div className="@container -mx-2 flex items-center gap-3 rounded-md px-2 py-3 transition-colors hover:bg-muted/40">
             <button
                 type="button"
                 onClick={onOpen}

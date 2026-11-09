@@ -32,7 +32,7 @@ export function SettingRow({
     return (
         <div
             className={cn(
-                "gap-x-6 gap-y-2.5 px-4 py-3",
+                "gap-x-6 gap-y-2.5 py-3.5",
                 stacked ? "flex flex-col" : "flex items-center justify-between",
                 phoneStack && !stacked && "max-md:flex-col max-md:items-stretch",
             )}
