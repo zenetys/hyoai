@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { UnsetNumberField } from "@/components/settings/fields/UnsetNumberField";
-import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/hooks/useStore";
 import { settingsStore, updateSettings } from "@/lib/stores/settings";
 import type { PenaltySettings } from "@/types/settings";
@@ -21,8 +21,8 @@ export function PenaltiesTab() {
     };
 
     return (
-        <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+        <>
+            <SettingGroup title={t("penalties.title")}>
                 <UnsetNumberField
                     id="penalties-repeat"
                     label={t("penalties.repeatPenalty")}
@@ -48,10 +48,8 @@ export function PenaltiesTab() {
                     placeholder={t("unsetPlaceholder")}
                     step={0.1}
                 />
-            </div>
-            <Separator />
-            <p className="text-xs text-muted-foreground">{t("penalties.dryHint")}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            </SettingGroup>
+            <SettingGroup description={t("penalties.dryHint")}>
                 <UnsetNumberField
                     id="penalties-dry-multiplier"
                     label={t("penalties.dryMultiplier")}
@@ -84,7 +82,7 @@ export function PenaltiesTab() {
                     placeholder={t("unsetPlaceholder")}
                     step={1}
                 />
-            </div>
-        </div>
+            </SettingGroup>
+        </>
     );
 }

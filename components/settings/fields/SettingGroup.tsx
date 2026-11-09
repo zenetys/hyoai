@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
  * A titled group of settings: flat rows separated by a hairline, no card around them. The title
  * is a sentence, like the text of the page above it, not a small-caps label.
  *
- * @param title - Optional heading above the surface
- * @param description - Optional line under the heading
+ * @param title - Optional heading above the rows
+ * @param description - Optional line under the heading, or above the rows when there is no title
  * @param children - The rows
  */
 export function SettingGroup({
@@ -19,9 +19,9 @@ export function SettingGroup({
 }) {
     return (
         <section className="space-y-1">
-            {title && (
+            {(title || description) && (
                 <div className="space-y-0.5 pb-1">
-                    <h3 className="text-sm font-medium">{title}</h3>
+                    {title && <h3 className="text-sm font-medium">{title}</h3>}
                     {description && <p className="text-xs text-muted-foreground">{description}</p>}
                 </div>
             )}

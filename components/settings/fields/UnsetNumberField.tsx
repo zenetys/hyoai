@@ -1,7 +1,7 @@
 "use client";
 
+import { SettingRow } from "@/components/settings/fields/SettingRow";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 interface UnsetNumberFieldProps {
     id: string;
@@ -16,7 +16,7 @@ interface UnsetNumberFieldProps {
 }
 
 /**
- * Numeric settings field where an empty input means "not sent": the parameter
+ * Numeric setting row where an empty input means "not sent": the parameter
  * is omitted from requests and the server default applies.
  *
  * @param props - Field identity, bound value, change callback and bounds
@@ -43,12 +43,11 @@ export function UnsetNumberField({
     };
 
     return (
-        <div className="space-y-1.5">
-            <Label htmlFor={id}>{label}</Label>
-            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        <SettingRow label={label} description={description} htmlFor={id}>
             <Input
                 id={id}
                 type="number"
+                className="w-40"
                 value={value ?? ""}
                 onChange={handleChange}
                 placeholder={placeholder}
@@ -56,6 +55,6 @@ export function UnsetNumberField({
                 max={max}
                 step={step}
             />
-        </div>
+        </SettingRow>
     );
 }
