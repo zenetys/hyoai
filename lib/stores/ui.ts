@@ -76,7 +76,7 @@ export interface ModelInfoTarget {
 interface UiState {
     settingsOpen: boolean;
     settingsTab: SettingsTab;
-    settingsPage: SettingsPage;
+    settingsPage: SettingsPage | null;
     settingsFocus: string | null;
     commandOpen: boolean;
     modelInfoOpen: boolean;
@@ -96,7 +96,7 @@ interface UiState {
 export const uiStore = createStore<UiState>({
     settingsOpen: false,
     settingsTab: "general",
-    settingsPage: "appearance",
+    settingsPage: null,
     settingsFocus: null,
     commandOpen: false,
     modelInfoOpen: false,
@@ -137,31 +137,33 @@ export function setSettingsTab(tab: SettingsTab): void {
 /**
  * Set the active page of the settings dialog. This is a global state because the
  * settings can be opened from multiple places, and the dialog should stay on
- * the same page when switching between them.
+ * the same page when switching between them. No page is the list of pages: the
+ * first screen of the dialog on a phone, and the first page on a larger screen.
  *
- * @param page - The page to show in the settings dialog
+ * @param page - The page to show in the settings dialog, or null for the list
  */
-export function setSettingsPage(page: SettingsPage): void {
-    uiStore.setState({ settingsPage: page, settingsTab: TAB_OF_PAGE[page] });
+export function setSettingsPage(page: SettingsPage | null): void {
+    uiStore.setState({ settingsPage: page, settingsTab: page ? TAB_OF_PAGE[page] : "general" });
 }
 
 /**
- * Open the settings dialog on a specific page. This is a global state because the
- * settings can be opened from multiple places, and the dialog should stay on
- * the same page when switching between them.
+ * Open the settings dialog, on a specific page when one is given. This is a global
+ * state because the settings can be opened from multiple places, and the dialog
+ * should stay on the same page when switching between them.
  *
- * The optional focus names a section the page should scroll into view (a model
- * entry id for the models page), so a caller can point at one entry instead of
- * dropping the reader at the top of a long form.
+ * Without a page the dialog opens on the list of pages. The optional focus names
+ * a section the page should scroll into view (a model entry id for the models
+ * page), so a caller can point at one entry instead of dropping the reader at
+ * the top of a long form.
  *
- * @param page - The page to show in the settings dialog
+ * @param page - The page to show in the settings dialog, or null for the list
  * @param focus - Section to scroll into view once the page is rendered
  */
-export function openSettings(page: SettingsPage = "appearance", focus: string | null = null): void {
+export function openSettings(page: SettingsPage | null = null, focus: string | null = null): void {
     uiStore.setState({
         settingsOpen: true,
         settingsPage: page,
-        settingsTab: TAB_OF_PAGE[page],
+        settingsTab: page ? TAB_OF_PAGE[page] : "general",
         settingsFocus: focus,
     });
 }

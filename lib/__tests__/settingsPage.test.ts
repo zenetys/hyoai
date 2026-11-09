@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSettingsPage, SETTINGS_PAGES } from "@/lib/stores/ui";
+import {
+    openSettings,
+    parseSettingsPage,
+    setSettingsOpen,
+    setSettingsPage,
+    SETTINGS_PAGES,
+    uiStore,
+} from "@/lib/stores/ui";
 
 describe("parseSettingsPage", () => {
     it("accepts every page of the dialog", () => {
@@ -38,5 +45,32 @@ describe("parseSettingsPage", () => {
 
     it("is case sensitive so a link never matches a page by accident", () => {
         expect(parseSettingsPage("Data")).toBeNull();
+    });
+});
+
+describe("opening the settings", () => {
+    it("opens on the list of pages when no page is given", () => {
+        openSettings();
+        expect(uiStore.getState().settingsOpen).toBe(true);
+        expect(uiStore.getState().settingsPage).toBeNull();
+    });
+
+    it("opens on the page it is given, and keeps the focus for it", () => {
+        openSettings("models", "alpha");
+        expect(uiStore.getState().settingsPage).toBe("models");
+        expect(uiStore.getState().settingsFocus).toBe("alpha");
+    });
+
+    it("goes back to the list of pages", () => {
+        openSettings("tools");
+        setSettingsPage(null);
+        expect(uiStore.getState().settingsPage).toBeNull();
+        expect(uiStore.getState().settingsOpen).toBe(true);
+    });
+
+    it("drops the focus when the dialog closes", () => {
+        openSettings("models", "alpha");
+        setSettingsOpen(false);
+        expect(uiStore.getState().settingsFocus).toBeNull();
     });
 });
