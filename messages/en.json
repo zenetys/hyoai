@@ -302,6 +302,24 @@
             "config": "Config",
             "tools": "Tools"
         },
+        "groups": {
+            "preferences": "Preferences",
+            "customize": "Customize",
+            "platform": "Platform",
+            "generation": "Generation"
+        },
+        "nav": {
+            "appearance": "Appearance",
+            "behavior": "Behavior",
+            "models": "Models",
+            "servers": "MCP servers",
+            "tools": "Tools",
+            "data": "Data",
+            "config": "Configuration",
+            "sampling": "Sampling",
+            "chunking": "Chunking"
+        },
+        "back": "Back",
         "general": {
             "appearanceTitle": "Appearance",
             "appearanceDescription": "Theme, language and how the interface looks.",
