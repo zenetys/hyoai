@@ -71,7 +71,7 @@ export function ToolsToggle() {
                         >
                             <Wrench aria-hidden="true" />
                             {pending && (
-                                <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-amber-500 ring-2 ring-card">
+                                <span className="absolute right-px bottom-px size-2 rounded-full bg-amber-500 ring-2 ring-card">
                                     <span className="sr-only">{t("toolsPending")}</span>
                                 </span>
                             )}
