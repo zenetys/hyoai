@@ -2,17 +2,20 @@
 
 import { AppWindow, ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 
 import { OverrideBadge } from "@/components/settings/fields/OverrideBadge";
 import { visibleSettingsNav } from "@/components/settings/pages";
+import type { SettingsSearchEntry } from "@/components/settings/search";
 import { SettingsNav } from "@/components/settings/SettingsNav";
+import { SettingsSearchInput, SettingsSearchResults } from "@/components/settings/SettingsSearch";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
 import { modelsStore, selectConfigHealth } from "@/lib/stores/models";
-import { setSettingsOpen, setSettingsPage, uiStore } from "@/lib/stores/ui";
+import { setSettingsOpen, setSettingsPage, type SettingsPage, uiStore } from "@/lib/stores/ui";
 import { getFullAppHref } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +23,8 @@ import { cn } from "@/lib/utils";
  * Application settings dialog opened from the header through the UI store. A grouped navigation
  * on the left and the open page on the right; on a phone the navigation and the page are two
  * screens, with a back button from the page. An embed drops the pages it never offers (tools,
- * configuration) and shows the data page only with the sidebar.
+ * configuration) and shows the data page only with the sidebar. A search box over the navigation
+ * lists the settings that match and brings to the one picked.
  */
 export function SettingsDialog() {
     const t = useTranslations("settings");
@@ -43,6 +47,43 @@ export function SettingsDialog() {
     const showList = phone && !current;
 
     const heading = current ? t(`nav.${current.id}`) : t("title");
+
+    const [query, setQuery] = useState("");
+    const [pendingFocus, setPendingFocus] = useState<string | null>(null);
+    const searching = query.trim() !== "";
+
+    const openPage = (id: SettingsPage) => {
+        setQuery("");
+        setSettingsPage(id);
+    };
+    const openResult = (entry: SettingsSearchEntry) => {
+        openPage(entry.page);
+        setPendingFocus(entry.id ?? null);
+    };
+
+    // Once the page of a result is on screen, focus its control, looked for over a short while.
+    useEffect(() => {
+        if (!pendingFocus || searching || current?.id === undefined) return;
+        const started = performance.now();
+        let frame = requestAnimationFrame(function find() {
+            const target = document.getElementById(pendingFocus);
+            if (target) {
+                target.scrollIntoView({ block: "center" });
+                target.focus({ preventScroll: true });
+                setPendingFocus(null);
+            } else if (performance.now() - started < 1000) {
+                frame = requestAnimationFrame(find);
+            } else {
+                setPendingFocus(null);
+            }
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [pendingFocus, searching, current?.id]);
+
+    // Start from a clean search whenever the dialog is shown again.
+    useEffect(() => {
+        if (!open) setQuery("");
+    }, [open]);
 
     return (
         <Dialog open={open} onOpenChange={setSettingsOpen}>
@@ -78,32 +119,58 @@ export function SettingsDialog() {
                 </div>
                 <div className="flex min-h-0 flex-1 md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
                     {(!phone || showList) && (
-                        <aside className="min-h-0 overflow-y-auto border-r p-3 max-md:flex-1 max-md:border-r-0">
-                            <SettingsNav
-                                groups={groups}
-                                active={current?.id ?? null}
-                                onOpen={setSettingsPage}
-                                phone={phone}
-                            />
+                        <aside className="min-h-0 space-y-3 overflow-y-auto border-r p-3 max-md:flex-1 max-md:border-r-0">
+                            <SettingsSearchInput value={query} onChange={setQuery} />
+                            {phone && searching ? (
+                                <SettingsSearchResults
+                                    query={query}
+                                    pages={pages.map((entry) => entry.id)}
+                                    onOpen={openResult}
+                                />
+                            ) : (
+                                <SettingsNav
+                                    groups={groups}
+                                    active={searching ? null : (current?.id ?? null)}
+                                    onOpen={openPage}
+                                    phone={phone}
+                                />
+                            )}
                         </aside>
                     )}
-                    {Content && (
+                    {(Content || (!phone && searching)) && (
                         <div
-                            key={current.id}
+                            key={searching ? "search" : current?.id}
                             className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent"
                         >
                             <div className="mx-auto max-w-2xl space-y-1">
-                                {!phone && (
-                                    <div className="flex items-center gap-2 pb-2">
-                                        <h2 className="text-sm font-medium">{heading}</h2>
-                                        {hasOverride && current?.id === "config" && (
-                                            <OverrideBadge tick={appliedTick} health={health} />
-                                        )}
-                                    </div>
+                                {searching ? (
+                                    <SettingsSearchResults
+                                        query={query}
+                                        pages={pages.map((entry) => entry.id)}
+                                        onOpen={openResult}
+                                    />
+                                ) : (
+                                    Content && (
+                                        <>
+                                            {!phone && (
+                                                <div className="flex items-center gap-2 pb-2">
+                                                    <h2 className="text-sm font-medium">
+                                                        {heading}
+                                                    </h2>
+                                                    {hasOverride && current?.id === "config" && (
+                                                        <OverrideBadge
+                                                            tick={appliedTick}
+                                                            health={health}
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
+                                            <div className="space-y-8">
+                                                <Content />
+                                            </div>
+                                        </>
+                                    )
                                 )}
-                                <div className="space-y-8">
-                                    <Content />
-                                </div>
                             </div>
                         </div>
                     )}
