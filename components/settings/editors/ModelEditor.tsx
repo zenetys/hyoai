@@ -1,44 +1,27 @@
 "use client";
 
-import { ChevronDown, Power, PowerOff } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { EditableCard } from "@/components/settings/fields/EditableCard";
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
-import { JsonField } from "@/components/settings/fields/JsonField";
 import { McpScopeField } from "@/components/settings/fields/McpScopeField";
-import { TextField } from "@/components/settings/fields/TextField";
+import { SettingGroup } from "@/components/settings/fields/SettingGroup";
+import { SettingJson } from "@/components/settings/fields/SettingJson";
+import { SettingSelect } from "@/components/settings/fields/SettingSelect";
+import { SettingText } from "@/components/settings/fields/SettingText";
+import { SettingToggle } from "@/components/settings/fields/SettingToggle";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import type { Capability, DraftModel } from "@/lib/draft";
 import { listServerTypes } from "@/lib/plugins/registry";
 
 /**
- * DOM id of a model card, so the config tab can scroll one entry into view and
- * the entry's own field ids stay scoped to it.
+ * Detail of one model entry as flat rows: the enabled switch, identity and endpoint fields, the
+ * streaming and context switches, an advanced section (request-body fragments,
+ * capability overrides, tool-call recovery and MCP scope), then the reorder and
+ * remove actions. The caller draws the way back to the list above it.
  *
- * @param index - Position of the entry in the models list
- */
-export function modelAnchorId(index: number): string {
-    return `config-model-${index}`;
-}
-
-/**
- * Editor for one model entry: identity and endpoint fields, capability
- * switches, request headers, and an advanced section for the thinking and
- * effort request-body fragments. The header carries reorder controls, a power
- * toggle for the entry availability, and a disabled tag mirroring its state.
- *
- * @param index - Position of the entry, used to anchor the card and scope its ids
+ * @param index - Position of the entry, used to scope the ids of its fields
  * @param model - The model draft being edited
  * @param onChange - Called with a partial change to merge into the entry
  * @param onRemove - Called to drop the entry from the list
@@ -69,250 +52,220 @@ export function ModelEditor({
     canMoveDown: boolean;
     mcpServers: { id: string; label: string }[];
 }) {
-    const t = useTranslations("settings");
-    const title = model.id || t("config.modelUntitled");
+    const t = useTranslations("settings.config");
+    const prefix = `model-${index}`;
     const serverTypes = listServerTypes().map((definition) => definition.id);
+    const typeOptions: [string, string][] = serverTypes.map((type) => [type, type]);
+    if (!serverTypes.includes(model.type)) {
+        typeOptions.push([model.type, t("serverTypeNotInstalled", { type: model.type })]);
+    }
+    const capabilityOptions: [string, string][] = [
+        ["auto", t("capabilityAuto")],
+        ["on", t("capabilityOn")],
+        ["off", t("capabilityOff")],
+    ];
 
     return (
-        <EditableCard
-            id={modelAnchorId(index)}
-            title={model.disabled ? `${title} · ${t("config.disabled")}` : title}
-            removeLabel={t("config.removeModel")}
-            onRemove={onRemove}
-            reorder={{
-                onUp: onMoveUp,
-                onDown: onMoveDown,
-                canUp: canMoveUp,
-                canDown: canMoveDown,
-                upLabel: t("config.moveUp"),
-                downLabel: t("config.moveDown"),
-            }}
-            headerAction={
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={model.disabled ? t("config.enableModel") : t("config.disableModel")}
-                    aria-pressed={model.disabled}
-                    onClick={() => onChange({ disabled: !model.disabled })}
-                >
-                    {model.disabled ? (
-                        <PowerOff aria-hidden="true" />
-                    ) : (
-                        <Power aria-hidden="true" />
-                    )}
-                </Button>
-            }
-        >
-            <div className="grid gap-3 sm:grid-cols-2">
-                <TextField
-                    label={t("config.modelId")}
-                    description={t("config.modelIdHint")}
-                    placeholder={t("config.modelIdPlaceholder")}
+        <div className="space-y-8">
+            <SettingGroup>
+                <SettingToggle
+                    id={`${prefix}-enabled`}
+                    label={t("enableModel")}
+                    checked={!model.disabled}
+                    onCheckedChange={(checked) => onChange({ disabled: !checked })}
+                />
+                <SettingText
+                    id={`${prefix}-id`}
+                    label={t("modelId")}
+                    description={t("modelIdHint")}
+                    placeholder={t("modelIdPlaceholder")}
                     value={model.id}
                     onChange={(value) => onChange({ id: value })}
                 />
-                <TextField
-                    label={t("config.pinnedModel")}
-                    description={t("config.pinnedModelHint")}
+                <SettingText
+                    id={`${prefix}-pinned`}
+                    label={t("pinnedModel")}
+                    description={t("pinnedModelHint")}
+                    placeholder={t("pinnedModelPlaceholder")}
                     value={model.model}
-                    placeholder={t("config.pinnedModelPlaceholder")}
                     onChange={(value) => onChange({ model: value })}
                 />
-                <TextField
-                    label={t("config.modelName")}
-                    description={t("config.modelNameHint")}
-                    placeholder={t("config.modelNamePlaceholder")}
+                <SettingText
+                    id={`${prefix}-name`}
+                    label={t("modelName")}
+                    description={t("modelNameHint")}
+                    placeholder={t("modelNamePlaceholder")}
                     value={model.name}
                     onChange={(value) => onChange({ name: value })}
                 />
-                <TextField
-                    label={t("config.modelShortName")}
-                    description={t("config.modelShortNameHint")}
-                    placeholder={t("config.modelShortNamePlaceholder")}
+                <SettingText
+                    id={`${prefix}-short-name`}
+                    label={t("modelShortName")}
+                    description={t("modelShortNameHint")}
+                    placeholder={t("modelShortNamePlaceholder")}
                     value={model.shortName}
                     onChange={(value) => onChange({ shortName: value })}
                 />
-                <TextField
-                    label={t("config.baseUrl")}
-                    description={t("config.baseUrlHint")}
-                    value={model.baseUrl}
+                <SettingText
+                    id={`${prefix}-base-url`}
+                    label={t("baseUrl")}
+                    description={t("baseUrlHint")}
                     placeholder="https://api.mistral.ai/v1"
+                    value={model.baseUrl}
                     onChange={(value) => onChange({ baseUrl: value })}
+                    wide
+                    mono
                 />
-                <div className="space-y-1.5">
-                    <Label>{t("config.serverType")}</Label>
-                    <p className="text-xs text-muted-foreground">{t("config.serverTypeHint")}</p>
-                    <Select value={model.type} onValueChange={(value) => onChange({ type: value })}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {serverTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                    {type}
-                                </SelectItem>
-                            ))}
-                            {!serverTypes.includes(model.type) && (
-                                <SelectItem value={model.type}>
-                                    {t("config.serverTypeNotInstalled", { type: model.type })}
-                                </SelectItem>
-                            )}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="sm:col-span-2">
-                    <TextField
-                        label={t("config.apiKey")}
-                        description={t("config.apiKeyHint")}
-                        placeholder={t("config.apiKeyPlaceholder")}
-                        value={model.apiKey}
-                        onChange={(value) => onChange({ apiKey: value })}
-                        action={
-                            <InputCopyButton value={model.apiKey} label={t("config.copyApiKey")} />
-                        }
-                    />
-                </div>
-            </div>
+                <SettingSelect
+                    id={`${prefix}-type`}
+                    label={t("serverType")}
+                    description={t("serverTypeHint")}
+                    value={model.type}
+                    onChange={(value) => onChange({ type: value })}
+                    options={typeOptions}
+                    className="w-40 max-w-full sm:w-48"
+                />
+                <SettingText
+                    id={`${prefix}-api-key`}
+                    label={t("apiKey")}
+                    description={t("apiKeyHint")}
+                    placeholder={t("apiKeyPlaceholder")}
+                    value={model.apiKey}
+                    onChange={(value) => onChange({ apiKey: value })}
+                    action={<InputCopyButton value={model.apiKey} label={t("copyApiKey")} />}
+                    wide
+                />
+                <SettingToggle
+                    id={`${prefix}-streaming`}
+                    label={t("streaming")}
+                    checked={model.streaming}
+                    onCheckedChange={(checked) => onChange({ streaming: checked })}
+                />
+                <SettingToggle
+                    id={`${prefix}-send-context`}
+                    label={t("sendContext")}
+                    checked={model.sendContext}
+                    onCheckedChange={(checked) => onChange({ sendContext: checked })}
+                />
+            </SettingGroup>
 
-            <div className="flex flex-wrap gap-6">
-                <Label className="flex items-center gap-2 font-normal cursor-pointer">
-                    <Switch
-                        id={`${modelAnchorId(index)}-streaming`}
-                        checked={model.streaming}
-                        onCheckedChange={(checked) => onChange({ streaming: checked })}
+            <Collapsible className="space-y-1">
+                <CollapsibleTrigger className="group flex items-center gap-1.5 rounded-md text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                    <ChevronDown
+                        aria-hidden="true"
+                        className="size-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90"
                     />
-                    {t("config.streaming")}
-                </Label>
-                <Label className="flex items-center gap-2 font-normal cursor-pointer">
-                    <Switch
-                        id={`${modelAnchorId(index)}-send-context`}
-                        checked={model.sendContext}
-                        onCheckedChange={(checked) => onChange({ sendContext: checked })}
-                    />
-                    {t("config.sendContext")}
-                </Label>
-            </div>
-
-            <Collapsible>
-                <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                    <ChevronDown aria-hidden="true" className="size-3.5" />
-                    {t("config.advanced")}
+                    {t("advanced")}
                 </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-3 pt-3">
-                    <JsonField
-                        label={t("config.modelHeaders")}
-                        value={model.headers}
-                        onChange={(value) => onChange({ headers: value })}
-                    />
-                    <JsonField
-                        label={t("config.modelThinking")}
-                        value={model.thinking}
-                        onChange={(value) => onChange({ thinking: value })}
-                    />
-                    <JsonField
-                        label={t("config.modelEffort")}
-                        value={model.effort}
-                        onChange={(value) => onChange({ effort: value })}
-                    />
-                    <JsonField
-                        label={t("config.modelModalities")}
-                        value={model.modalities}
-                        onChange={(value) => onChange({ modalities: value })}
-                    />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <CapabilityField
-                            label={t("config.supportsThinking")}
+                <CollapsibleContent>
+                    <SettingGroup>
+                        <SettingJson
+                            id={`${prefix}-headers`}
+                            label={t("modelHeaders")}
+                            value={model.headers}
+                            onChange={(value) => onChange({ headers: value })}
+                        />
+                        <SettingJson
+                            id={`${prefix}-thinking`}
+                            label={t("modelThinking")}
+                            value={model.thinking}
+                            onChange={(value) => onChange({ thinking: value })}
+                        />
+                        <SettingJson
+                            id={`${prefix}-effort`}
+                            label={t("modelEffort")}
+                            value={model.effort}
+                            onChange={(value) => onChange({ effort: value })}
+                        />
+                        <SettingJson
+                            id={`${prefix}-modalities`}
+                            label={t("modelModalities")}
+                            value={model.modalities}
+                            onChange={(value) => onChange({ modalities: value })}
+                        />
+                        <SettingSelect
+                            id={`${prefix}-supports-thinking`}
+                            label={t("supportsThinking")}
                             value={model.supportsThinking}
-                            onChange={(value) => onChange({ supportsThinking: value })}
+                            onChange={(value) =>
+                                onChange({ supportsThinking: value as Capability })
+                            }
+                            options={capabilityOptions}
                         />
-                        <CapabilityField
-                            label={t("config.runtimeProps")}
+                        <SettingSelect
+                            id={`${prefix}-runtime-props`}
+                            label={t("runtimeProps")}
                             value={model.runtimeProps}
-                            onChange={(value) => onChange({ runtimeProps: value })}
+                            onChange={(value) => onChange({ runtimeProps: value as Capability })}
+                            options={capabilityOptions}
                         />
-                        <CapabilityField
-                            label={t("config.tools")}
-                            hint={t("config.toolsHint")}
+                        <SettingSelect
+                            id={`${prefix}-tools`}
+                            label={t("tools")}
+                            description={t("toolsHint")}
                             value={model.tools}
-                            onChange={(value) => onChange({ tools: value })}
+                            onChange={(value) => onChange({ tools: value as Capability })}
+                            options={capabilityOptions}
                         />
-                        <CapabilityField
-                            label={t("config.parallelToolCalls")}
+                        <SettingSelect
+                            id={`${prefix}-parallel-tool-calls`}
+                            label={t("parallelToolCalls")}
                             value={model.parallelToolCalls}
-                            onChange={(value) => onChange({ parallelToolCalls: value })}
+                            onChange={(value) =>
+                                onChange({ parallelToolCalls: value as Capability })
+                            }
+                            options={capabilityOptions}
                         />
-                        <CapabilityField
-                            label={t("config.supportsToolChoice")}
-                            hint={t("config.supportsToolChoiceHint")}
+                        <SettingSelect
+                            id={`${prefix}-supports-tool-choice`}
+                            label={t("supportsToolChoice")}
+                            description={t("supportsToolChoiceHint")}
                             value={model.supportsToolChoice}
-                            onChange={(value) => onChange({ supportsToolChoice: value })}
+                            onChange={(value) =>
+                                onChange({ supportsToolChoice: value as Capability })
+                            }
+                            options={capabilityOptions}
                         />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="flex items-center gap-2 font-normal cursor-pointer">
-                            <Switch
-                                id={`${modelAnchorId(index)}-recover-tool-calls`}
-                                checked={model.recoverToolCalls}
-                                onCheckedChange={(checked) =>
-                                    onChange({ recoverToolCalls: checked })
-                                }
-                            />
-                            {t("config.recoverToolCalls")}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                            {t("config.recoverToolCallsHint")}
-                        </p>
-                    </div>
-                    <McpScopeField
-                        servers={mcpServers}
-                        value={model.mcpServers}
-                        onChange={(value) => onChange({ mcpServers: value })}
-                        toolsOff={model.tools === "off"}
-                    />
+                        <SettingToggle
+                            id={`${prefix}-recover-tool-calls`}
+                            label={t("recoverToolCalls")}
+                            description={t("recoverToolCallsHint")}
+                            checked={model.recoverToolCalls}
+                            onCheckedChange={(checked) => onChange({ recoverToolCalls: checked })}
+                        />
+                        <McpScopeField
+                            servers={mcpServers}
+                            value={model.mcpServers}
+                            onChange={(value) => onChange({ mcpServers: value })}
+                            toolsOff={model.tools === "off"}
+                        />
+                    </SettingGroup>
                 </CollapsibleContent>
             </Collapsible>
-        </EditableCard>
-    );
-}
 
-/**
- * Tri-state select for an optional boolean capability: "auto" leaves the field
- * omitted (derived from the backend type), "on"/"off" force it.
- *
- * @param label - Field label
- * @param hint - Helper text shown under the select
- * @param value - Current tri-state value
- * @param onChange - Called with the next tri-state value
- */
-function CapabilityField({
-    label,
-    hint,
-    value,
-    onChange,
-}: {
-    label: string;
-    hint?: string;
-    value: Capability;
-    onChange: (value: Capability) => void;
-}) {
-    const t = useTranslations("settings");
-
-    return (
-        <div className="space-y-1.5">
-            <Label>{label}</Label>
-
-            <Select value={value} onValueChange={(next) => onChange(next as Capability)}>
-                <SelectTrigger className="w-full">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="auto">{t("config.capabilityAuto")}</SelectItem>
-                    <SelectItem value="on">{t("config.capabilityOn")}</SelectItem>
-                    <SelectItem value="off">{t("config.capabilityOff")}</SelectItem>
-                </SelectContent>
-            </Select>
-            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+            <SettingGroup>
+                <div className="flex flex-wrap gap-2 py-3.5">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!canMoveUp}
+                        onClick={onMoveUp}
+                    >
+                        {t("moveUp")}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!canMoveDown}
+                        onClick={onMoveDown}
+                    >
+                        {t("moveDown")}
+                    </Button>
+                    <Button type="button" variant="destructive" onClick={onRemove}>
+                        {t("removeModel")}
+                    </Button>
+                </div>
+            </SettingGroup>
         </div>
     );
 }

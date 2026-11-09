@@ -39,11 +39,13 @@ export function McpScopeField({
     ];
 
     return (
-        <div className="space-y-2">
-            <div className="space-y-1">
-                <Label>{t("mcpScope")}</Label>
-                <p className="text-xs text-muted-foreground">{t("mcpScopeHint")}</p>
-                {toolsOff && <p className="text-xs text-muted-foreground">{t("mcpScopeOff")}</p>}
+        <div className="space-y-3 py-3.5">
+            <div className="space-y-0.5">
+                <Label className="text-sm leading-snug font-medium">{t("mcpScope")}</Label>
+                <p className="text-xs leading-snug text-muted-foreground">{t("mcpScopeHint")}</p>
+                {toolsOff && (
+                    <p className="text-xs leading-snug text-muted-foreground">{t("mcpScopeOff")}</p>
+                )}
             </div>
             <ToggleField
                 id={`${id}-all`}
@@ -55,7 +57,7 @@ export function McpScopeField({
                 <p className="text-xs text-muted-foreground">{t("mcpScopeNone")}</p>
             )}
             {value !== null && (
-                <ul className="space-y-1.5">
+                <ul className="space-y-2">
                     {rows.map((row) => (
                         <li key={row.id} className="flex items-center gap-2 text-sm">
                             <Checkbox
