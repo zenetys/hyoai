@@ -23,7 +23,7 @@ export function SettingRow({
     children,
 }: {
     label: string;
-    description?: string;
+    description?: ReactNode;
     htmlFor?: string;
     stacked?: boolean;
     phoneStack?: boolean;
