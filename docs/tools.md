@@ -288,7 +288,7 @@ conversations, the limits, the providers and the approval of each tool.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/tool-settings.png">
-    <img alt="The Tools page of the settings, with tools enabled for new conversations and Current time set to Always allow, which are not the defaults: Tool calling options, the Clock provider with its approval, an MCP server and the Reset approvals button" src="images/light/tool-settings.png" width="716">
+    <img alt="The Tools page of the settings, with tools enabled for new conversations and Current time set to Always allow, which are not the defaults: Maximum steps, Default approval, Result size limit, the Clock provider with its approval and the Reset approvals button" src="images/light/tool-settings.png" width="692">
 </picture>
 
 In this picture, tools are enabled for new conversations and "Current time" is set to "Always

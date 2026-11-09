@@ -155,7 +155,7 @@ rebuild). Each entry describes a model and the endpoint serving it. The in-app
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/config.png">
-    <img alt="The Models page in Settings, editing a model entry" src="docs/images/light/config.png" width="716">
+    <img alt="The Models page in Settings, editing a model entry" src="docs/images/light/config.png" width="692">
 </picture>
 
 `public/config.json` is gitignored (it holds deployment-specific endpoints):
@@ -329,7 +329,7 @@ approval (Ask each time, Always allow or Hidden from the model; the default is A
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/mcp-servers-short.png">
-    <img alt="MCP servers page in Settings: one connected, one blocked by CORS with the headers to add, one refusing the credentials" src="docs/images/light/mcp-servers-short.png" width="716">
+    <img alt="MCP servers page in Settings: one server connected, one blocked by CORS, one refusing the credentials" src="docs/images/light/mcp-servers-short.png" width="692">
 </picture>
 
 The key table, the CORS headers a server must send, the reverse-proxy recipes (Caddy, nginx), how secrets are

@@ -28,7 +28,7 @@ wrench is not shown, so the last three places do not exist there and no MCP tool
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-servers-short.png">
-    <img alt="Settings, MCP servers page: three MCP servers, Product docs (Connected), Metrics (CORS blocked, with the headers the server must send) and Tickets (Authentication, HTTP 401)" src="images/light/mcp-servers-short.png" width="716">
+    <img alt="Settings, MCP servers page: three MCP servers, Product docs (Connected), Metrics (CORS blocked) and Tickets (Authentication)" src="images/light/mcp-servers-short.png" width="692">
 </picture>
 
 ## Declaring servers in `config.json`
@@ -95,7 +95,7 @@ ask for your approval like any other tool, unless you allow them." When no serve
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-add.png">
-    <img alt="The New server form: Name, Identifier, Address, Transport (Automatic), Bearer token revealed, with a crossed-eye icon button (Hide the token) and a copy icon button, Other headers (JSON, not masked), and the Cancel and Save buttons" src="images/light/mcp-add.png" width="716">
+    <img alt="The New server form: Name, Identifier, Address, Transport (Automatic), Bearer token revealed, with a crossed-eye icon button (Hide the token) and a copy icon button, Other headers (JSON, not masked), and the Cancel and Save buttons" src="images/light/mcp-add.png" width="692">
 </picture>
 
 | Field                                | What to enter                                                                                                                                                                                                                                                                                               |
@@ -168,11 +168,12 @@ its detail.
 
 Under the name of the server, a coloured pill says where the connection stands. The address follows
 in monospace. For any state other than **Connected**, a box under the address explains the state;
-for a failure it also repeats, in monospace, the message the connection reported.
+for a failure it also repeats, in monospace, the message the connection reported. In the list below, the pill sits at the right of each row; the
+box and the message are in the detail of the server.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-servers.png">
-    <img alt="Five MCP servers in five states: Product docs (Connected, Tools (4)), Metrics (CORS blocked), Tickets (Authentication, HTTP 401), Wiki (Not found, HTTP 404) and Legacy search (Off, switched off)" src="images/light/mcp-servers.png" width="716">
+    <img alt="Five MCP servers in five states: Product docs (Connected), Metrics (CORS blocked), Tickets (Authentication, HTTP 401), Wiki (Not found, HTTP 404) and Legacy search (Off, switched off)" src="images/light/mcp-servers.png" width="692">
 </picture>
 
 | Pill               | What it says                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -230,7 +231,7 @@ connection and connects from scratch. The button spins while the listing runs.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-tools.png">
-    <img alt="The detail of a server with its tools expanded, listing four tools with an approval select each (Always allow, Ask each time, Ask each time, Disabled), three marked Read-only and one marked Destructive, each followed by 'declared by the server, not verified'" src="images/light/mcp-tools.png" width="716">
+    <img alt="The Tools (4) block of a server detail, expanded: four tools with an approval select each (Always allow, Ask each time, Ask each time, Hidden from the model), three marked Read-only and one marked Destructive, each followed by 'declared by the server, not verified'" src="images/light/mcp-tools.png" width="692">
 </picture>
 
 Each tool of the list shows:
@@ -360,7 +361,7 @@ To do the same from the browser:
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/mcp-scope.png">
-    <img alt="Advanced settings of a model in the Models page: Tool calling set to Yes, and the MCP servers block with Every enabled server switched off, Product docs and Metrics ticked and Tickets not ticked" src="images/light/mcp-scope.png" width="690">
+    <img alt="Advanced settings of a model in the Models page: Tool calling set to Yes, and the MCP servers block with Every enabled server switched off, Product docs and Metrics ticked and Tickets not ticked" src="images/light/mcp-scope.png" width="692">
 </picture>
 
 A few details of the block:

@@ -350,7 +350,7 @@ app does when a model stops answering."
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/unavailable-settings.png">
-    <img alt="Settings, Models page, Model availability group with the Automatically disable unavailable models switch on and the silent server delay set to 20" src="images/light/unavailable-settings.png" width="716">
+    <img alt="Settings, Models page, Model availability group with the Automatically disable unavailable models switch on and the silent server delay set to 20" src="images/light/unavailable-settings.png" width="692">
 </picture>
 
 | Setting                                      | Default | Range             | Effect                                                                                                                                                                                                                                                                               |

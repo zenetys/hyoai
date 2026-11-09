@@ -603,7 +603,7 @@ everything else empty, off or on **Auto** (note that a `type` missing from a han
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/config.png">
-    <img alt="The Models page in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/light/config.png" width="716">
+    <img alt="The Models page in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/light/config.png" width="692">
 </picture>
 
 The detail of a model shows the entry as a form. The screenshot shows a `claude` entry modelled on the Anthropic recipe above, with a different
