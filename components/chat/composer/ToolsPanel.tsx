@@ -19,6 +19,7 @@ import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, setToolProviderEnabled } from "@/lib/stores/settings";
 import { openSettings } from "@/lib/stores/ui";
 import { listToolProviders } from "@/lib/tools/catalog";
+import { cn } from "@/lib/utils";
 
 /**
  * Content of the tools popover: the switch of the open conversation, then every
@@ -31,8 +32,15 @@ import { listToolProviders } from "@/lib/tools/catalog";
  * the panel, the negative margins cancelling the panel padding while the text stays aligned.
  *
  * @param onNavigate - Called when the panel sends the user elsewhere, so the popover can close
+ * @param compact - Rendered in a bottom sheet: the link to the settings becomes a finger-sized row
  */
-export function ToolsPanel({ onNavigate }: { onNavigate: () => void }) {
+export function ToolsPanel({
+    onNavigate,
+    compact = false,
+}: {
+    onNavigate: () => void;
+    compact?: boolean;
+}) {
     const t = useTranslations("composer");
     const tMcp = useTranslations("settings.tools.mcp");
     const localize = useLocalizedText();
@@ -116,7 +124,10 @@ export function ToolsPanel({ onNavigate }: { onNavigate: () => void }) {
             <Separator />
             <button
                 type="button"
-                className="-mx-1.5 -mb-1.5 flex cursor-default items-center gap-2 rounded-md px-1.5 py-1 text-sm transition-colors outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+                className={cn(
+                    "flex cursor-default items-center rounded-md text-sm transition-colors outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0",
+                    compact ? "-mx-3 gap-3 px-3 py-2.5" : "-mx-1.5 -mb-1.5 gap-2 px-1.5 py-1",
+                )}
                 onClick={() => {
                     onNavigate();
                     openSettings("tools");

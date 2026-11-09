@@ -6,9 +6,11 @@ import { useState } from "react";
 
 import { ToolsPanel } from "@/components/chat/composer/ToolsPanel";
 import { Button } from "@/components/ui/button";
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePendingApproval, useToolsEnabled } from "@/hooks/useActiveChat";
+import { useIsCompact } from "@/hooks/useMediaQuery";
 import { useToolsState } from "@/hooks/useToolsState";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +19,9 @@ import { cn } from "@/lib/utils";
  * conversation and the providers. Tinted while tools are on, with a dot while a call
  * waits for approval. Where tools are never offered (an embed, no provider) nothing
  * shows; when the model cannot take them the button is greyed out and says why.
+ * The panel is a popover on a fine-pointer desktop and a bottom sheet on a touch device
+ * or narrow window, like the model menu, so it never covers the composer it belongs to. An
+ * open panel follows the window when it is resized across that limit.
  * Bound to the chat instance in context, so each compare pane has its own.
  */
 export function ToolsToggle() {
@@ -24,6 +29,7 @@ export function ToolsToggle() {
     const state = useToolsState();
     const enabled = useToolsEnabled();
     const pending = usePendingApproval();
+    const compact = useIsCompact();
     const [open, setOpen] = useState(false);
 
     if (state === "hidden") return null;
@@ -54,29 +60,43 @@ export function ToolsToggle() {
         );
     }
 
+    const button = (
+        <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={pending ? `${t("tools")}: ${t("toolsPending")}` : t("tools")}
+            className={cn("relative", enabled && "bg-primary/10 text-primary hover:text-primary")}
+        >
+            <Wrench aria-hidden="true" />
+            {pending && (
+                <span
+                    aria-hidden="true"
+                    className="absolute right-px bottom-px size-2 rounded-full bg-amber-500 ring-2 ring-card"
+                />
+            )}
+        </Button>
+    );
+
+    if (compact) {
+        return (
+            <Drawer open={open} onOpenChange={setOpen}>
+                <DrawerTrigger asChild>{button}</DrawerTrigger>
+                <DrawerContent aria-describedby={undefined}>
+                    <DrawerTitle className="sr-only">{t("tools")}</DrawerTitle>
+                    <div className="flex flex-col gap-3 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm">
+                        <ToolsPanel compact onNavigate={() => setOpen(false)} />
+                    </div>
+                </DrawerContent>
+            </Drawer>
+        );
+    }
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label={t("tools")}
-                            className={cn(
-                                "relative",
-                                enabled && "bg-primary/10 text-primary hover:text-primary",
-                            )}
-                        >
-                            <Wrench aria-hidden="true" />
-                            {pending && (
-                                <span className="absolute right-px bottom-px size-2 rounded-full bg-amber-500 ring-2 ring-card">
-                                    <span className="sr-only">{t("toolsPending")}</span>
-                                </span>
-                            )}
-                        </Button>
-                    </PopoverTrigger>
+                    <PopoverTrigger asChild>{button}</PopoverTrigger>
                 </TooltipTrigger>
                 <TooltipContent>{t("tools")}</TooltipContent>
             </Tooltip>
