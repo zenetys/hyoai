@@ -318,7 +318,7 @@
             "chatWidth": "Largeur du chat",
             "chatWidthMedium": "Moyenne",
             "chatWidthLarge": "Large",
-            "chatWidthXlarge": "Extra large",
+            "chatWidthXlarge": "Très large",
             "compactInput": "Saisie compacte",
             "compactInputDescription": "Place le bouton +, le champ de saisie et les contrôles sur une seule ligne, jusqu'à ce que le message passe à la ligne.",
             "showStats": "Statistiques des messages",
@@ -352,7 +352,7 @@
         },
         "sampling": {
             "description": "Les champs vides utilisent les valeurs par défaut du serveur.",
-            "temperature": "Temperature",
+            "temperature": "Température",
             "temperatureDescription": "Aléa du tirage des tokens (0 à 2).",
             "topK": "Top K",
             "topKDescription": "Ne garde que les K tokens les plus probables.",
