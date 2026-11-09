@@ -187,8 +187,24 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"spa
     );
 }
 
-function DropdownMenuSub({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
-    return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
+const SubSideContext = React.createContext<{
+    side: string | null;
+    setSide: (side: string | null) => void;
+}>({ side: null, setSide: () => {} });
+
+function DropdownMenuSub({
+    children,
+    ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
+    const [side, setSide] = React.useState<string | null>(null);
+    const value = React.useMemo(() => ({ side, setSide }), [side]);
+    return (
+        <SubSideContext.Provider value={value}>
+            <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props}>
+                {children}
+            </DropdownMenuPrimitive.Sub>
+        </SubSideContext.Provider>
+    );
 }
 
 function DropdownMenuSubTrigger({
@@ -199,6 +215,7 @@ function DropdownMenuSubTrigger({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
     inset?: boolean;
 }) {
+    const { side } = React.useContext(SubSideContext);
     return (
         <DropdownMenuPrimitive.SubTrigger
             data-slot="dropdown-menu-sub-trigger"
@@ -210,17 +227,47 @@ function DropdownMenuSubTrigger({
             {...props}
         >
             {children}
-            <ChevronRightIcon className="ml-auto" />
+            <ChevronRightIcon
+                className={cn(
+                    "ml-auto transition-transform duration-150 motion-reduce:transition-none",
+                    side === "left" && "rotate-180",
+                )}
+            />
         </DropdownMenuPrimitive.SubTrigger>
     );
 }
 
 function DropdownMenuSubContent({
     className,
+    ref,
     ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+    const { setSide } = React.useContext(SubSideContext);
+    const [el, setEl] = React.useState<HTMLDivElement | null>(null);
+    const setRef = React.useCallback(
+        (node: HTMLDivElement | null) => {
+            setEl(node);
+            if (typeof ref === "function") ref(node);
+            else if (ref) ref.current = node;
+        },
+        [ref],
+    );
+
+    React.useEffect(() => {
+        if (!el) return;
+        const read = () => setSide(el.getAttribute("data-side"));
+        read();
+        const observer = new MutationObserver(read);
+        observer.observe(el, { attributes: true, attributeFilter: ["data-side"] });
+        return () => {
+            observer.disconnect();
+            setSide(null);
+        };
+    }, [el, setSide]);
+
     return (
         <DropdownMenuPrimitive.SubContent
+            ref={setRef}
             data-slot="dropdown-menu-sub-content"
             className={cn(
                 "z-50 min-w-[96px] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
