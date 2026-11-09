@@ -96,7 +96,7 @@ export function ModelsTab() {
             <AvailabilityTab />
 
             <div className="space-y-4">
-                <SettingGroup title={t("config.models")}>
+                <SettingGroup>
                     {models.length === 0 && (
                         <p className="py-3.5 text-sm text-muted-foreground">
                             {t("config.noModels")}
