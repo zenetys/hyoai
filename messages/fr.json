@@ -295,19 +295,6 @@
         "title": "Paramètres",
         "openApp": "Ouvrir l'application complète",
         "unsetPlaceholder": "Défaut serveur",
-        "tabs": {
-            "general": "Général",
-            "generation": "Génération",
-            "data": "Données",
-            "config": "Config",
-            "tools": "Outils"
-        },
-        "groups": {
-            "preferences": "Préférences",
-            "customize": "Personnalisation",
-            "platform": "Plateforme",
-            "generation": "Génération"
-        },
         "nav": {
             "appearance": "Apparence",
             "behavior": "Comportement",
@@ -325,8 +312,6 @@
         },
         "back": "Retour",
         "general": {
-            "appearanceTitle": "Apparence",
-            "appearanceDescription": "Thème, langue et présentation de l'interface.",
             "theme": "Thème",
             "skin": "Apparence",
             "language": "Langue de l'interface",
@@ -345,8 +330,6 @@
             "expandSearchDescription": "Garde le panneau de recherche ouvert une fois la réponse terminée.",
             "expandSources": "Déplier les sources",
             "expandSourcesDescription": "Affiche les sources dépliées sous la réponse.",
-            "behaviorTitle": "Comportement",
-            "behaviorDescription": "Saisie, prompt système et pièces jointes.",
             "systemPrompt": "Prompt système",
             "systemPromptDescription": "Envoyé en tête de chaque conversation. Vide : aucun prompt système.",
             "systemPromptPlaceholder": "Tu es un assistant utile...",
