@@ -31,7 +31,7 @@ export function ToolPolicySelect({
 
     return (
         <Select value={value} onValueChange={(next) => onChange(next as ToolPolicy)}>
-            <SelectTrigger size="sm" className="w-52 shrink-0" aria-label={label}>
+            <SelectTrigger size="sm" className="w-52 shrink-0 max-md:w-full" aria-label={label}>
                 <SelectValue />
             </SelectTrigger>
             <SelectContent>

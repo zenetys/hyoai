@@ -39,7 +39,7 @@ export function SettingsSearchInput({
                 onChange={(event) => onChange(event.target.value)}
                 placeholder={t("placeholder")}
                 aria-label={t("placeholder")}
-                className="pl-8"
+                className="pl-8 max-md:h-10"
             />
         </div>
     );

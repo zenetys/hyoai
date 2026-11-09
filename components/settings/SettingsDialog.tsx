@@ -112,12 +112,18 @@ export function SettingsDialog() {
                 onOpenAutoFocus={focusDialogOnPhone}
                 onEscapeKeyDown={clearSearchFirst}
             >
-                <div className="flex h-12 shrink-0 items-center gap-1 border-b px-5 max-md:pr-14 max-md:pl-2">
+                <div
+                    className={cn(
+                        "flex h-12 shrink-0 items-center gap-1 border-b px-5 max-md:pl-2",
+                        embed ? "max-md:pr-24" : "max-md:pr-14",
+                    )}
+                >
                     {phone && current && (
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon-sm"
+                            className="max-md:size-10"
                             aria-label={t("back")}
                             onClick={() => setSettingsPage(null)}
                         >
@@ -159,7 +165,7 @@ export function SettingsDialog() {
                     {(Content || (!phone && searching)) && (
                         <div
                             key={searching ? "search" : current?.id}
-                            className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent dark:[&_[data-slot=select-trigger]]:hover:bg-foreground/10"
+                            className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent dark:[&_[data-slot=select-trigger]]:hover:bg-foreground/10 max-md:[&_[data-slot=select-trigger]]:h-10! max-md:[&_[data-slot=button][data-size=default]]:h-10! max-md:[&_[data-slot=button][data-size=sm]]:h-10! max-md:[&_[data-slot=button][data-size=icon-sm]]:size-10! max-md:[&_input]:h-10 max-md:[&_[data-slot=input-group]]:h-10 max-md:[&_[data-slot=input-group-addon]_button]:size-10 max-md:[&_[data-slot=switch]]:after:-inset-y-3"
                         >
                             <div className="mx-auto max-w-2xl space-y-1">
                                 {searching ? (
@@ -201,7 +207,7 @@ export function SettingsDialog() {
                                 asChild
                                 variant="ghost"
                                 size="icon-sm"
-                                className="absolute top-2 right-11"
+                                className="absolute top-2 right-11 max-md:top-1 max-md:size-10"
                             >
                                 <a
                                     href={getFullAppHref()}

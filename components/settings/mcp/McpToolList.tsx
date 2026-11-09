@@ -56,7 +56,7 @@ export function McpToolList({
         <Collapsible open={open} onOpenChange={setOpen}>
             <div className="flex items-center justify-between gap-2">
                 <CollapsibleTrigger
-                    className="flex min-w-0 items-center gap-1 text-sm font-medium"
+                    className="flex min-w-0 items-center gap-1 text-sm font-medium max-md:py-2.5"
                     disabled={!tools}
                 >
                     {tools && (

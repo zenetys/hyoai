@@ -33,7 +33,7 @@ export function SettingLink({
             <button
                 type="button"
                 onClick={onOpen}
-                className="min-w-0 flex-1 rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="min-w-0 flex-1 rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:-my-1 max-md:py-1"
             >
                 <span className="block truncate text-sm font-medium">{title}</span>
                 {subtitle && (
@@ -47,7 +47,7 @@ export function SettingLink({
                 type="button"
                 onClick={onOpen}
                 aria-label={openLabel}
-                className="rounded-md p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="rounded-md p-1 text-muted-foreground max-md:-my-2 max-md:p-3 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
                 <ChevronRight className="size-4" aria-hidden="true" />
             </button>

@@ -150,7 +150,7 @@ export function ModelEditor({
             </SettingGroup>
 
             <Collapsible className="space-y-1">
-                <CollapsibleTrigger className="group flex items-center gap-1.5 rounded-md text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                <CollapsibleTrigger className="group flex items-center gap-1.5 rounded-md text-sm font-medium outline-none max-md:py-2.5 focus-visible:ring-3 focus-visible:ring-ring/50">
                     <ChevronDown
                         aria-hidden="true"
                         className="size-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90"
