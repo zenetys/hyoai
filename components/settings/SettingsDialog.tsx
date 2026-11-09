@@ -47,7 +47,7 @@ export function SettingsDialog() {
     return (
         <Dialog open={open} onOpenChange={setSettingsOpen}>
             <DialogContent
-                className="gap-0 p-0 max-md:flex max-md:flex-col md:top-[6vh] md:h-[min(42rem,88vh)] md:max-w-4xl md:translate-y-0"
+                className="gap-0 p-0 max-md:flex max-md:flex-col md:top-[6vh] md:h-[min(42rem,88vh)] md:grid-rows-[auto_minmax(0,1fr)] md:max-w-4xl md:translate-y-0"
                 scrollable={false}
                 aria-describedby={undefined}
             >
