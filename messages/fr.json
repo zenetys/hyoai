@@ -578,9 +578,11 @@
             "mcpScope": "Serveurs MCP",
             "mcpScopeHint": "Quels serveurs du catalogue ce modèle peut utiliser.",
             "mcpScopeAll": "Tous les serveurs activés",
-            "mcpScopeNone": "Aucun serveur n'est encore configuré. Ajoutes-en un dans l'onglet Outils.",
+            "mcpScopeNone": "Aucun serveur n'est encore configuré. Ajoutes-en un dans la page Serveurs MCP.",
             "mcpScopeMissing": "{id} (absent du catalogue)",
-            "mcpScopeOff": "L'appel d'outils est désactivé pour ce modèle."
+            "mcpScopeOff": "L'appel d'outils est désactivé pour ce modèle.",
+            "noModels": "Aucun modèle n'est configuré.",
+            "editModel": "Modifier {name}"
         },
         "tools": {
             "title": "Appel d'outils",

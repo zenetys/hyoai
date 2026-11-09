@@ -578,9 +578,11 @@
             "mcpScope": "MCP servers",
             "mcpScopeHint": "Which servers of the catalog this model may use.",
             "mcpScopeAll": "Every enabled server",
-            "mcpScopeNone": "No server is set up yet. Add one in the Tools tab.",
+            "mcpScopeNone": "No server is set up yet. Add one in the MCP servers page.",
             "mcpScopeMissing": "{id} (not in the catalog)",
-            "mcpScopeOff": "Tool calling is off for this model."
+            "mcpScopeOff": "Tool calling is off for this model.",
+            "noModels": "No model is configured.",
+            "editModel": "Edit {name}"
         },
         "tools": {
             "title": "Tool calling",
