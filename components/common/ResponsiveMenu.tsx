@@ -38,6 +38,7 @@ interface ResponsiveMenuProps {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     align?: "start" | "end";
+    side?: "top" | "bottom";
     title?: React.ReactNode;
     contentClassName?: string;
     preventCloseAutoFocus?: boolean;
@@ -55,6 +56,7 @@ interface ResponsiveMenuProps {
  * @param trigger - Element opening the menu, rendered asChild
  * @param title - Drawer heading on mobile, kept for a11y even when sr-only
  * @param align - Dropdown alignment on desktop
+ * @param side - Side of the trigger the dropdown prefers on desktop (it flips when short of room)
  * @param contentClassName - Extra classes for the desktop dropdown content only
  * @param onDismiss - Called when the desktop menu is dismissed (outside click or
  *   Escape) rather than closed by selecting an item, with the trigger refocus
@@ -69,6 +71,7 @@ export function ResponsiveMenu({
     open,
     onOpenChange,
     align = "start",
+    side,
     title,
     contentClassName,
     preventCloseAutoFocus = false,
@@ -115,6 +118,7 @@ export function ResponsiveMenu({
                 <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
                 <DropdownMenuContent
                     align={align}
+                    side={side}
                     collisionPadding={8}
                     className={contentClassName}
                     onEscapeKeyDown={() => {
@@ -146,6 +150,7 @@ interface ResponsiveMenuItemProps {
     variant?: "default" | "destructive";
     className?: string;
     closeOnSelect?: boolean;
+    disabled?: boolean;
 }
 
 /**
@@ -156,6 +161,7 @@ interface ResponsiveMenuItemProps {
  *
  * @param onSelect - Action to run when chosen, given the click modifiers
  * @param variant - "destructive" tints the row like a delete action
+ * @param disabled - Greys the row out and ignores it
  */
 export function ResponsiveMenuItem({
     children,
@@ -163,6 +169,7 @@ export function ResponsiveMenuItem({
     variant = "default",
     className,
     closeOnSelect = true,
+    disabled = false,
 }: ResponsiveMenuItemProps) {
     const { isMobile, close } = useResponsiveMenuSurface();
     // Captured before Radix selects the item, so onSelect can read the modifier.
@@ -173,6 +180,7 @@ export function ResponsiveMenuItem({
             <DropdownMenuItem
                 variant={variant}
                 className={className}
+                disabled={disabled}
                 onPointerDownCapture={(event) => {
                     shiftRef.current = event.shiftKey;
                 }}
@@ -189,8 +197,9 @@ export function ResponsiveMenuItem({
     return (
         <button
             type="button"
+            disabled={disabled}
             className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent [&_svg]:size-4 [&_svg]:shrink-0",
+                "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
                 variant === "destructive" && "text-destructive [&_svg]:text-destructive",
                 className,
             )}

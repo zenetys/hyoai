@@ -3,18 +3,18 @@
 import { File, FileText, Image as ImageIcon, MessageSquareText, Mic, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef } from "react";
-import type { ReactNode, RefObject } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+    ResponsiveMenu,
+    ResponsiveMenuItem,
+    ResponsiveMenuSeparator,
+    useResponsiveMenuSurface,
+} from "@/components/common/ResponsiveMenu";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AUDIO_ACCEPT } from "@/lib/files";
+import { cn } from "@/lib/utils";
 
 interface MenuEntryProps {
     icon: ReactNode;
@@ -32,16 +32,46 @@ interface MenuEntryProps {
  * @param onSelect - The function to call when the entry is selected
  */
 function MenuEntry({ icon, label, disabledReason, onSelect }: MenuEntryProps) {
+    const { isMobile } = useResponsiveMenuSurface();
     return (
-        <DropdownMenuItem className="gap-3" disabled={Boolean(disabledReason)} onSelect={onSelect}>
+        <ResponsiveMenuItem
+            className="gap-3"
+            disabled={Boolean(disabledReason)}
+            onSelect={() => onSelect()}
+        >
             {icon}
             <span className="flex flex-col">
                 {label}
                 {disabledReason && (
-                    <span className="text-[10px] text-muted-foreground">{disabledReason}</span>
+                    <span
+                        className={cn(
+                            "text-muted-foreground",
+                            isMobile ? "text-xs" : "text-[10px]",
+                        )}
+                    >
+                        {disabledReason}
+                    </span>
                 )}
             </span>
-        </DropdownMenuItem>
+        </ResponsiveMenuItem>
+    );
+}
+
+/**
+ * The "+" button, with its tooltip. It takes the props the menu gives its trigger.
+ *
+ * @param label - Accessible name and tooltip of the button
+ */
+function AttachTrigger({ label, ...props }: ComponentProps<typeof Button> & { label: string }) {
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" aria-label={label} {...props}>
+                    <Plus aria-hidden="true" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent>{label}</TooltipContent>
+        </Tooltip>
     );
 }
 
@@ -121,57 +151,46 @@ export function AttachmentMenu({
             {filePicker(audioInputRef, AUDIO_ACCEPT, onAudioFiles)}
             {filePicker(textInputRef, "", onTextFiles)}
             {filePicker(pdfInputRef, "application/pdf,.pdf", onPdfFiles)}
-            <DropdownMenu>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={t("attachMenu")}
-                            >
-                                <Plus aria-hidden="true" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>{t("attachMenu")}</TooltipContent>
-                </Tooltip>
-                <DropdownMenuContent align="start" side="top" className="w-fit max-w-80">
-                    <MenuEntry
-                        icon={<ImageIcon aria-hidden="true" />}
-                        label={t("attachImages")}
-                        disabledReason={visionBlocked ? t("requiresVision") : null}
-                        onSelect={() => imageInputRef.current?.click()}
-                    />
-                    <MenuEntry
-                        icon={<Mic aria-hidden="true" />}
-                        label={t("attachAudio")}
-                        disabledReason={audioBlocked ? t("requiresAudio") : null}
-                        onSelect={() => audioInputRef.current?.click()}
-                    />
-                    <MenuEntry
-                        icon={<FileText aria-hidden="true" />}
-                        label={t("attachText")}
-                        onSelect={() => textInputRef.current?.click()}
-                    />
-                    <MenuEntry
-                        icon={<File aria-hidden="true" />}
-                        label={t("attachPdf")}
-                        onSelect={() => pdfInputRef.current?.click()}
-                    />
-                    {onSystemMessage && (
-                        <>
-                            <DropdownMenuSeparator />
-                            <MenuEntry
-                                icon={<MessageSquareText aria-hidden="true" />}
-                                label={t("systemMessage")}
-                                onSelect={onSystemMessage}
-                            />
-                        </>
-                    )}
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <ResponsiveMenu
+                align="start"
+                side="top"
+                title={t("attachMenu")}
+                contentClassName="w-fit max-w-80"
+                trigger={<AttachTrigger label={t("attachMenu")} />}
+            >
+                <MenuEntry
+                    icon={<ImageIcon aria-hidden="true" />}
+                    label={t("attachImages")}
+                    disabledReason={visionBlocked ? t("requiresVision") : null}
+                    onSelect={() => imageInputRef.current?.click()}
+                />
+                <MenuEntry
+                    icon={<Mic aria-hidden="true" />}
+                    label={t("attachAudio")}
+                    disabledReason={audioBlocked ? t("requiresAudio") : null}
+                    onSelect={() => audioInputRef.current?.click()}
+                />
+                <MenuEntry
+                    icon={<FileText aria-hidden="true" />}
+                    label={t("attachText")}
+                    onSelect={() => textInputRef.current?.click()}
+                />
+                <MenuEntry
+                    icon={<File aria-hidden="true" />}
+                    label={t("attachPdf")}
+                    onSelect={() => pdfInputRef.current?.click()}
+                />
+                {onSystemMessage && (
+                    <>
+                        <ResponsiveMenuSeparator />
+                        <MenuEntry
+                            icon={<MessageSquareText aria-hidden="true" />}
+                            label={t("systemMessage")}
+                            onSelect={onSystemMessage}
+                        />
+                    </>
+                )}
+            </ResponsiveMenu>
         </>
     );
 }
