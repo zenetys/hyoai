@@ -276,7 +276,8 @@ Tools settings screen are in [docs/tools.md](docs/tools.md).
 Security defaults:
 
 - Every tool asks before it runs. "Always allow" applies to one tool, never to a whole provider,
-  and Settings → Tools lists the decisions and can reset them. Setting the default to "always
+  and Settings → Tools and Settings → MCP servers list the decisions, and Settings → Tools can
+  reset them. Setting the default to "always
   allow" is a deliberate choice and shows a warning. Approvals are never imported from an export.
 - A result is capped at 20,000 characters by default (the Result size limit setting), shown as
   plain text (never rendered as Markdown or HTML), and a call is cut after 60 seconds. Nothing the

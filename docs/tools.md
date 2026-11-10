@@ -130,8 +130,8 @@ The panel has two levels, and the difference matters:
   provider, how many tools it lists ("1 tool", "4 tools", followed by "· 1 hidden" when some are set to
   "Hidden from the model" and so are not offered), or why it cannot ("The tools could not
   be listed"), and a switch, which is the same setting as "Offer the tools of {provider} to models"
-  in Settings → Tools and applies to every conversation. An MCP server is tagged "MCP" and carries
-  its connection state. The line under its name is the first of these that applies: the reason of a
+  in Settings → Tools and applies to every conversation. An MCP server is tagged "MCP", its switch is
+  the one of its page in Settings → MCP servers, and it carries its connection state. The line under its name is the first of these that applies: the reason of a
   failure next to a status label such as "CORS blocked" (or, for a connected server whose tool list
   was malformed, "The server is connected, but it did not list its tools correctly."), then "Off",
   "Not offered to this model", "Connecting…" and "The tools could not be listed". A connected server
@@ -177,11 +177,11 @@ The card shows what is sent and to whom:
 
 Then three buttons:
 
-| Button           | What happens                                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Allow once**   | This call runs. The next call of the same tool asks again                                                           |
-| **Always allow** | This call runs, and that one tool is set to "Always allow" in Settings → Tools, where you can change it back        |
-| **Deny**         | The call does not run. The model gets a result saying you denied it and must not retry, and the card shows "Denied" |
+| Button           | What happens                                                                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Allow once**   | This call runs. The next call of the same tool asks again                                                                                                           |
+| **Always allow** | This call runs, and that one tool is set to "Always allow" in Settings → Tools (Settings → MCP servers for the tool of an MCP server), where you can change it back |
+| **Deny**         | The call does not run. The model gets a result saying you denied it and must not retry, and the card shows "Denied"                                                 |
 
 Nothing in the card is focused on its own, so a keystroke meant for the composer never approves a
 call. If you change the approval of that tool in Settings while the card is waiting, the card
@@ -359,7 +359,8 @@ into.
 ## Security defaults
 
 - Every tool asks before it runs. "Always allow" applies to one tool, never to a whole provider, and
-  Settings → Tools lists the decisions and can reset them. Setting the default to "always allow" is
+  Settings → Tools and Settings → MCP servers list the decisions, and Settings → Tools can reset
+  them. Setting the default to "always allow" is
   a deliberate choice and shows a warning. Approvals are never imported from an export.
 - A result is capped at 20,000 characters, shown as plain text (never rendered as Markdown or HTML),
   and a call is cut after 60 seconds. Nothing the model writes after a tool result on the same
