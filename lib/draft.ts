@@ -102,6 +102,7 @@ export interface DraftMcpServer {
  * @param effortLevels - Effort levels as edited in the form
  * @param integrations - Side-channel integrations as edited in the form
  * @param mcpServers - MCP server catalog as edited in the form
+ * @param extras - Root keys the form does not edit, carried through untouched
  */
 export interface Draft {
     appName: string;
@@ -113,7 +114,19 @@ export interface Draft {
     effortLevels: DraftLevel[];
     integrations: DraftIntegration[];
     mcpServers: DraftMcpServer[];
+    extras: Record<string, unknown>;
 }
+
+// The root keys the form edits; every other key is kept as it is.
+const FORM_KEYS = new Set([
+    "appName",
+    "defaultModel",
+    "models",
+    "thinking",
+    "effort",
+    "integrations",
+    "mcp",
+]);
 
 // Coerce an unknown value to a plain string, empty when absent.
 const asString = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -286,6 +299,7 @@ export function rawToDraft(raw: unknown): Draft {
                 enabled: server.enabled !== false,
             };
         }),
+        extras: Object.fromEntries(Object.entries(root).filter(([key]) => !FORM_KEYS.has(key))),
     };
 }
 
@@ -421,6 +435,8 @@ export function buildConfig(
             }),
         };
     }
+
+    for (const [key, value] of Object.entries(draft.extras)) put(config, key, value);
 
     if (badField) return { ok: false, field: badField };
     return { ok: true, config };

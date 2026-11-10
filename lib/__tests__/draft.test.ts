@@ -237,3 +237,50 @@ describe("recoverToolCalls of a model in the config form", () => {
         expect(models[1].recoverToolCalls).toBe(true);
     });
 });
+
+describe("root keys the config form does not edit", () => {
+    const raw = {
+        appName: "Demo",
+        models: [{ id: "a", baseUrl: "/a" }],
+        notice: { text: { en: "Hello" }, level: "warning" },
+        placeholders: { en: ["Ask me anything"] },
+        embedOrigins: ["https://example.com"],
+        futureKey: { nested: [1, 2] },
+    };
+
+    it("carries them through the draft untouched", () => {
+        const built = buildConfig(rawToDraft(raw));
+        if (!built.ok) throw new Error("unbuildable");
+        expect(built.config.notice).toEqual(raw.notice);
+        expect(built.config.placeholders).toEqual(raw.placeholders);
+        expect(built.config.embedOrigins).toEqual(raw.embedOrigins);
+        expect(built.config.futureKey).toEqual(raw.futureKey);
+    });
+
+    it("keeps the keys of the form first and loses none of the file", () => {
+        const built = buildConfig(rawToDraft(raw));
+        if (!built.ok) throw new Error("unbuildable");
+        expect(Object.keys(built.config)).toEqual([
+            "appName",
+            "models",
+            "notice",
+            "placeholders",
+            "embedOrigins",
+            "futureKey",
+        ]);
+    });
+
+    it("keeps every root key of the example file", async () => {
+        const example = (await import("@/public/config.example.json")).default as Record<
+            string,
+            unknown
+        >;
+        const built = buildConfig(rawToDraft(example));
+        if (!built.ok) throw new Error("unbuildable");
+        for (const key of Object.keys(example)) expect(built.config).toHaveProperty(key);
+    });
+
+    it("starts empty for a new draft", () => {
+        expect(rawToDraft({ models: [] }).extras).toEqual({});
+    });
+});
