@@ -284,3 +284,14 @@ describe("root keys the config form does not edit", () => {
         expect(rawToDraft({ models: [] }).extras).toEqual({});
     });
 });
+
+describe("thinking.disabled of a model in the config form", () => {
+    it("goes through the draft as written", () => {
+        const raw = { models: [{ id: "a", baseUrl: "/a", thinking: { disabled: true } }] };
+        const built = buildConfig(rawToDraft(raw));
+        if (!built.ok) throw new Error("unbuildable");
+        expect(built.config.models).toEqual([
+            expect.objectContaining({ thinking: { disabled: true } }),
+        ]);
+    });
+});

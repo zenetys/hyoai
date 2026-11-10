@@ -21,10 +21,14 @@ export type ModelIssue = "unknownType" | "modelRequiresPin";
  * server (Qwen3 "chat_template_kwargs.enable_thinking", llama.cpp
  * "reasoning_budget", ...). A missing side sends nothing for that state, letting
  * the model use its own default.
+ *
+ * Set on a model entry, "disabled" turns reasoning off for that model: no
+ * toggle is offered and neither fragment is sent, not even an inherited one.
  */
 export interface ThinkingConfig {
     on?: Record<string, unknown>;
     off?: Record<string, unknown>;
+    disabled?: boolean;
 }
 
 /**

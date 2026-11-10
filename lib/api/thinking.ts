@@ -19,9 +19,10 @@ export function applyThinkingConfig(
     endpoint: ModelConfig,
     params: ThinkingParams,
 ): void {
-    const fragment = params.thinking === false ? endpoint.thinking?.off : endpoint.thinking?.on;
+    const thinking = endpoint.thinking;
+    const fragment = params.thinking === false ? thinking?.off : thinking?.on;
 
-    if (fragment) deepMerge(body, fragment);
+    if (fragment && thinking?.disabled !== true) deepMerge(body, fragment);
 
     const effortLevel = resolveEffortLevel(endpoint.effort, params.effort ?? "");
 

@@ -138,3 +138,31 @@ describe("estimateMessagesTokens", () => {
         expect(withReasoning).toBeGreaterThan(without);
     });
 });
+
+describe("applyThinkingConfig", () => {
+    const entry = (thinking: ModelConfig["thinking"]) =>
+        ({ type: "vllm", baseUrl: "http://example.test", thinking }) as ModelConfig;
+
+    it("merges the fragment of the active side", () => {
+        const model = entry({ on: { think: true }, off: { think: false } });
+        const on: Record<string, unknown> = {};
+        const off: Record<string, unknown> = {};
+
+        applyThinkingConfig(on, model, { thinking: true });
+        applyThinkingConfig(off, model, { thinking: false });
+
+        expect(on).toEqual({ think: true });
+        expect(off).toEqual({ think: false });
+    });
+
+    it("sends no fragment for a model that opted out of reasoning", () => {
+        const model = entry({ disabled: true, on: { think: true }, off: { think: false } });
+        const body: Record<string, unknown> = {};
+
+        applyThinkingConfig(body, model, { thinking: true });
+        applyThinkingConfig(body, model, { thinking: false });
+        applyThinkingConfig(body, model, {});
+
+        expect(body).toEqual({});
+    });
+});

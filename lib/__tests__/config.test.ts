@@ -205,6 +205,42 @@ describe("recoverToolCalls", () => {
     });
 });
 
+describe("thinking.disabled on a model entry", () => {
+    const global = { on: { think: true }, off: { think: false } };
+
+    it("turns reasoning off for that model only", () => {
+        const config = ready({
+            thinking: global,
+            models: [
+                { ...model, id: "a" },
+                { ...model, id: "b", thinking: { disabled: true } },
+            ],
+        });
+        expect(config.models.map((entry) => entry.supportsThinking)).toEqual([true, false]);
+        expect(config.models[1].thinking).toEqual({ disabled: true });
+    });
+
+    it("wins over supportsThinking and over fragments written on the same entry", () => {
+        const config = ready({
+            models: [
+                {
+                    ...model,
+                    supportsThinking: true,
+                    thinking: { disabled: true, on: { think: true } },
+                },
+            ],
+        });
+        expect(config.models[0].supportsThinking).toBe(false);
+    });
+
+    it("is ignored when false", () => {
+        const config = ready({
+            models: [{ ...model, thinking: { disabled: false, on: { think: true } } }],
+        });
+        expect(config.models[0].supportsThinking).toBe(true);
+    });
+});
+
 describe("loadAppConfig", () => {
     beforeEach(() => {
         stored.override = null;

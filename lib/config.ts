@@ -18,6 +18,7 @@ import { STORAGE_KEYS } from "@/types/storage";
 const thinkingSchema = z.object({
     on: z.record(z.string(), z.unknown()).optional(),
     off: z.record(z.string(), z.unknown()).optional(),
+    disabled: z.boolean().optional(),
 });
 
 const effortSchema = z.object({
@@ -160,9 +161,11 @@ function resolveCapabilities(
         ? entry.modalities
         : { image: false, audio: false, ...entry.modalities };
     const supportsThinking =
-        entry.supportsThinking ??
-        (Boolean(entry.thinking?.on || entry.thinking?.off) ||
-            capabilities?.supportsThinking === true);
+        entry.thinking?.disabled === true
+            ? false
+            : (entry.supportsThinking ??
+              (Boolean(entry.thinking?.on || entry.thinking?.off) ||
+                  capabilities?.supportsThinking === true));
     const listModels = capabilities?.listModels === true;
     const issue: ModelIssue | undefined = !definition
         ? "unknownType"
