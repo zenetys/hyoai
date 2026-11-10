@@ -28,7 +28,8 @@ import { cn } from "@/lib/utils";
  * the provider switches are the global setting, which is said next to them, and the
  * switch of a server is the one of its card in the settings. A server the model of the
  * chat is not scoped to says so. A call waiting for approval is pointed out at the top.
- * The link to the settings ends the panel as a row of the model menu: its highlight spans
+ * The link to the settings ends the panel as a row of the model menu, opening the MCP servers page
+ * when the panel lists servers (their cards live there) and the tools page otherwise: its highlight spans
  * the panel, the negative margins cancelling the panel padding while the text stays aligned.
  *
  * @param onNavigate - Called when the panel sends the user elsewhere, so the popover can close
@@ -130,7 +131,7 @@ export function ToolsPanel({
                 )}
                 onClick={() => {
                     onNavigate();
-                    openSettings("tools");
+                    openSettings(catalog.length > 0 ? "servers" : "tools");
                 }}
             >
                 <Settings aria-hidden="true" />
