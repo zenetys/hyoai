@@ -14,7 +14,7 @@ import { hydrateLocale, setLocale } from "@/lib/stores/locale";
 import { initModels, modelsStore, pruneStaleOverride, setActiveModel } from "@/lib/stores/models";
 import { hydrateSettings, setSkin, settingsStore, updateSettings } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
-import { setEmbed } from "@/lib/stores/ui";
+import { enableSettingsUrlSync, openSettingsFromUrl, setEmbed } from "@/lib/stores/ui";
 import { type EmbedConfig, getChatIdFromUrl, getCompareFromUrl } from "@/lib/url";
 import type { AppSettings } from "@/types/settings";
 import { STORAGE_KEYS } from "@/types/storage";
@@ -50,6 +50,8 @@ export async function bootApp(): Promise<void> {
     else if (!urlChatId || !(await openConversation(urlChatId))) startNewConversation();
 
     enableCompareUrlSync();
+    openSettingsFromUrl();
+    enableSettingsUrlSync();
     enableCrossTabRefresh();
     void refreshStorage();
 }
@@ -137,4 +139,7 @@ export async function bootEmbed(config: EmbedConfig): Promise<void> {
         registerLifecycleFlush();
         enableCrossTabRefresh();
     }
+
+    openSettingsFromUrl();
+    enableSettingsUrlSync();
 }

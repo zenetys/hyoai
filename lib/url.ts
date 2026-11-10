@@ -138,6 +138,39 @@ export function setCompareInUrl(state: CompareUrlState | null): void {
     window.history.replaceState(window.history.state, "", url);
 }
 
+// Query parameter carrying the open settings tab, e.g. ?settings=data.
+const SETTINGS_PARAM = "settings";
+
+/**
+ * Read the settings tab requested by the current URL, if any. The value is
+ * returned as is: the caller decides whether it names a tab it knows.
+ *
+ * @returns Raw tab id or null when absent
+ */
+export function getSettingsFromUrl(): string | null {
+    if (typeof window === "undefined") return null;
+    return new URL(window.location.href).searchParams.get(SETTINGS_PARAM);
+}
+
+/**
+ * Reflect the open settings tab in the URL without adding history entries, so
+ * the tab can be linked to. Passing null clears the parameter.
+ *
+ * @param tab - Tab id to encode, or null when the dialog is closed
+ */
+export function setSettingsInUrl(tab: string | null): void {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (tab) {
+        if (url.searchParams.get(SETTINGS_PARAM) === tab) return;
+        url.searchParams.set(SETTINGS_PARAM, tab);
+    } else {
+        if (!url.searchParams.has(SETTINGS_PARAM)) return;
+        url.searchParams.delete(SETTINGS_PARAM);
+    }
+    window.history.replaceState(window.history.state, "", url);
+}
+
 // Query parameter toggling the embeddable compact mode, e.g. ?embed=1.
 const EMBED_PARAM = "embed";
 
@@ -270,8 +303,7 @@ export function getEmbedConfig(): EmbedConfig | null {
     };
 }
 
-// Every query parameter the embed URL understands, dropped when linking out to
-// the full application so its address bar stays clean.
+// Every query parameter the embed URL understands, plus the settings page, dropped on a link out.
 const EMBED_PARAMS = [
     EMBED_PARAM,
     "theme",
@@ -287,6 +319,7 @@ const EMBED_PARAMS = [
     "hint",
     "intro",
     "sidebar",
+    SETTINGS_PARAM,
 ];
 
 /**
