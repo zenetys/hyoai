@@ -30,7 +30,7 @@
         "modified": "Modifié le {date}",
         "generating": "Génération en cours…",
         "stopGeneration": "Arrêter la génération",
-        "generationDone": "Génération terminée, cliquez pour voir",
+        "generationDone": "Génération terminée, clique pour voir",
         "deleteTitle": "Supprimer la conversation",
         "deleteDescription": "Cette conversation et toutes ses branches seront définitivement supprimées.",
         "awaitingApproval": "En attente de ton approbation",
@@ -45,7 +45,7 @@
             "system": "Système"
         },
         "skin": {
-            "label": "Apparence",
+            "label": "Style",
             "soft": "Soft",
             "flat": "Flat",
             "contrast": "Contraste",
@@ -526,7 +526,7 @@
             "reset": "Réinitialiser…",
             "resetDone": "Configuration réinitialisée.",
             "resetDialogTitle": "Réinitialiser des paramètres",
-            "resetDialogDescription": "Choisissez les surcharges à réinitialiser vers le config.json déployé. Les éléments décochés sont conservés.",
+            "resetDialogDescription": "Choisis les surcharges à réinitialiser vers le config.json déployé. Les éléments décochés sont conservés.",
             "resetSelected": "Réinitialiser ({count})",
             "resetNothing": "Aucune surcharge à réinitialiser.",
             "resetCat": {
