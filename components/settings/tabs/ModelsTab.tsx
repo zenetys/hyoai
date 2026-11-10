@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { ResetDialog } from "@/components/settings/dialogs/ResetDialog";
 import { ModelEditor } from "@/components/settings/editors/ModelEditor";
 import { SettingBreadcrumb } from "@/components/settings/fields/SettingBreadcrumb";
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useConfigDraft } from "@/hooks/useConfigDraft";
 import { useStore } from "@/hooks/useStore";
-import { uiStore } from "@/lib/stores/ui";
+import { setConfigResetOpen, uiStore } from "@/lib/stores/ui";
 
 /**
  * Host part of a server address, or an empty string when the address is empty or invalid.
@@ -32,12 +33,24 @@ function hostOf(url: string): string {
 /**
  * Models page of the settings: the availability checks, then the models as a list of rows
  * (switch to enable one, chevron to open it), and the detail of one model with all its fields.
- * Edits apply live through the shared config draft. The list is where the page opens, unless
- * a model id is asked for through the settings focus, which opens that model once.
+ * Edits apply live through the shared config draft; a field the config cannot take is named
+ * under the page, since the edit is then not applied, and the reset of the local override is
+ * reached from the override badge in the title. The list is where the page opens, unless a model
+ * id is asked for through the settings focus, which opens that model once.
  */
 export function ModelsTab() {
     const t = useTranslations("settings");
-    const { draft, patchModel, addModel, removeModel, moveModel } = useConfigDraft();
+    const {
+        draft,
+        built,
+        overrideItems,
+        resetOverride,
+        patchModel,
+        addModel,
+        removeModel,
+        moveModel,
+    } = useConfigDraft();
+    const resetOpen = useStore(uiStore, (state) => state.configResetOpen);
     const focus = useStore(uiStore, (state) => state.settingsFocus);
     const [open, setOpen] = useState<number | null>(null);
     const [handledFocus, setHandledFocus] = useState<string | null>(null);
@@ -53,6 +66,20 @@ export function ModelsTab() {
     }
 
     const models = draft.models;
+    const invalid =
+        built && !built.ok ? (
+            <p role="alert" className="text-xs text-destructive">
+                {t("config.invalidJson", { field: built.field })}
+            </p>
+        ) : null;
+    const reset = (
+        <ResetDialog
+            open={resetOpen}
+            onOpenChange={setConfigResetOpen}
+            items={overrideItems}
+            onConfirm={(keys) => void resetOverride(keys)}
+        />
+    );
     const current = open === null ? undefined : models[open];
 
     if (open !== null && current) {
@@ -87,6 +114,8 @@ export function ModelsTab() {
                         .filter((server) => server.id.trim())
                         .map((server) => ({ id: server.id, label: server.label }))}
                 />
+                {invalid}
+                {reset}
             </div>
         );
     }
@@ -149,7 +178,9 @@ export function ModelsTab() {
                     <Plus aria-hidden="true" />
                     {t("config.addModel")}
                 </Button>
+                {invalid}
             </div>
+            {reset}
         </>
     );
 }

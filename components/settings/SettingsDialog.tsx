@@ -48,6 +48,9 @@ export function SettingsDialog() {
 
     const heading = current ? t(`nav.${current.id}`) : t("title");
 
+    // The override badge sits on the two pages that edit the config.
+    const overrideShown = hasOverride && (current?.id === "config" || current?.id === "models");
+
     const [query, setQuery] = useState("");
     const [pendingFocus, setPendingFocus] = useState<string | null>(null);
 
@@ -138,9 +141,7 @@ export function SettingsDialog() {
                     >
                         {phone ? heading : t("title")}
                     </DialogTitle>
-                    {phone && hasOverride && current?.id === "config" && (
-                        <OverrideBadge tick={appliedTick} health={health} />
-                    )}
+                    {phone && overrideShown && <OverrideBadge tick={appliedTick} health={health} />}
                 </div>
                 <div className="flex min-h-0 flex-1 md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
                     {(!phone || showList) && (
@@ -182,7 +183,7 @@ export function SettingsDialog() {
                                                     <h2 className="text-sm font-medium">
                                                         {heading}
                                                     </h2>
-                                                    {hasOverride && current?.id === "config" && (
+                                                    {overrideShown && (
                                                         <OverrideBadge
                                                             tick={appliedTick}
                                                             health={health}
