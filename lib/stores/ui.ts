@@ -1,8 +1,42 @@
 import { createStore } from "@/lib/store";
 import type { EmbedTheme } from "@/lib/url";
 
-// Settings dialog tabs, kept in sync with the SettingsDialog triggers.
+// Settings dialog tabs, kept in sync with the dialog triggers until it moves to pages.
 export type SettingsTab = "general" | "generation" | "tools" | "data" | "config";
+
+// Settings pages, in navigation order: preferences, customization, platform, then generation.
+export type SettingsPage =
+    | "appearance"
+    | "behavior"
+    | "models"
+    | "servers"
+    | "tools"
+    | "data"
+    | "config"
+    | "sampling"
+    | "chunking";
+
+// Transitional: the tab a page lives in until the dialog stops using tabs.
+const TAB_OF_PAGE: Record<SettingsPage, SettingsTab> = {
+    appearance: "general",
+    behavior: "general",
+    models: "config",
+    servers: "tools",
+    tools: "tools",
+    data: "data",
+    config: "config",
+    sampling: "generation",
+    chunking: "generation",
+};
+
+// Transitional: the page a tab opens on.
+const PAGE_OF_TAB: Record<SettingsTab, SettingsPage> = {
+    general: "appearance",
+    generation: "sampling",
+    tools: "tools",
+    data: "data",
+    config: "config",
+};
 
 /**
  * Which model the info dialog describes; null means the active model.
@@ -19,6 +53,7 @@ export interface ModelInfoTarget {
 interface UiState {
     settingsOpen: boolean;
     settingsTab: SettingsTab;
+    settingsPage: SettingsPage;
     settingsFocus: string | null;
     commandOpen: boolean;
     modelInfoOpen: boolean;
@@ -38,6 +73,7 @@ interface UiState {
 export const uiStore = createStore<UiState>({
     settingsOpen: false,
     settingsTab: "general",
+    settingsPage: "appearance",
     settingsFocus: null,
     commandOpen: false,
     modelInfoOpen: false,
@@ -67,30 +103,44 @@ export function setSettingsOpen(open: boolean): void {
 }
 
 /**
- * Set the active tab of the settings dialog. This is a global state because the
- * settings can be opened from multiple places, and the dialog should stay on
- * the same tab when switching between them.
+ * Set the active tab of the settings dialog. Transitional, with the page the tab opens on.
  *
  * @param tab - The tab to show in the settings dialog
  */
 export function setSettingsTab(tab: SettingsTab): void {
-    uiStore.setState({ settingsTab: tab });
+    uiStore.setState({ settingsTab: tab, settingsPage: PAGE_OF_TAB[tab] });
 }
 
 /**
- * Open the settings dialog on a specific tab. This is a global state because the
+ * Set the active page of the settings dialog. This is a global state because the
  * settings can be opened from multiple places, and the dialog should stay on
- * the same tab when switching between them.
+ * the same page when switching between them.
  *
- * The optional focus names a section the tab should scroll into view (a model
- * entry id for the config tab), so a caller can point at one entry instead of
+ * @param page - The page to show in the settings dialog
+ */
+export function setSettingsPage(page: SettingsPage): void {
+    uiStore.setState({ settingsPage: page, settingsTab: TAB_OF_PAGE[page] });
+}
+
+/**
+ * Open the settings dialog on a specific page. This is a global state because the
+ * settings can be opened from multiple places, and the dialog should stay on
+ * the same page when switching between them.
+ *
+ * The optional focus names a section the page should scroll into view (a model
+ * entry id for the models page), so a caller can point at one entry instead of
  * dropping the reader at the top of a long form.
  *
- * @param tab - The tab to show in the settings dialog
- * @param focus - Section to scroll into view once the tab is rendered
+ * @param page - The page to show in the settings dialog
+ * @param focus - Section to scroll into view once the page is rendered
  */
-export function openSettings(tab: SettingsTab = "general", focus: string | null = null): void {
-    uiStore.setState({ settingsOpen: true, settingsTab: tab, settingsFocus: focus });
+export function openSettings(page: SettingsPage = "appearance", focus: string | null = null): void {
+    uiStore.setState({
+        settingsOpen: true,
+        settingsPage: page,
+        settingsTab: TAB_OF_PAGE[page],
+        settingsFocus: focus,
+    });
 }
 
 /**
