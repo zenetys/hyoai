@@ -1,7 +1,7 @@
 import { createStore } from "@/lib/store";
 import { type EmbedTheme, getSettingsFromUrl, setSettingsInUrl } from "@/lib/url";
 
-// Settings pages, in navigation order: preferences, customization, platform, then generation.
+// Settings pages, in navigation order; the changelog is pinned at the foot of the list.
 export type SettingsPage =
     | "appearance"
     | "behavior"
@@ -11,7 +11,8 @@ export type SettingsPage =
     | "data"
     | "config"
     | "sampling"
-    | "chunking";
+    | "chunking"
+    | "changelog";
 
 // Every page a ?settings= link may name.
 export const SETTINGS_PAGES: readonly SettingsPage[] = [
@@ -24,6 +25,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     "config",
     "sampling",
     "chunking",
+    "changelog",
 ];
 
 /**

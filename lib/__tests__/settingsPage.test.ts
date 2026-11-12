@@ -16,11 +16,12 @@ describe("parseSettingsPage", () => {
         }
     });
 
-    it("names the nine pages of the navigation", () => {
+    it("names the ten pages of the navigation", () => {
         expect([...SETTINGS_PAGES].sort()).toEqual(
             [
                 "appearance",
                 "behavior",
+                "changelog",
                 "chunking",
                 "config",
                 "data",
