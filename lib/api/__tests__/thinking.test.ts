@@ -47,6 +47,22 @@ describe("shouldPreserveThinking", () => {
 
         expect(shouldPreserveThinking(model, { effort: "high" })).toBe(true);
     });
+
+    it("ignores an opt-in of the thinking fragment when the model opted out of reasoning", () => {
+        const model = entry({ thinking: { disabled: true, on: preserve } });
+
+        expect(shouldPreserveThinking(model, { thinking: true })).toBe(false);
+        expect(shouldPreserveThinking(model, {})).toBe(false);
+    });
+
+    it("still sees an opt-in of the effort level when the model opted out of reasoning", () => {
+        const model = entry({
+            thinking: { disabled: true },
+            effort: { default: "high", levels: [{ id: "high", label: "High", body: preserve }] },
+        });
+
+        expect(shouldPreserveThinking(model, { effort: "high" })).toBe(true);
+    });
 });
 
 describe("applyThinkingConfig", () => {
