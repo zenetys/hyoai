@@ -516,6 +516,129 @@
             "levelLabel": "Libellé",
             "levelLabelPlaceholder": "Medium",
             "levelBody": "Corps de requête (JSON)",
+            "reasoning": {
+                "title": "Réflexion",
+                "description": "Si ce modèle peut réfléchir, comment le menu le propose et ce qui est envoyé dans chaque état.",
+                "writes": "Écrit dans",
+                "reasons": {
+                    "label": "Autoriser la réflexion",
+                    "on": "Interrupteur général. Les réglages ci-dessous s'appliquent.",
+                    "off": "Réflexion coupée pour ce modèle : pas d'interrupteur dans le menu et rien n'est envoyé, pas même les fragments globaux.",
+                    "inverse": "(stocké à l'envers : vrai quand l'interrupteur est coupé)",
+                    "offDetail": "Les niveaux d'effort ne sont pas touchés. Réactive « Autoriser la réflexion » pour retrouver les réglages."
+                },
+                "switch": {
+                    "label": "Afficher l'interrupteur Réflexion dans le menu des modèles",
+                    "on": "Chacun choisit si le modèle réfléchit, depuis le menu des modèles.",
+                    "off": "Pas d'interrupteur : le modèle fonctionne toujours comme configuré.",
+                    "auto": "Auto",
+                    "autoOn": "Automatique : activé parce qu'un fragment est défini.",
+                    "autoOff": "Automatique : désactivé parce qu'aucun fragment n'est défini et que le type de serveur ne réfléchit pas par défaut.",
+                    "reset": "Revenir à l'automatique"
+                },
+                "hidden": {
+                    "on": "Sans interrupteur dans le menu, le fragment On est quand même envoyé tant que la réflexion est activée, ce qui est le cas par défaut.",
+                    "off": "Le fragment Off est quand même envoyé quand la réflexion a été désactivée sur un autre modèle. Laisse-le vide, ou désactive « Autoriser la réflexion » pour l'éviter."
+                },
+                "body": {
+                    "title": "Envoyé au serveur",
+                    "summary": "Les champs fusionnés dans la requête quand la réflexion est activée ou désactivée.",
+                    "inherited": "Global",
+                    "on": "On",
+                    "off": "Off",
+                    "none": "Rien d'envoyé",
+                    "invalid": "Invalide",
+                    "custom": "Propre à ce modèle : remplace les fragments globaux en bloc.",
+                    "useGlobal": "Utiliser les globaux",
+                    "inheritedText": "Hérité de la configuration globale. Personnaliser copie les deux fragments dans ce modèle, ils ne sont plus fusionnés ensuite.",
+                    "customize": "Personnaliser pour ce modèle",
+                    "onLabel": "Quand la réflexion est activée",
+                    "onHint": "Fusionné dans la requête. Écrit dans",
+                    "offLabel": "Quand la réflexion est désactivée",
+                    "offHint": "Fusionné dans la requête. Écrit dans",
+                    "emptyHint": "Vide : rien n'est envoyé, le modèle garde son comportement par défaut."
+                },
+                "json": {
+                    "label": "Modifier en JSON",
+                    "description": "Un seul éditeur de l'objet de réflexion remplace « Autoriser la réflexion » et « Envoyé au serveur ». « Afficher l'interrupteur Réflexion dans le menu des modèles » est une autre clé (supportsThinking), hors de cet objet.",
+                    "blocked": "Corrige le JSON pour revenir aux champs."
+                }
+            },
+            "effortLevels": {
+                "title": "Niveaux d'effort",
+                "description": "Listés dans le menu des modèles, dans cet ordre.",
+                "writes": "Écrit dans",
+                "add": "Ajouter un niveau",
+                "inheritedText": "Hérité de la configuration globale ({count, plural, one {# niveau} other {# niveaux}}). Personnaliser les copie dans ce modèle, ils ne sont plus fusionnés ensuite.",
+                "customize": "Personnaliser pour ce modèle",
+                "defaultSuffix": " (défaut)",
+                "customText": "Propre à ce modèle : remplace les niveaux globaux en bloc.",
+                "useGlobal": "Utiliser les niveaux globaux",
+                "empty": {
+                    "title": "Aucun niveau d'effort",
+                    "text": "Le menu des modèles n'affiche aucun effort pour ce modèle, même si la configuration globale a des niveaux.",
+                    "preset": "Partir de Low, Medium, High"
+                },
+                "untitled": "Nouveau niveau",
+                "moveUp": "Monter {name}",
+                "moveDown": "Descendre {name}",
+                "isDefault": "Défaut",
+                "makeDefault": "Définir par défaut",
+                "remove": "Supprimer {name}",
+                "id": "Identifiant",
+                "idPlaceholder": "medium",
+                "label": "Libellé",
+                "labelPlaceholder": "Medium",
+                "body": "Corps de requête",
+                "bodyNone": "aucun : l'identifiant est envoyé comme reasoning_effort",
+                "bodyEmptyHint": "Vide : l'identifiant est envoyé comme reasoning_effort, sauf si la requête en porte déjà un.",
+                "errors": {
+                    "idEmpty": "L'identifiant est obligatoire.",
+                    "idDuplicate": "Un autre niveau a déjà cet identifiant.",
+                    "labelEmpty": "Le libellé est obligatoire.",
+                    "bodyBadge": "Invalide",
+                    "labelDuplicate": "Un autre niveau a le même libellé : le menu les affichera pareil."
+                },
+                "footer": {
+                    "problems": "{count, plural, one {# problème} other {# problèmes}} à corriger avant d'enregistrer la configuration.",
+                    "ok": "{count, plural, one {# niveau} other {# niveaux}}, le menu démarre sur {label}.",
+                    "implicit": "Aucun défaut marqué : le premier niveau s'applique.",
+                    "duplicates": "{count, plural, one {# identifiant en double} other {# identifiants en double}} : l'enregistrement reste possible, seul le premier niveau trouvé s'applique."
+                },
+                "raw": {
+                    "note": "Ce texte n'a pas la forme d'une liste de niveaux : modifie-le en JSON.",
+                    "ready": "Le JSON est lisible : tu peux revenir à la liste.",
+                    "back": "Revenir à la liste"
+                },
+                "dragHandle": "Déplacer {name} : glisse la poignée, ou utilise les flèches haut et bas",
+                "moved": "{name} déplacé à la position {position} sur {count}."
+            },
+            "thinkingJson": {
+                "label": "Objet de réflexion (JSON)",
+                "description": "Clés connues : on, off et disabled. Écrit dans thinking.",
+                "empty": "Vide : l'entrée hérite de l'objet de réflexion global.",
+                "emptyInherited": "Vide : l'entrée hérite de l'objet de réflexion global, affiché en grisé. Écrire ici le remplace en bloc.",
+                "unknownKey": "Clé « {key} » inconnue : le schéma l'ignore sans erreur.",
+                "sideNotObject": "« {key} » doit être un objet JSON, entre accolades.",
+                "disabledNotBoolean": "« disabled » doit valoir true ou false."
+            },
+            "fragment": {
+                "empty": "Vide : rien n'est envoyé.",
+                "valid": "Objet JSON valide.",
+                "syntax": "JSON invalide.",
+                "notObject": "Ce doit être un objet JSON, entre accolades.",
+                "format": "Mettre en forme",
+                "template": {
+                    "qwen": "Insérer enable_thinking",
+                    "budget": "Insérer reasoning_budget 0"
+                }
+            },
+            "viewAsJson": {
+                "label": "Aperçu du JSON écrit",
+                "written": "Lecture seule : thinking, supportsThinking et effort, tels qu'enregistrés dans ce modèle",
+                "writtenEmpty": "Rien n'est écrit : l'entrée hérite.",
+                "blocked": "Un champ invalide empêche d'enregistrer la configuration."
+            },
             "integrations": "Intégrations",
             "addIntegration": "Ajouter une intégration",
             "removeIntegration": "Supprimer l'intégration",

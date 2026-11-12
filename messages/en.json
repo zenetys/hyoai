@@ -516,6 +516,129 @@
             "levelLabel": "Label",
             "levelLabelPlaceholder": "Medium",
             "levelBody": "Request body (JSON)",
+            "reasoning": {
+                "title": "Thinking",
+                "description": "Whether this model can think, how the menu offers it, and what is sent in each state.",
+                "writes": "Written as",
+                "reasons": {
+                    "label": "Allow thinking",
+                    "on": "Master switch. The settings below apply.",
+                    "off": "Thinking is off for this model: no switch in the menu and nothing is sent, not even the global fragments.",
+                    "inverse": "(stored inverted: true when this switch is off)",
+                    "offDetail": "The effort levels are not affected. Turn \"Allow thinking\" on again to bring the settings back."
+                },
+                "switch": {
+                    "label": "Show the Thinking switch in the model menu",
+                    "on": "People choose whether the model thinks, from the model menu.",
+                    "off": "No switch: the model always works as configured.",
+                    "auto": "Auto",
+                    "autoOn": "Automatic: on because a fragment is set.",
+                    "autoOff": "Automatic: off because no fragment is set and the server type does not think by default.",
+                    "reset": "Back to automatic"
+                },
+                "hidden": {
+                    "on": "Without a switch in the menu, the On fragment is still sent while thinking is on, which is the default.",
+                    "off": "The Off fragment is still sent when thinking was turned off on another model. Leave it empty, or turn off \"Allow thinking\" to stop that."
+                },
+                "body": {
+                    "title": "Sent to the server",
+                    "summary": "The request fields merged when thinking is on or off.",
+                    "inherited": "Global",
+                    "on": "On",
+                    "off": "Off",
+                    "none": "Nothing sent",
+                    "invalid": "Invalid",
+                    "custom": "Specific to this model: replaces the global fragments as a whole.",
+                    "useGlobal": "Use the global ones",
+                    "inheritedText": "Inherited from the global configuration. Customizing copies both fragments into this model, they are not merged afterwards.",
+                    "customize": "Customize for this model",
+                    "onLabel": "When thinking is on",
+                    "onHint": "Merged into the request. Written as",
+                    "offLabel": "When thinking is off",
+                    "offHint": "Merged into the request. Written as",
+                    "emptyHint": "Empty: nothing is sent, the model keeps its own default."
+                },
+                "json": {
+                    "label": "Edit as JSON",
+                    "description": "One editor of the thinking object replaces \"Allow thinking\" and \"Sent to the server\". \"Show the Thinking switch in the model menu\" is another key (supportsThinking), outside this object.",
+                    "blocked": "Fix the JSON to go back to the fields."
+                }
+            },
+            "effortLevels": {
+                "title": "Effort levels",
+                "description": "Listed in the model menu, in this order.",
+                "writes": "Written as",
+                "add": "Add a level",
+                "inheritedText": "Inherited from the global configuration ({count, plural, one {# level} other {# levels}}). Customizing copies them into this model, they are not merged afterwards.",
+                "customize": "Customize for this model",
+                "defaultSuffix": " (default)",
+                "customText": "Specific to this model: replaces the global levels as a whole.",
+                "useGlobal": "Use the global levels",
+                "empty": {
+                    "title": "No effort level",
+                    "text": "The model menu shows no effort for this model, even if the global configuration has levels.",
+                    "preset": "Start from Low, Medium, High"
+                },
+                "untitled": "New level",
+                "moveUp": "Move {name} up",
+                "moveDown": "Move {name} down",
+                "isDefault": "Default",
+                "makeDefault": "Make default",
+                "remove": "Remove {name}",
+                "id": "Identifier",
+                "idPlaceholder": "medium",
+                "label": "Label",
+                "labelPlaceholder": "Medium",
+                "body": "Request body",
+                "bodyNone": "none: the id is sent as reasoning_effort",
+                "bodyEmptyHint": "Empty: the id is sent as reasoning_effort, unless the request already has one.",
+                "errors": {
+                    "idEmpty": "The identifier is required.",
+                    "idDuplicate": "Another level already has this identifier.",
+                    "labelEmpty": "The label is required.",
+                    "bodyBadge": "Invalid",
+                    "labelDuplicate": "Another level has the same label: the menu will show them alike."
+                },
+                "footer": {
+                    "problems": "{count, plural, one {# problem} other {# problems}} to fix before the configuration can be saved.",
+                    "ok": "{count, plural, one {# level} other {# levels}}, the menu starts on {label}.",
+                    "implicit": "No default marked: the first level applies.",
+                    "duplicates": "{count, plural, one {# duplicate identifier} other {# duplicate identifiers}}: saving is still possible, only the first level found applies."
+                },
+                "raw": {
+                    "note": "This text is not shaped like a list of levels: edit it as JSON.",
+                    "ready": "The JSON is readable: you can go back to the list.",
+                    "back": "Back to the list"
+                },
+                "dragHandle": "Move {name}: drag the handle, or use the up and down arrow keys",
+                "moved": "{name} moved to position {position} of {count}."
+            },
+            "thinkingJson": {
+                "label": "Thinking object (JSON)",
+                "description": "Known keys: on, off and disabled. Written to thinking.",
+                "empty": "Empty: the entry inherits the global thinking object.",
+                "emptyInherited": "Empty: the entry inherits the global thinking object, shown in grey. Typing here replaces it as a whole.",
+                "unknownKey": "Unknown key \"{key}\": the schema ignores it without an error.",
+                "sideNotObject": "\"{key}\" must be a JSON object, in braces.",
+                "disabledNotBoolean": "\"disabled\" must be true or false."
+            },
+            "fragment": {
+                "empty": "Empty: nothing is sent.",
+                "valid": "Valid JSON object.",
+                "syntax": "Invalid JSON.",
+                "notObject": "It must be a JSON object, between braces.",
+                "format": "Format",
+                "template": {
+                    "qwen": "Insert enable_thinking",
+                    "budget": "Insert reasoning_budget 0"
+                }
+            },
+            "viewAsJson": {
+                "label": "Preview of the written JSON",
+                "written": "Read-only: thinking, supportsThinking and effort, as saved in this model",
+                "writtenEmpty": "Nothing is written: the entry inherits.",
+                "blocked": "An invalid field prevents saving the configuration."
+            },
             "integrations": "Integrations",
             "addIntegration": "Add an integration",
             "removeIntegration": "Remove integration",
