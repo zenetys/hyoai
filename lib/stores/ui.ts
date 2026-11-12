@@ -133,12 +133,17 @@ export function openSettings(page: SettingsPage | null = null, focus: string | n
 
 /**
  * Open the settings dialog on the page named by the ?settings= parameter of the
- * URL, when it names one. An unknown value is ignored; a page the current view
- * hides (an embed has no config page) falls back to the first one in the dialog
- * itself.
+ * URL, when it names one, or on its first screen for a bare ?settings. An unknown
+ * value is ignored; a page the current view hides (an embed has no config page)
+ * falls back to the first one in the dialog itself.
  */
 export function openSettingsFromUrl(): void {
-    const page = parseSettingsPage(getSettingsFromUrl());
+    const raw = getSettingsFromUrl();
+    if (raw === "") {
+        openSettings();
+        return;
+    }
+    const page = parseSettingsPage(raw);
     if (page) openSettings(page);
 }
 
@@ -146,17 +151,18 @@ export function openSettingsFromUrl(): void {
 let settingsUrlWired = false;
 
 /**
- * Keep ?settings= in step with the dialog: the open page is written to the URL
- * and closing the dialog removes it, so a page can be bookmarked and shared.
+ * Keep ?settings= in step with the dialog: the open page is written to the URL,
+ * a bare ?settings stands for the list of pages, and closing the dialog removes
+ * it, so a page can be bookmarked and shared.
  */
 export function enableSettingsUrlSync(): void {
     if (settingsUrlWired || typeof window === "undefined") return;
     settingsUrlWired = true;
     const start = uiStore.getState();
-    let last: string | null = start.settingsOpen ? start.settingsPage : null;
+    let last: string | null = start.settingsOpen ? (start.settingsPage ?? "") : null;
     uiStore.subscribe(() => {
         const { settingsOpen, settingsPage } = uiStore.getState();
-        const next = settingsOpen ? settingsPage : null;
+        const next = settingsOpen ? (settingsPage ?? "") : null;
         if (next === last) return;
         last = next;
         setSettingsInUrl(next);

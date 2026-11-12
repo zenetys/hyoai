@@ -143,9 +143,10 @@ const SETTINGS_PARAM = "settings";
 
 /**
  * Read the settings tab requested by the current URL, if any. The value is
- * returned as is: the caller decides whether it names a tab it knows.
+ * returned as is: the caller decides whether it names a tab it knows, and a
+ * bare ?settings comes back as an empty string.
  *
- * @returns Raw tab id or null when absent
+ * @returns Raw tab id, an empty string for a bare parameter, or null when absent
  */
 export function getSettingsFromUrl(): string | null {
     if (typeof window === "undefined") return null;
@@ -154,16 +155,18 @@ export function getSettingsFromUrl(): string | null {
 
 /**
  * Reflect the open settings tab in the URL without adding history entries, so
- * the tab can be linked to. Passing null clears the parameter.
+ * the tab can be linked to. An empty string writes a bare ?settings, and null
+ * clears the parameter.
  *
- * @param tab - Tab id to encode, or null when the dialog is closed
+ * @param tab - Tab id to encode, an empty string for no tab, or null when the dialog is closed
  */
 export function setSettingsInUrl(tab: string | null): void {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (tab) {
+    if (tab !== null) {
         if (url.searchParams.get(SETTINGS_PARAM) === tab) return;
         url.searchParams.set(SETTINGS_PARAM, tab);
+        url.search = url.search.replace(/([?&])settings=(?=&|$)/, "$1settings");
     } else {
         if (!url.searchParams.has(SETTINGS_PARAM)) return;
         url.searchParams.delete(SETTINGS_PARAM);
