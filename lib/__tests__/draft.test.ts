@@ -295,3 +295,43 @@ describe("thinking.disabled of a model in the config form", () => {
         ]);
     });
 });
+
+describe("modalities of a model in the config form", () => {
+    const built = (modalities: unknown) => {
+        const result = buildConfig(
+            rawToDraft({ models: [{ id: "a", baseUrl: "/a", modalities }] }),
+        );
+        if (!result.ok) throw new Error("unbuildable");
+        return (result.config.models as Record<string, unknown>[])[0];
+    };
+
+    it("reads each modality as a tri-state, auto when absent", () => {
+        const draft = rawToDraft({
+            models: [
+                { id: "a", baseUrl: "/a" },
+                { id: "b", baseUrl: "/b", modalities: { image: true, audio: false } },
+                { id: "c", baseUrl: "/c", modalities: { audio: true } },
+            ],
+        });
+        expect(draft.models.map((model) => [model.imageModality, model.audioModality])).toEqual([
+            ["auto", "auto"],
+            ["on", "off"],
+            ["auto", "on"],
+        ]);
+        expect(newDraftModel().imageModality).toBe("auto");
+        expect(newDraftModel().audioModality).toBe("auto");
+    });
+
+    it("writes only the modalities that are not on auto", () => {
+        expect(built({ image: false })).toHaveProperty("modalities", { image: false });
+        expect(built({ audio: true })).toHaveProperty("modalities", { audio: true });
+        expect(built({ image: true, audio: false })).toHaveProperty("modalities", {
+            image: true,
+            audio: false,
+        });
+    });
+
+    it("leaves the key out when both are on auto", () => {
+        expect("modalities" in built(undefined)).toBe(false);
+    });
+});

@@ -10,8 +10,9 @@ export type Capability = "auto" | "on" | "off";
 
 /**
  * One model entry as edited in the form; free-form request-body fragments
- * (thinking, effort, modalities) are kept as JSON text so partial typing is
- * tolerated, and the optional capability booleans as a tri-state.
+ * (thinking, effort) are kept as JSON text so partial typing is tolerated, and
+ * the optional capability booleans, the image and audio modalities included, as
+ * a tri-state.
  */
 export interface DraftModel {
     id: string;
@@ -28,6 +29,8 @@ export interface DraftModel {
     thinking: string;
     effort: string;
     modalities: string;
+    imageModality: Capability;
+    audioModality: Capability;
     supportsThinking: Capability;
     runtimeProps: Capability;
     tools: Capability;
@@ -194,6 +197,8 @@ export function newDraftModel(): DraftModel {
         thinking: "",
         effort: "",
         modalities: "",
+        imageModality: "auto",
+        audioModality: "auto",
         supportsThinking: "auto",
         runtimeProps: "auto",
         tools: "auto",
@@ -248,6 +253,8 @@ export function rawToDraft(raw: unknown): Draft {
                 thinking: asJson(model.thinking),
                 effort: asJson(model.effort),
                 modalities: asJson(model.modalities),
+                imageModality: asCapability(asRecord(model.modalities)?.image),
+                audioModality: asCapability(asRecord(model.modalities)?.audio),
                 supportsThinking: asCapability(model.supportsThinking),
                 runtimeProps: asCapability(model.runtimeProps),
                 tools: asCapability(model.tools),
@@ -353,7 +360,19 @@ export function buildConfig(
         put(entry, "headers", parse(model.headers, `models[${index}].headers`));
         put(entry, "thinking", parse(model.thinking, `models[${index}].thinking`));
         put(entry, "effort", parse(model.effort, `models[${index}].effort`));
-        put(entry, "modalities", parse(model.modalities, `models[${index}].modalities`));
+
+        const modalities: Record<string, boolean> = {};
+        const image = fromCapability(model.imageModality);
+        const audio = fromCapability(model.audioModality);
+        if (image !== undefined) modalities.image = image;
+        if (audio !== undefined) modalities.audio = audio;
+        put(
+            entry,
+            "modalities",
+            Object.keys(modalities).length > 0
+                ? modalities
+                : parse(model.modalities, `models[${index}].modalities`),
+        );
         put(entry, "supportsThinking", fromCapability(model.supportsThinking));
         put(entry, "runtimeProps", fromCapability(model.runtimeProps));
         put(entry, "tools", fromCapability(model.tools));
