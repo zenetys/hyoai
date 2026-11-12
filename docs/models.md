@@ -266,7 +266,7 @@ added from the **Models** page, which starts from an empty configuration.
 | `sendContext`        | boolean                                            | `true`: full branch history; `false`: last message only (default: `true`)                                                                                                                                                                                                |
 | `disabled`           | boolean                                            | `true`: keep the entry in the file but do not offer it in the model selector, where it shows greyed out and cannot be picked (default: `false`)                                                                                                                          |
 | `modalities`         | `{ image?, audio? }`                               | Attachment capabilities: `true` enables that attachment menu entry, `false` always disables it, even if a probed endpoint advertises it. Off by default unless the endpoint is probed (`runtimeProps`, e.g. llama.cpp `/props`) and advertises it; overridable           |
-| `thinking`           | `{ on?, off? }`                                    | The reasoning toggle of this entry, which replaces the top-level `thinking` as a whole. See [Reasoning](#reasoning-thinking-and-effort)                                                                                                                                  |
+| `thinking`           | `{ on?, off?, disabled? }`                         | The reasoning toggle of this entry, which replaces the top-level `thinking` as a whole. See [Reasoning](#reasoning-thinking-and-effort)                                                                                                                                  |
 | `effort`             | `{ default?, levels }`                             | The effort levels of this entry, which replace the top-level `effort` as a whole. See [Reasoning](#reasoning-thinking-and-effort)                                                                                                                                        |
 | `supportsThinking`   | boolean                                            | Whether the reasoning toggle is offered. Defaults from `type` and from the presence of a `thinking` config, overridable                                                                                                                                                  |
 | `tools`              | boolean                                            | Tool calling for this entry; off unless the config says `true`, or the entry reads `/props` (`runtimeProps`) and the server reports a chat template that handles tools. `false` forces it off. See [Tool calling](tools.md)                                              |
@@ -384,11 +384,16 @@ carries a `thinking` config, and an entry with a toggle but no levels shows only
 which adds effort levels, shows both the levels and the **Thinking** switch. On a fresh install the
 switch is on.
 
+A model that does not reason can opt out of the global `thinking` with `"thinking": { "disabled": true }`
+on its own entry. It then has no **Thinking** switch and neither fragment is sent, not even the
+global one. `disabled` wins over `supportsThinking` and over any `on` or `off` written next to it, it
+only applies to the entry that carries it, and the effort levels are not affected.
+
 The fragment is chosen from the stored Thinking state (the global setting, or the pane's own choice
 in compare mode) whether or not the switch is shown for that entry: an entry that has a `thinking`
 config but whose switch is hidden (`supportsThinking: false`) still receives its `on` fragment while
 the state is on, which is the default, or its `off` fragment, when it has one, once thinking has
-been switched off on another model.
+been switched off on another model. Use `disabled` to stop that.
 
 ### `effort`: a level picker
 
@@ -591,8 +596,9 @@ and ends with an **Add a model** button.
 4. The **Generated JSON** preview, with a **Copy** button, and the **Reset…** button.
 
 MCP servers are not edited here but in Settings → MCP servers (see [mcp.md](mcp.md)); the model
-detail only sets which servers a model uses. The root key `embedOrigins` ([embed.md](embed.md)) is
-not edited in these pages either and is not part of the generated JSON: keep it in the deployed file when you paste.
+detail only sets which servers a model uses. The root keys that no page edits, such as `notice`,
+`placeholders` and `embedOrigins` ([embed.md](embed.md)), are kept as they are in the generated JSON,
+after the keys of the form.
 
 ### Adding a model
 
@@ -637,7 +643,7 @@ In the detail of a model, under the switches, the collapsible **Advanced setting
 | Form field                             | Key                  | Notes                                                                                                                                                       |
 | -------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Headers (JSON)**                     | `headers`            | A JSON object of strings, for example the Anthropic opt-in of the recipe above                                                                              |
-| **Thinking (JSON)**                    | `thinking`           | The `on` and `off` fragments of this entry                                                                                                                  |
+| **Thinking (JSON)**                    | `thinking`           | The `on` and `off` fragments of this entry, or `disabled`                                                                                                   |
 | **Effort (JSON)**                      | `effort`             | The `default` and `levels` of this entry                                                                                                                    |
 | **Modalities (JSON)**                  | `modalities`         | For example `{ "image": true }`                                                                                                                             |
 | **Supports thinking**                  | `supportsThinking`   | **Auto**, **Yes** or **No**                                                                                                                                 |
@@ -686,8 +692,8 @@ written in `config.json` (4-space indentation; optional fields that are empty, s
 **Auto** are left out, while `id`, `baseUrl`, `type`, `streaming` and `sendContext` are always
 written). **Copy** puts that JSON on the clipboard ("Configuration copied to clipboard."), ready to
 paste into the real `config.json`: this is the way to promote an experiment made in the browser into
-the deployment. The root key `embedOrigins` is not part of that JSON (see [The form](#the-form)), so
-keep it in the deployed file when you paste over it. The preview and the copy show a model's
+the deployment. The JSON holds every root key of the configuration, including the ones no page
+edits (see [The form](#the-form)), so it can replace the deployed file as it is. The preview and the copy show a model's
 `apiKey` as typed; only the values of MCP headers are masked in the preview, and the copy gives the
 real configuration.
 
