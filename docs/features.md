@@ -79,13 +79,15 @@ The full application shows all nine. The [embedded widget](embed.md#what-the-wid
 hides **Models**, **MCP servers**, **Tools** and **Configuration**, and also **Data** unless its
 sidebar variant is on.
 
-Once a page is open, the address bar carries `?settings=<page>` (`appearance`, `behavior`,
+While Settings is open, the address bar carries `?settings=<page>` (`appearance`, `behavior`,
 `models`, `servers`, `tools`, `data`, `config`, `sampling` or `chunking`) and closing the dialog
-removes it. Opening Settings from the header or the command palette shows **Appearance** on a wide
-screen, or the list of pages on a phone, without a parameter until a page is picked. A link with
-the parameter opens Settings on that page: use it to send someone straight to the **Models** page,
-say. An unknown value is ignored, and a page the view hides (the widget has no **Models**) opens
-on **Appearance** on a wide screen and on the list of pages on a phone.
+removes it. It names the page on screen, so opening Settings from the header or the command palette
+gives `?settings=appearance` on a wide screen. On a phone, where the first screen is the list of
+pages, the address carries a bare `?settings` until a page is picked. A link with the parameter
+opens Settings on that page: use it to send someone straight to the **Models** page, say. A bare
+`?settings` opens Settings on its first screen. An unknown value is ignored, and a page the view
+hides (the widget has no **Models**) opens on **Appearance** on a wide screen and on the list of
+pages on a phone.
 
 ## Conversations and the sidebar
 
