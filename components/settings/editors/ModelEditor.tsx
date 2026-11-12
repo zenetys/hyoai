@@ -177,11 +177,21 @@ export function ModelEditor({
                             value={model.effort}
                             onChange={(value) => onChange({ effort: value })}
                         />
-                        <SettingJson
-                            id={`${prefix}-modalities`}
-                            label={t("modelModalities")}
-                            value={model.modalities}
-                            onChange={(value) => onChange({ modalities: value })}
+                        <SettingSelect
+                            id={`${prefix}-image-modality`}
+                            label={t("imageModality")}
+                            description={t("modalityHint")}
+                            value={model.imageModality}
+                            onChange={(value) => onChange({ imageModality: value as Capability })}
+                            options={capabilityOptions}
+                        />
+                        <SettingSelect
+                            id={`${prefix}-audio-modality`}
+                            label={t("audioModality")}
+                            description={t("modalityHint")}
+                            value={model.audioModality}
+                            onChange={(value) => onChange({ audioModality: value as Capability })}
+                            options={capabilityOptions}
                         />
                         <SettingSelect
                             id={`${prefix}-supports-thinking`}
