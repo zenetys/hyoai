@@ -304,13 +304,21 @@
             "data": "Données",
             "config": "Configuration",
             "sampling": "Échantillonnage",
-            "chunking": "Découpage"
+            "chunking": "Découpage",
+            "changelog": "Changelog"
         },
         "search": {
             "placeholder": "Rechercher un réglage",
             "noResult": "Aucun réglage ne correspond à « {query} »."
         },
         "back": "Retour",
+        "changelog": {
+            "description": "Les notes de chaque version, de la plus récente à la plus ancienne. Elles sont rédigées en anglais.",
+            "allReleases": "Toutes les versions sur GitHub",
+            "installed": "Installée",
+            "showDetails": "Voir le détail",
+            "hideDetails": "Masquer le détail"
+        },
         "general": {
             "theme": "Thème",
             "skin": "Style",

@@ -304,13 +304,21 @@
             "data": "Data",
             "config": "Configuration",
             "sampling": "Sampling",
-            "chunking": "Chunking"
+            "chunking": "Chunking",
+            "changelog": "Changelog"
         },
         "search": {
             "placeholder": "Search settings",
             "noResult": "No setting matches “{query}”."
         },
         "back": "Back",
+        "changelog": {
+            "description": "The release notes of every version, newest first. They are written in English.",
+            "allReleases": "All releases on GitHub",
+            "installed": "Installed",
+            "showDetails": "Show the details",
+            "hideDetails": "Hide the details"
+        },
         "general": {
             "theme": "Theme",
             "skin": "Style",
