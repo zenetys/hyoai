@@ -187,7 +187,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                             {list.map((meta) => (
                                 <label
                                     key={meta.id}
-                                    className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+                                    className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
                                 >
                                     <Checkbox
                                         checked={selected.has(meta.id)}

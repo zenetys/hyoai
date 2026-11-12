@@ -65,7 +65,7 @@ export function HeaderTitle() {
         <div className="min-w-0 flex-1">
             <button
                 type="button"
-                className="-mx-2 inline-block max-w-full truncate rounded px-2 py-1 text-left text-sm font-medium hover:bg-muted"
+                className="-mx-2 inline-block max-w-full truncate rounded px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-muted"
                 onClick={() => setRenaming(true)}
             >
                 {label}
