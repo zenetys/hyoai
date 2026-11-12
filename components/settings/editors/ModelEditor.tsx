@@ -3,6 +3,9 @@
 import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { EffortLevelList } from "@/components/settings/editors/EffortLevelList";
+import { ReasoningEditor } from "@/components/settings/editors/ReasoningEditor";
+import { WrittenJson } from "@/components/settings/editors/WrittenJson";
 import { InputCopyButton } from "@/components/settings/fields/InputCopyButton";
 import { McpScopeField } from "@/components/settings/fields/McpScopeField";
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
@@ -12,14 +15,14 @@ import { SettingText } from "@/components/settings/fields/SettingText";
 import { SettingToggle } from "@/components/settings/fields/SettingToggle";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import type { Capability, DraftModel } from "@/lib/draft";
+import type { Capability, DraftLevel, DraftModel } from "@/lib/draft";
 import { listServerTypes } from "@/lib/plugins/registry";
 
 /**
  * Detail of one model entry as flat rows: the enabled switch, identity and endpoint fields, the
- * streaming and context switches, an advanced section (request-body fragments,
- * capability overrides, tool-call recovery and MCP scope), then the reorder and
- * remove actions. The caller draws the way back to the list above it.
+ * streaming and context switches, an advanced section (headers, modalities, the reasoning
+ * controls with the effort levels, capability overrides, tool-call recovery and MCP scope), then
+ * the reorder and remove actions. The caller draws the way back to the list above it.
  *
  * @param index - Position of the entry, used to scope the ids of its fields
  * @param model - The model draft being edited
@@ -30,6 +33,11 @@ import { listServerTypes } from "@/lib/plugins/registry";
  * @param canMoveUp - Whether an up move is possible (not already first)
  * @param canMoveDown - Whether a down move is possible (not already last)
  * @param mcpServers - The MCP servers of the catalog, for the scope of the entry
+ * @param globalThinkingOn - The global thinking.on as JSON text, inherited by an entry without
+ *   its own
+ * @param globalThinkingOff - The global thinking.off as JSON text
+ * @param globalEffortLevels - The global effort levels, inherited by an entry without its own
+ * @param globalEffortDefault - Id of the global default effort level
  */
 export function ModelEditor({
     index,
@@ -41,6 +49,10 @@ export function ModelEditor({
     canMoveUp,
     canMoveDown,
     mcpServers,
+    globalThinkingOn,
+    globalThinkingOff,
+    globalEffortLevels,
+    globalEffortDefault,
 }: {
     index: number;
     model: DraftModel;
@@ -51,10 +63,17 @@ export function ModelEditor({
     canMoveUp: boolean;
     canMoveDown: boolean;
     mcpServers: { id: string; label: string }[];
+    globalThinkingOn: string;
+    globalThinkingOff: string;
+    globalEffortLevels: DraftLevel[];
+    globalEffortDefault: string;
 }) {
     const t = useTranslations("settings.config");
     const prefix = `model-${index}`;
     const serverTypes = listServerTypes().map((definition) => definition.id);
+    const typeReasons =
+        listServerTypes().find((definition) => definition.id === model.type)?.capabilities
+            ?.supportsThinking === true;
     const typeOptions: [string, string][] = serverTypes.map((type) => [type, type]);
     if (!serverTypes.includes(model.type)) {
         typeOptions.push([model.type, t("serverTypeNotInstalled", { type: model.type })]);
@@ -157,99 +176,111 @@ export function ModelEditor({
                     />
                     {t("advanced")}
                 </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <SettingGroup>
-                        <SettingJson
-                            id={`${prefix}-headers`}
-                            label={t("modelHeaders")}
-                            value={model.headers}
-                            onChange={(value) => onChange({ headers: value })}
+                <CollapsibleContent rail>
+                    <div className="space-y-4 pt-1">
+                        <SettingGroup>
+                            <SettingJson
+                                id={`${prefix}-headers`}
+                                label={t("modelHeaders")}
+                                value={model.headers}
+                                onChange={(value) => onChange({ headers: value })}
+                            />
+                            <SettingSelect
+                                id={`${prefix}-image-modality`}
+                                label={t("imageModality")}
+                                description={t("modalityHint")}
+                                value={model.imageModality}
+                                onChange={(value) =>
+                                    onChange({ imageModality: value as Capability })
+                                }
+                                options={capabilityOptions}
+                            />
+                            <SettingSelect
+                                id={`${prefix}-audio-modality`}
+                                label={t("audioModality")}
+                                description={t("modalityHint")}
+                                value={model.audioModality}
+                                onChange={(value) =>
+                                    onChange({ audioModality: value as Capability })
+                                }
+                                options={capabilityOptions}
+                            />
+                        </SettingGroup>
+                        <ReasoningEditor
+                            idPrefix={`${prefix}-reasoning`}
+                            thinking={model.thinking}
+                            supportsThinking={model.supportsThinking}
+                            onChange={onChange}
+                            globalOn={globalThinkingOn}
+                            globalOff={globalThinkingOff}
+                            typeReasons={typeReasons}
                         />
-                        <SettingJson
-                            id={`${prefix}-thinking`}
-                            label={t("modelThinking")}
-                            value={model.thinking}
-                            onChange={(value) => onChange({ thinking: value })}
+                        <EffortLevelList
+                            idPrefix={`${prefix}-effort`}
+                            effort={model.effort}
+                            onChange={(text) => onChange({ effort: text })}
+                            globalLevels={globalEffortLevels}
+                            globalDefault={globalEffortDefault}
                         />
-                        <SettingJson
-                            id={`${prefix}-effort`}
-                            label={t("modelEffort")}
-                            value={model.effort}
-                            onChange={(value) => onChange({ effort: value })}
+                        <WrittenJson
+                            thinking={model.thinking}
+                            supportsThinking={model.supportsThinking}
+                            effort={model.effort}
                         />
-                        <SettingSelect
-                            id={`${prefix}-image-modality`}
-                            label={t("imageModality")}
-                            description={t("modalityHint")}
-                            value={model.imageModality}
-                            onChange={(value) => onChange({ imageModality: value as Capability })}
-                            options={capabilityOptions}
-                        />
-                        <SettingSelect
-                            id={`${prefix}-audio-modality`}
-                            label={t("audioModality")}
-                            description={t("modalityHint")}
-                            value={model.audioModality}
-                            onChange={(value) => onChange({ audioModality: value as Capability })}
-                            options={capabilityOptions}
-                        />
-                        <SettingSelect
-                            id={`${prefix}-supports-thinking`}
-                            label={t("supportsThinking")}
-                            value={model.supportsThinking}
-                            onChange={(value) =>
-                                onChange({ supportsThinking: value as Capability })
-                            }
-                            options={capabilityOptions}
-                        />
-                        <SettingSelect
-                            id={`${prefix}-runtime-props`}
-                            label={t("runtimeProps")}
-                            value={model.runtimeProps}
-                            onChange={(value) => onChange({ runtimeProps: value as Capability })}
-                            options={capabilityOptions}
-                        />
-                        <SettingSelect
-                            id={`${prefix}-tools`}
-                            label={t("tools")}
-                            description={t("toolsHint")}
-                            value={model.tools}
-                            onChange={(value) => onChange({ tools: value as Capability })}
-                            options={capabilityOptions}
-                        />
-                        <SettingSelect
-                            id={`${prefix}-parallel-tool-calls`}
-                            label={t("parallelToolCalls")}
-                            value={model.parallelToolCalls}
-                            onChange={(value) =>
-                                onChange({ parallelToolCalls: value as Capability })
-                            }
-                            options={capabilityOptions}
-                        />
-                        <SettingSelect
-                            id={`${prefix}-supports-tool-choice`}
-                            label={t("supportsToolChoice")}
-                            description={t("supportsToolChoiceHint")}
-                            value={model.supportsToolChoice}
-                            onChange={(value) =>
-                                onChange({ supportsToolChoice: value as Capability })
-                            }
-                            options={capabilityOptions}
-                        />
-                        <SettingToggle
-                            id={`${prefix}-recover-tool-calls`}
-                            label={t("recoverToolCalls")}
-                            description={t("recoverToolCallsHint")}
-                            checked={model.recoverToolCalls}
-                            onCheckedChange={(checked) => onChange({ recoverToolCalls: checked })}
-                        />
-                        <McpScopeField
-                            servers={mcpServers}
-                            value={model.mcpServers}
-                            onChange={(value) => onChange({ mcpServers: value })}
-                            toolsOff={model.tools === "off"}
-                        />
-                    </SettingGroup>
+                        <SettingGroup>
+                            <SettingSelect
+                                id={`${prefix}-runtime-props`}
+                                label={t("runtimeProps")}
+                                value={model.runtimeProps}
+                                onChange={(value) =>
+                                    onChange({ runtimeProps: value as Capability })
+                                }
+                                options={capabilityOptions}
+                            />
+                            <SettingSelect
+                                id={`${prefix}-tools`}
+                                label={t("tools")}
+                                description={t("toolsHint")}
+                                value={model.tools}
+                                onChange={(value) => onChange({ tools: value as Capability })}
+                                options={capabilityOptions}
+                            />
+                            <SettingSelect
+                                id={`${prefix}-parallel-tool-calls`}
+                                label={t("parallelToolCalls")}
+                                value={model.parallelToolCalls}
+                                onChange={(value) =>
+                                    onChange({ parallelToolCalls: value as Capability })
+                                }
+                                options={capabilityOptions}
+                            />
+                            <SettingSelect
+                                id={`${prefix}-supports-tool-choice`}
+                                label={t("supportsToolChoice")}
+                                description={t("supportsToolChoiceHint")}
+                                value={model.supportsToolChoice}
+                                onChange={(value) =>
+                                    onChange({ supportsToolChoice: value as Capability })
+                                }
+                                options={capabilityOptions}
+                            />
+                            <SettingToggle
+                                id={`${prefix}-recover-tool-calls`}
+                                label={t("recoverToolCalls")}
+                                description={t("recoverToolCallsHint")}
+                                checked={model.recoverToolCalls}
+                                onCheckedChange={(checked) =>
+                                    onChange({ recoverToolCalls: checked })
+                                }
+                            />
+                            <McpScopeField
+                                servers={mcpServers}
+                                value={model.mcpServers}
+                                onChange={(value) => onChange({ mcpServers: value })}
+                                toolsOff={model.tools === "off"}
+                            />
+                        </SettingGroup>
+                    </div>
                 </CollapsibleContent>
             </Collapsible>
 

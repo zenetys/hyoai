@@ -36,7 +36,8 @@ function hostOf(url: string): string {
  * Edits apply live through the shared config draft; a field the config cannot take is named
  * under the page, since the edit is then not applied, and the reset of the local override is
  * reached from the override badge in the title. The list is where the page opens, unless a model
- * id is asked for through the settings focus, which opens that model once.
+ * id is asked for through the settings focus, which opens that model once. The detail also
+ * receives the global thinking and effort settings of the draft, which the model falls back on.
  */
 export function ModelsTab() {
     const t = useTranslations("settings");
@@ -113,6 +114,10 @@ export function ModelsTab() {
                     mcpServers={draft.mcpServers
                         .filter((server) => server.id.trim())
                         .map((server) => ({ id: server.id, label: server.label }))}
+                    globalThinkingOn={draft.thinkingOn}
+                    globalThinkingOff={draft.thinkingOff}
+                    globalEffortLevels={draft.effortLevels}
+                    globalEffortDefault={draft.effortDefault}
                 />
                 {invalid}
                 {reset}
