@@ -1,6 +1,6 @@
 "use client";
 
-import { FileWarning, MessagesSquare } from "lucide-react";
+import { FileWarning } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { useStore } from "@/hooks/useStore";
@@ -19,9 +19,6 @@ export function ChatEmptyState() {
 
     return (
         <div className="flex flex-col items-center gap-4 px-8 pb-6 text-center">
-            <div className="flex size-14 items-center justify-center rounded-panel bg-muted shadow-surface">
-                <MessagesSquare className="size-7 text-muted-foreground" aria-hidden="true" />
-            </div>
             <h2 className="font-display text-2xl font-semibold">
                 {t("emptyTitle", { name: appName || t("emptyTitleDefaultName") })}
             </h2>
