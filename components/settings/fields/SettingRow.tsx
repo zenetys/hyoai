@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
  * row puts the control under the text, for wide controls such as a text area.
  *
  * @param label - Setting name
- * @param description - What the setting does
+ * @param description - What the setting does, as text or as blocks such as paragraphs and notices
  * @param htmlFor - Id of the control, so the label names it
  * @param stacked - Put the control under the text instead of beside it
  * @param phoneStack - Stack the row on a phone only, so a wide control does not squeeze the text
@@ -42,7 +42,7 @@ export function SettingRow({
                     {label}
                 </Label>
                 {description && (
-                    <p className="text-xs leading-snug text-muted-foreground">{description}</p>
+                    <div className="text-xs leading-snug text-muted-foreground">{description}</div>
                 )}
             </div>
             <div
