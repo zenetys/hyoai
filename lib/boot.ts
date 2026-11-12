@@ -12,9 +12,10 @@ import {
 import { hydrateConversations } from "@/lib/stores/conversations";
 import { hydrateLocale, setLocale } from "@/lib/stores/locale";
 import { initModels, modelsStore, pruneStaleOverride, setActiveModel } from "@/lib/stores/models";
+import { hydrateProjects } from "@/lib/stores/projects";
 import { hydrateSettings, setSkin, settingsStore, updateSettings } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
-import { enableSettingsUrlSync, openSettingsFromUrl, setEmbed } from "@/lib/stores/ui";
+import { enableSettingsUrlSync, openSettingsFromUrl, setEmbed, uiStore } from "@/lib/stores/ui";
 import { type EmbedConfig, getChatIdFromUrl, getCompareFromUrl } from "@/lib/url";
 import type { AppSettings } from "@/types/settings";
 import { STORAGE_KEYS } from "@/types/storage";
@@ -32,7 +33,13 @@ export async function bootApp(): Promise<void> {
     booted = true;
     await runMigrations();
     await pruneStaleOverride();
-    await Promise.all([hydrateSettings(), initModels(), hydrateConversations(), hydrateCompare()]);
+    await Promise.all([
+        hydrateSettings(),
+        initModels(),
+        hydrateConversations(),
+        hydrateProjects(),
+        hydrateCompare(),
+    ]);
     await hydrateLocale();
     registerLifecycleFlush();
 
@@ -64,7 +71,8 @@ let crossTabWired = false;
  * fires a storage event on each localStorage write in every OTHER tab, so an
  * index write re-hydrates the conversation list and a payload write reloads the
  * open conversation (when idle), letting one tab follow along as another -- e.g.
- * an embed widget -- generates and persists.
+ * an embed widget -- generates and persists. The projects follow the same way,
+ * except in the embed, which has none.
  */
 function enableCrossTabRefresh(): void {
     if (crossTabWired || typeof window === "undefined") return;
@@ -73,6 +81,9 @@ function enableCrossTabRefresh(): void {
         if (event.storageArea !== window.localStorage || !event.key) return;
         if (event.key === STORAGE_KEYS.conversationsIndex) {
             void hydrateConversations();
+        } else if (event.key === STORAGE_KEYS.projects) {
+            // The embed reads without writing, so it must not pick up the host's projects.
+            if (!uiStore.getState().embed) void hydrateProjects();
         } else if (event.key.startsWith(STORAGE_KEYS.conversationPrefix)) {
             reloadLiveConversation(event.key.slice(STORAGE_KEYS.conversationPrefix.length));
         }
