@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
     compare: "lc:compare",
     notice: "lc:notice",
     conversationsIndex: "lc:convs",
+    projects: "lc:projects",
     conversation: (id: string) => `lc:conv:${id}`,
     conversationPrefix: "lc:conv:",
 } as const;

@@ -134,6 +134,17 @@ function schedule(key: string, produce: () => string | null, codec: Codec): void
 }
 
 /**
+ * Whether a scheduled write for a key has not reached storage yet. A value read
+ * back from storage while this is true is older than the in-memory state.
+ *
+ * @param key - Storage key to check
+ * @returns true when a debounced write is still queued for the key
+ */
+export function hasPendingWrite(key: string): boolean {
+    return pendingWrites.has(key);
+}
+
+/**
  * Force the pending write for one key to execute now.
  * On quota failure the write stays queued for a later retry and registered
  * quota callbacks are notified instead of throwing.
