@@ -85,6 +85,34 @@ export function removeMeta(id: string): void {
 }
 
 /**
+ * Remove several conversation metas from the index with a single write.
+ *
+ * @param ids - Conversation ids
+ */
+export function removeMetas(ids: string[]): void {
+    if (ids.length === 0) return;
+    const gone = new Set(ids);
+    conversationsStore.setState((state) => ({
+        index: state.index.filter((entry) => !gone.has(entry.id)),
+    }));
+    persistIndex();
+}
+
+/**
+ * Make every conversation of a project loose, with a single write.
+ *
+ * @param projectId - Project being deleted
+ */
+export function detachProject(projectId: string): void {
+    conversationsStore.setState((state) => ({
+        index: state.index.map((entry) =>
+            entry.projectId === projectId ? { ...entry, projectId: undefined } : entry,
+        ),
+    }));
+    persistIndex();
+}
+
+/**
  * Read a meta from the index.
  *
  * @param id - Conversation id

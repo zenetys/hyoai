@@ -14,9 +14,18 @@ import {
 import { peekPaneInstance } from "@/lib/chat/slots";
 import { deleteConversation as deleteConversationPayload } from "@/lib/storage/persistence";
 import { compareStore } from "@/lib/stores/compare";
-import { removeMeta } from "@/lib/stores/conversations";
+import {
+    conversationsStore,
+    detachProject,
+    getMeta,
+    patchMeta,
+    removeMeta,
+    removeMetas,
+} from "@/lib/stores/conversations";
 import { setLiveStatus } from "@/lib/stores/live";
+import { createProject, getProject, removeProject } from "@/lib/stores/projects";
 import { refreshStorage } from "@/lib/stores/storage";
+import type { Project } from "@/types/projects";
 
 // The default chat instance is re-exported for the historic import sites.
 export { defaultChat };
@@ -119,4 +128,82 @@ export async function deleteConversationById(id: string): Promise<void> {
     setLiveStatus(id, "idle");
     await deleteConversationPayload(id);
     void refreshStorage();
+}
+
+/**
+ * Move a conversation into a project, or out of it. Only its project changes:
+ * the pin and the modification date stay. An unindexed draft has no meta yet and
+ * is left alone.
+ *
+ * @param id - Conversation id
+ * @param projectId - Target project, null to make the conversation loose
+ */
+export function moveConversationToProject(id: string, projectId: string | null): void {
+    if (!getMeta(id)) return;
+    if (projectId === null) {
+        patchMeta(id, { projectId: undefined });
+        return;
+    }
+    if (!getProject(projectId)) return;
+    patchMeta(id, { projectId });
+}
+
+/**
+ * Create a project and move a conversation into it. Nothing is created for a
+ * conversation that is not indexed yet.
+ *
+ * @param id - Conversation id
+ * @param name - Name of the new project
+ * @returns The new project, or null when the name is blank or the conversation is not indexed
+ */
+export function moveConversationToNewProject(id: string, name: string): Project | null {
+    if (!getMeta(id)) return null;
+    const project = createProject({ name });
+    if (project) moveConversationToProject(id, project.id);
+    return project;
+}
+
+/**
+ * Delete several conversations from the index and storage with one storage
+ * refresh. Each live instance showing one is aborted and dropped first, like
+ * deleteConversationById.
+ *
+ * @param ids - Conversation ids
+ */
+export async function deleteConversationsById(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    removeMetas(ids);
+    for (const id of ids) {
+        releaseFromPanes(id);
+        releaseFromForeground(id);
+        setLiveStatus(id, "idle");
+    }
+    await Promise.all(ids.map((id) => deleteConversationPayload(id)));
+    void refreshStorage();
+}
+
+/**
+ * Delete a project. Its conversations are either kept as loose conversations or
+ * deleted along with it; a generation running in a deleted one is aborted. The
+ * project leaves the list before the payloads are deleted, so a payload that
+ * fails to delete cannot leave a project behind.
+ *
+ * @param id - Project id
+ * @param conversations - "keep" to make them loose, "delete" to delete them
+ */
+export async function deleteProjectById(
+    id: string,
+    conversations: "keep" | "delete",
+): Promise<void> {
+    if (conversations === "keep") {
+        detachProject(id);
+        removeProject(id);
+        return;
+    }
+    const ids = conversationsStore
+        .getState()
+        .index.filter((meta) => meta.projectId === id)
+        .map((meta) => meta.id);
+    removeProject(id);
+    await deleteConversationsById(ids);
 }
