@@ -15,7 +15,9 @@ import { cn } from "@/lib/utils";
  * @param description - What the setting does, or why it is unavailable
  * @param checked - Current state
  * @param onCheckedChange - Called with the next state
- * @param disabled - Dim the row and lock the switch
+ * @param extra - Control shown just before the switch, such as an automatic marker or a reset
+ *   button
+ * @param disabled - Lock the switch and dim it with the label, the description stays readable
  */
 export function SettingToggle({
     id,
@@ -23,6 +25,7 @@ export function SettingToggle({
     description,
     checked,
     onCheckedChange,
+    extra,
     disabled = false,
 }: {
     id: string;
@@ -30,17 +33,22 @@ export function SettingToggle({
     description?: ReactNode;
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
+    extra?: ReactNode;
     disabled?: boolean;
 }) {
     return (
-        <div className={cn(disabled && "opacity-50")}>
+        <div className={cn(disabled && "[&_label]:opacity-50")}>
             <SettingRow label={label} description={description} htmlFor={id}>
-                <Switch
-                    id={id}
-                    checked={checked}
-                    onCheckedChange={onCheckedChange}
-                    disabled={disabled}
-                />
+                <div className="flex items-center gap-2.5">
+                    {extra}
+                    <Switch
+                        id={id}
+                        checked={checked}
+                        onCheckedChange={onCheckedChange}
+                        disabled={disabled}
+                        className="max-md:after:-inset-y-3"
+                    />
+                </div>
             </SettingRow>
         </div>
     );
