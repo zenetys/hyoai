@@ -163,7 +163,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     return (
         <div
             className={cn(
-                "group/item flex items-center gap-1 rounded-lg pr-1 hover:bg-sidebar-accent",
+                "group/item flex items-center gap-1 rounded-lg pr-1 transition-colors hover:bg-sidebar-accent",
                 active && "bg-sidebar-accent text-sidebar-accent-foreground",
             )}
         >

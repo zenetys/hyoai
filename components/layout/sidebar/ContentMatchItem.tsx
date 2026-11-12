@@ -26,7 +26,7 @@ export function ContentMatchItem({ hit }: { hit: ContentSearchHit }) {
         <button
             type="button"
             onClick={handleOpen}
-            className="block w-full rounded-lg px-2.5 py-1.5 text-left hover:bg-sidebar-accent"
+            className="block w-full rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
         >
             <span className="block truncate text-sm">{hit.meta.title || t("untitled")}</span>
             <SnippetMatch snippet={hit.snippet} className="mt-0.5 line-clamp-1" />
