@@ -1,4 +1,5 @@
 import { getTranslator } from "@/lib/i18n";
+import { stripProject } from "@/lib/projects";
 import { buildExport, remapConversationIds } from "@/lib/storage/io";
 import { toLlamaCppExport } from "@/lib/storage/llamacpp";
 import { toMarkdownExport } from "@/lib/storage/markdown";
@@ -12,7 +13,7 @@ import type { ExportFile } from "@/types/storage";
 
 /**
  * Assemble the full Conversation shape (meta plus data) of one stored
- * conversation.
+ * conversation, without its project: exports carry none.
  *
  * @param id - Conversation id
  * @returns null when the meta or payload is missing
@@ -21,7 +22,7 @@ async function loadFullConversation(id: string): Promise<Conversation | null> {
     const meta = getMeta(id);
     const data = (await readConversation(id)) as ConversationData | null;
     if (!meta || !data) return null;
-    return { ...meta, ...data, id };
+    return stripProject({ ...meta, ...data, id });
 }
 
 /**
