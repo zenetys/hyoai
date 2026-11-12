@@ -151,7 +151,7 @@ export function SettingsDialog() {
                 </div>
                 <div className="flex min-h-0 flex-1 md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
                     {(!phone || showList) && (
-                        <aside className="min-h-0 space-y-3 overflow-y-auto border-r p-3 max-md:flex-1 max-md:border-r-0">
+                        <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-r p-3 max-md:flex-1 max-md:border-r-0">
                             <SettingsSearchInput value={query} onChange={setQuery} />
                             {phone && searching ? (
                                 <SettingsSearchResults

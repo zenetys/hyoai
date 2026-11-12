@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * The list of settings pages, grouped by hairlines rather than labels: the pages name
- * themselves. On a phone it is the first screen of the dialog, so each row is taller and ends
- * with a chevron; beside a page the current one is highlighted.
+ * themselves. A pinned group sits at the foot of the list. On a phone it is the first screen of
+ * the dialog, so each row is taller and ends with a chevron; beside a page the current one is
+ * highlighted.
  *
  * @param groups - The groups to list, with the pages the view shows
  * @param active - The open page, or null on the list screen
@@ -31,10 +32,17 @@ export function SettingsNav({
     const t = useTranslations("settings");
 
     return (
-        <nav aria-label={t("title")} className="space-y-3">
+        <nav aria-label={t("title")} className="flex flex-1 flex-col gap-3">
             {groups.map((group, index) => (
-                <div key={group.id} className={cn("space-y-1", index > 0 && "border-t pt-3")}>
-                    {group.pages.map(({ id, icon: Icon }) => (
+                <div
+                    key={group.id}
+                    className={cn(
+                        "space-y-1",
+                        index > 0 && "border-t pt-3",
+                        group.pinned && "mt-auto",
+                    )}
+                >
+                    {group.pages.map(({ id, icon: Icon, meta }) => (
                         <button
                             key={id}
                             type="button"
@@ -51,6 +59,7 @@ export function SettingsNav({
                                 aria-hidden="true"
                             />
                             <span className="flex-1">{t(`nav.${id}`)}</span>
+                            {meta && <span className="text-xs text-muted-foreground">{meta}</span>}
                             {phone && (
                                 <ChevronRight
                                     className="size-4 text-muted-foreground"
