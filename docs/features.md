@@ -55,9 +55,9 @@ breakpoint (768 px). From 768 px up the switchers and **Copy link** stay in the 
 touch tablet included.
 
 The Settings dialog is one dialog with a navigation on the left and one page at a time on the
-right. The navigation has nine pages in four groups: **Appearance** and **Behavior**; **Models**,
-**MCP servers** and **Tools**; **Data** and **Configuration**; **Sampling** and **Chunking**. Each
-setting is a row of its page. A search box above the navigation filters the settings by name or by
+right. The navigation has ten pages in five groups: **Appearance** and **Behavior**; **Models**,
+**MCP servers** and **Tools**; **Data** and **Configuration**; **Sampling** and **Chunking**; and
+**Changelog**, pinned at the foot of the list. Each setting is a row of its page. A search box above the navigation filters the settings by name or by
 explanation; choosing a result opens its page and puts the focus on its control. On a phone the
 navigation and the page are two screens, and a back arrow leads from the page to the navigation. The
 pages hold:
@@ -74,20 +74,36 @@ pages hold:
   integrations), the generated JSON and **Reset…** (see [models.md](models.md)).
 - **Sampling**: the sampling parameters and the **Penalties** group.
 - **Chunking**: the chunking of oversized inputs and the **Conversation compaction** group.
+- **Changelog**: the release notes of every version, newest first, with the version of the build at
+  the end of its row in the navigation (see [The changelog](#the-changelog)).
 
-The full application shows all nine. The [embedded widget](embed.md#what-the-widget-leaves-out)
-hides **Models**, **MCP servers**, **Tools** and **Configuration**, and also **Data** unless its
-sidebar variant is on.
+The full application shows all ten. The [embedded widget](embed.md#what-the-widget-leaves-out)
+hides **Models**, **MCP servers**, **Tools**, **Configuration** and **Changelog**, and also **Data**
+unless its sidebar variant is on.
 
 While Settings is open, the address bar carries `?settings=<page>` (`appearance`, `behavior`,
-`models`, `servers`, `tools`, `data`, `config`, `sampling` or `chunking`) and closing the dialog
-removes it. It names the page on screen, so opening Settings from the header or the command palette
+`models`, `servers`, `tools`, `data`, `config`, `sampling`, `chunking` or `changelog`) and closing
+the dialog removes it. It names the page on screen, so opening Settings from the header or the command palette
 gives `?settings=appearance` on a wide screen. On a phone, where the first screen is the list of
 pages, the address carries a bare `?settings` until a page is picked. A link with the parameter
 opens Settings on that page: use it to send someone straight to the **Models** page, say. A bare
 `?settings` opens Settings on its first screen. An unknown value is ignored, and a page the view
 hides (the widget has no **Models**) opens on **Appearance** on a wide screen and on the list of
 pages on a phone.
+
+### The changelog
+
+The **Changelog** page lists the release notes of every version, newest first, each with its date.
+The installed version is marked and open. The older ones show the text that introduces the release,
+and a button opens its titled sections. **All releases on GitHub** opens the releases page. The
+version of the build, the one in `package.json` when the application is built, is shown at the end
+of the row of the page in the navigation.
+
+The notes are the ones published on GitHub, without their screenshots, and they are in English
+whatever the language of the interface. They come from `CHANGELOG.md`, which
+`scripts/changelog.mjs` writes from the published releases (see the README). The same script turns
+that file into `data/changelog.json`, which is not kept in Git, before `npm run dev`, `npm run build`
+and `npm run check`. The page is loaded when it is opened.
 
 ## Conversations and the sidebar
 

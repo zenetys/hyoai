@@ -97,8 +97,8 @@ an embed, except where noted.
   without tools and no MCP server is registered or contacted. See
   [Tool calling](tools.md) and [MCP servers](mcp.md).
 - **The deployment notice**: the `notice` strip of the config is never shown.
-- **Settings pages**: the Settings dialog has no **Models**, **MCP servers**, **Tools** and
-  **Configuration** page. **Data** is there only in the sidebar variant. The model availability
+- **Settings pages**: the Settings dialog has no **Models**, **MCP servers**, **Tools**,
+  **Configuration** and **Changelog** page. **Data** is there only in the sidebar variant. The model availability
   settings live on the **Models** page, so they are not offered either; the widget keeps the
   defaults.
 - **Compare models**: the conversation menu of the sidebar variant does not offer
