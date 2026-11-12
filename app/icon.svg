@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="13 10.44 41.09 41.09">
+    <style>
+        :root { --a: #1a9db8; --b: #0f6378; }
+        @media (prefers-color-scheme: dark) { :root { --a: #6fd3ea; --b: #1fa3bf; } }
+        .m { fill: url(#g); }
+    </style>
+    <defs>
+        <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="13" y1="10.44" x2="54.09" y2="51.53">
+            <stop offset="0" stop-color="var(--a)" style="stop-color: var(--a)" />
+            <stop offset="1" stop-color="var(--b)" style="stop-color: var(--b)" />
+        </linearGradient>
+    </defs>
+    <path class="m" fill-rule="evenodd" d="M20.52 30L15.88 30A1.5 1.5 0 0 1 14.41 28.18A18 18 0 0 1 29.59 14.16A1.5 1.5 0 0 1 31.12 16.35A13 13 0 0 0 29.7 20.81A1.5 1.5 0 0 1 28.68 22.04A10.5 10.5 0 0 0 21.96 28.94A1.5 1.5 0 0 1 20.52 30ZM15.5 34L20.52 34A1.5 1.5 0 0 1 21.96 35.06A10.5 10.5 0 0 0 41.56 36.34A1.5 1.5 0 0 1 42.89 35.46A13 13 0 0 0 47.47 34.51A1.5 1.5 0 0 1 49.49 36.26A18 18 0 0 1 32 50L20 50A6 6 0 0 1 14 44L14 35.5A1.5 1.5 0 0 1 15.5 34ZM32.09 22.46A10.5 10.5 0 1 1 53.09 22.46A10.5 10.5 0 1 1 32.09 22.46ZM37.59 22.46A5 5 0 1 0 47.59 22.46A5 5 0 1 0 37.59 22.46Z" />
+</svg>
