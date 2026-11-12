@@ -10,3 +10,6 @@ node_modules/
 # Build-time plugins: drop a folder here (see plugins/README.md)
 /plugins/*
 !/plugins/README.md
+
+# Written from CHANGELOG.md before the dev server, the build and the checks
+/data/changelog.json

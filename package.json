@@ -4,9 +4,12 @@
     "license": "Apache-2.0",
     "private": true,
     "scripts": {
+        "prebuild": "node scripts/changelog.mjs --from CHANGELOG.md",
         "build": "next build",
         "start": "npx serve out -p 4118",
+        "predev": "node scripts/changelog.mjs --from CHANGELOG.md",
         "dev": "next dev -H 127.0.0.1 -p 4117",
+        "precheck": "node scripts/changelog.mjs --from CHANGELOG.md",
         "check": "tsc --noEmit && eslint . && prettier --check .",
         "test": "vitest run",
         "format": "prettier --write . && eslint --fix ."
