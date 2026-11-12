@@ -7,7 +7,7 @@ import { STORAGE_KEYS, type StorageMeta } from "@/types/storage";
 /**
  * Schema version written by the current build of the app.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /**
  * Rewrite every stored conversation through the upgrade hooks of the installed
@@ -32,9 +32,23 @@ async function upgradeStoredTraces(adapter: StorageAdapter): Promise<void> {
     }
 }
 
+/**
+ * Create the empty list of projects when the key is absent. Nothing else is
+ * converted: the project id of a conversation is optional. Idempotent, an
+ * existing list is never overwritten.
+ *
+ * @param adapter - Storage backend to migrate
+ */
+export async function initProjects(adapter: StorageAdapter): Promise<void> {
+    if ((await adapter.get(STORAGE_KEYS.projects)) === null) {
+        await adapter.set(STORAGE_KEYS.projects, "[]");
+    }
+}
+
 // Each entry upgrades storage from version (n - 1) to n.
 const MIGRATIONS: Record<number, (adapter: StorageAdapter) => Promise<void>> = {
     2: upgradeStoredTraces,
+    3: initProjects,
 };
 
 /**
