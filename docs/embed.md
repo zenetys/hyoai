@@ -105,7 +105,8 @@ an embed, except where noted.
   it, so [compare mode](compare.md#compare-mode) cannot be started from a widget.
 - **Global shortcuts**: Ctrl/Cmd+K, Ctrl/Cmd+B and Ctrl/Cmd+Shift+O are
   registered by the full application shell only, see
-  [Keyboard shortcuts](features.md#keyboard-shortcuts).
+  [Keyboard shortcuts](features.md#keyboard-shortcuts). The sidebar of the widget does not show
+  their hints either.
 - **The availability watcher**: the full app probes the models in use in the
   background, the widget does not, so a server is judged down only from a failed
   chat request, from **Retry** or from the silent-server watch. See

@@ -122,7 +122,8 @@ is reloaded by the other when it is idle.
 
 The top of the sidebar has the **New conversation** button and a search field (placeholder
 **Search...**). Hovering or focusing them reveals the shortcut that does the same thing
-(Ctrl/Cmd+Shift+O and Ctrl/Cmd+K). Below, the list is split into **Pinned** and **Recent**: pinned
+(Ctrl/Cmd+Shift+O and Ctrl/Cmd+K), except on touch devices and in the embedded widget, where the
+hints are not shown. Below, the list is split into **Pinned** and **Recent**: pinned
 conversations come first, then everything else by last modification, most recent first. With no
 conversation the list reads **No conversations**.
 
