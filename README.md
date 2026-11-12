@@ -1,4 +1,9 @@
-# HYOAI
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+    <img alt="HYOAI" src="docs/images/logo-light.svg" height="56">
+  </picture>
+</h1>
 
 > **Host Your Own AI** — a server-less, browser-only chat UI for any
 > OpenAI-compatible LLM.
