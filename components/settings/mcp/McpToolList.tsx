@@ -84,7 +84,7 @@ export function McpToolList({
                     {t("refresh")}
                 </Button>
             </div>
-            <CollapsibleContent className="mt-2 space-y-2">
+            <CollapsibleContent rail className="mt-2 space-y-2">
                 {tools?.length === 0 && (
                     <p className="text-xs text-muted-foreground">{t("noTools")}</p>
                 )}
