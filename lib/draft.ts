@@ -28,7 +28,6 @@ export interface DraftModel {
     disabled: boolean;
     thinking: string;
     effort: string;
-    modalities: string;
     imageModality: Capability;
     audioModality: Capability;
     supportsThinking: Capability;
@@ -196,7 +195,6 @@ export function newDraftModel(): DraftModel {
         disabled: false,
         thinking: "",
         effort: "",
-        modalities: "",
         imageModality: "auto",
         audioModality: "auto",
         supportsThinking: "auto",
@@ -252,7 +250,6 @@ export function rawToDraft(raw: unknown): Draft {
                 disabled: model.disabled === true,
                 thinking: asJson(model.thinking),
                 effort: asJson(model.effort),
-                modalities: asJson(model.modalities),
                 imageModality: asCapability(asRecord(model.modalities)?.image),
                 audioModality: asCapability(asRecord(model.modalities)?.audio),
                 supportsThinking: asCapability(model.supportsThinking),
@@ -366,13 +363,7 @@ export function buildConfig(
         const audio = fromCapability(model.audioModality);
         if (image !== undefined) modalities.image = image;
         if (audio !== undefined) modalities.audio = audio;
-        put(
-            entry,
-            "modalities",
-            Object.keys(modalities).length > 0
-                ? modalities
-                : parse(model.modalities, `models[${index}].modalities`),
-        );
+        put(entry, "modalities", Object.keys(modalities).length > 0 ? modalities : undefined);
         put(entry, "supportsThinking", fromCapability(model.supportsThinking));
         put(entry, "runtimeProps", fromCapability(model.runtimeProps));
         put(entry, "tools", fromCapability(model.tools));

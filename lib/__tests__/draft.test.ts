@@ -332,6 +332,7 @@ describe("modalities of a model in the config form", () => {
     });
 
     it("leaves the key out when both are on auto", () => {
+        expect("modalities" in built({})).toBe(false);
         expect("modalities" in built(undefined)).toBe(false);
     });
 });
