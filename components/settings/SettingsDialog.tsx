@@ -68,6 +68,12 @@ export function SettingsDialog() {
         setPendingFocus(entry.id ?? null);
     };
 
+    // A wide screen always shows a page, so the address names it: the first one when none is open.
+    const firstPage = pages[0]?.id ?? null;
+    useEffect(() => {
+        if (open && !phone && !requested && firstPage) setSettingsPage(firstPage);
+    }, [open, phone, requested, firstPage]);
+
     // Once the page of a result is on screen, focus its control, looked for over a short while.
     useEffect(() => {
         if (!pendingFocus || searching || current?.id === undefined) return;
