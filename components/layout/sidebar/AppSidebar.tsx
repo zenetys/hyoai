@@ -11,17 +11,24 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shortcut } from "@/components/ui/shortcut";
 import { useConversationSearch } from "@/hooks/useConversations";
+import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
 import { startNewChat } from "@/lib/chat/panes";
 import { setMobileSidebarOpen } from "@/lib/stores/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Sidebar content: new chat button, title plus content search and the
- * conversation list split into pinned, recent and content-match sections.
+ * conversation list split into pinned, recent and content-match sections. The shortcut
+ * hints are left out on touch devices and wherever the shortcuts are not bound.
+ *
+ * @param shortcuts - Whether the keyboard shortcuts exist in the host shell
  */
-export function AppSidebar() {
+export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
     const t = useTranslations("sidebar");
     const tCommon = useTranslations("common");
     const [query, setQuery] = useState("");
+    const coarse = useIsCoarsePointer();
+    const hints = shortcuts && !coarse;
     const { titleMatches, contentMatches } = useConversationSearch(query);
     const pinned = titleMatches.filter((meta) => meta.pinned);
     const recent = titleMatches.filter((meta) => !meta.pinned);
@@ -42,11 +49,13 @@ export function AppSidebar() {
                     >
                         <PenLine aria-hidden="true" />
                         <span className="truncate">{t("newChat")}</span>
-                        <Shortcut
-                            keyName="O"
-                            shift
-                            className="ml-auto max-w-0 overflow-hidden bg-transparent px-0 opacity-0 transition-[max-width,opacity] duration-200 group-hover/new:max-w-24 group-hover/new:opacity-100 group-focus-visible/new:max-w-24 group-focus-visible/new:opacity-100"
-                        />
+                        {hints && (
+                            <Shortcut
+                                keyName="O"
+                                shift
+                                className="ml-auto max-w-0 overflow-hidden bg-transparent px-0 opacity-0 transition-[max-width,opacity] duration-200 group-hover/new:max-w-24 group-hover/new:opacity-100 group-focus-visible/new:max-w-24 group-focus-visible/new:opacity-100"
+                            />
+                        )}
                     </Button>
                     <Button
                         type="button"
@@ -68,13 +77,19 @@ export function AppSidebar() {
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder={t("searchPlaceholder")}
-                        className="pl-8 pr-2.5 transition-[padding-right] duration-200 group-hover/search:pr-14 group-focus-within/search:pr-14"
+                        className={cn(
+                            "pl-8 pr-2.5",
+                            hints &&
+                                "transition-[padding-right] duration-200 group-hover/search:pr-14 group-focus-within/search:pr-14",
+                        )}
                         aria-label={t("searchPlaceholder")}
                     />
-                    <Shortcut
-                        keyName="K"
-                        className="absolute top-1/2 right-2 -translate-y-1/2 bg-transparent px-0 opacity-0 transition-opacity group-focus-within/search:opacity-100 group-hover/search:opacity-100"
-                    />
+                    {hints && (
+                        <Shortcut
+                            keyName="K"
+                            className="absolute top-1/2 right-2 -translate-y-1/2 bg-transparent px-0 opacity-0 transition-opacity group-focus-within/search:opacity-100 group-hover/search:opacity-100"
+                        />
+                    )}
                 </div>
             </div>
             <ScrollArea className="min-h-0 flex-1 px-3 pb-3">

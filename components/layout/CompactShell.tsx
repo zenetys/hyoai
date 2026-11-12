@@ -374,7 +374,7 @@ function SidebarShell() {
                     aria-describedby={undefined}
                 >
                     <SheetTitle className="sr-only">{t("appName")}</SheetTitle>
-                    <AppSidebar />
+                    <AppSidebar shortcuts={false} />
                 </SheetContent>
             </Sheet>
             <ForegroundChatProvider key={foregroundEpoch}>
