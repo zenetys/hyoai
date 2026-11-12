@@ -227,6 +227,7 @@ export interface CompactionState {
  * @param model - Upstream model name last used
  * @param systemPrompt - Per-conversation system prompt override
  * @param tools - Whether tools are on for the conversation, unset to follow the setting
+ * @param projectId - Project the conversation belongs to; weak reference, an unknown id means loose
  */
 export interface ConversationMeta {
     id: string;
@@ -238,6 +239,7 @@ export interface ConversationMeta {
     model?: string;
     systemPrompt?: string;
     tools?: boolean;
+    projectId?: string;
 }
 
 /**
