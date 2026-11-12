@@ -38,7 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useActiveConversationId } from "@/hooks/useConversations";
 import { useLongPress } from "@/hooks/useLongPress";
-import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
+import { useIsCoarsePointer, useIsMobile } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
 import { deleteConversationById, openConversationInView } from "@/lib/actions";
 import { compareConversation } from "@/lib/chat/panes";
@@ -91,6 +91,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
         setPopping(done === "done");
     }
     const coarse = useIsCoarsePointer();
+    const mobile = useIsMobile();
     const longPress = useLongPress({ onLongPress: () => setMenuOpen(true) });
     const active = compare.enabled ? compare.inPane : activeId === meta.id;
     const dateFormat = useMemo(
@@ -212,7 +213,12 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
             ) : (
                 <HoverCard openDelay={300} closeDelay={100}>
                     <HoverCardTrigger asChild>{titleButton}</HoverCardTrigger>
-                    <HoverCardContent side="right">
+                    <HoverCardContent
+                        side={mobile ? "bottom" : "right"}
+                        sideOffset={mobile ? 8 : undefined}
+                        collisionPadding={8}
+                        className="max-w-(--radix-hover-card-content-available-width)"
+                    >
                         <span className="line-clamp-2 font-medium">
                             {meta.title || t("untitled")}
                         </span>
