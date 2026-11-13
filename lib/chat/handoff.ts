@@ -5,10 +5,12 @@ import type { Attachment } from "@/types/chat";
  *
  * @param text - The message text
  * @param attachments - Files attached to it
+ * @param focus - Ask the composer that picks the draft up to take the focus
  */
 export interface ComposerDraft {
     text: string;
     attachments: Attachment[];
+    focus?: boolean;
 }
 
 // How the mounted composer that carries drafts reads its own, if one is mounted.
@@ -39,6 +41,16 @@ export function registerDraftSource(read: () => ComposerDraft): () => void {
 export function stashDraft(): void {
     const draft = source?.();
     stashed = draft && (draft.text.trim() !== "" || draft.attachments.length > 0) ? draft : null;
+}
+
+/**
+ * Leave a text for the next composer, which starts with it and takes the focus.
+ * Nothing is sent: the person reads it and sends it, or not.
+ *
+ * @param text - The text to drop in the composer
+ */
+export function stashText(text: string): void {
+    stashed = { text, attachments: [], focus: true };
 }
 
 /**
