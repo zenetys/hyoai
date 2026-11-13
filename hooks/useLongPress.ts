@@ -16,6 +16,7 @@ interface LongPressResult {
         onPointerUp: () => void;
         onPointerCancel: () => void;
         onClickCapture: (event: React.MouseEvent) => void;
+        onKeyDown: () => void;
         onContextMenu?: (event: React.MouseEvent) => void;
     };
     firedRef: React.RefObject<boolean>;
@@ -30,7 +31,9 @@ interface LongPressResult {
  *
  * The returned `onClickCapture` swallows the click synthesized right after a
  * hold so the element's own `onClick` does not also run; `firedRef` is exposed
- * for consumers that guard their click handler directly.
+ * for consumers that guard their click handler directly. A pointer press or a key
+ * press clears the flag, since a right click or a keyboard context menu raises it
+ * without any click following.
  *
  * @param options - Callback and tuning for the hold gesture
  * @returns Handlers to spread on the target plus the fired flag
@@ -67,8 +70,9 @@ export function useLongPress({
 
     const onPointerDown = useCallback(
         (event: React.PointerEvent) => {
-            if (event.pointerType === "mouse") return;
+            // A right click sets the flag without any click following, so clear it on every press
             firedRef.current = false;
+            if (event.pointerType === "mouse") return;
             startRef.current = { x: event.clientX, y: event.clientY };
             timerRef.current = window.setTimeout(fire, delay);
         },
@@ -96,6 +100,14 @@ export function useLongPress({
         firedRef.current = false;
     }, []);
 
+    /**
+     * Clear the fired flag on any key press: a keyboard context menu raises it with no click
+     * after it, which would otherwise swallow the next real click.
+     */
+    const onKeyDown = useCallback(() => {
+        firedRef.current = false;
+    }, []);
+
     const onContextMenu = useCallback((event: React.MouseEvent) => {
         event.preventDefault();
         firedRef.current = true;
@@ -109,6 +121,7 @@ export function useLongPress({
             onPointerUp: clear,
             onPointerCancel: clear,
             onClickCapture,
+            onKeyDown,
             ...(contextMenu ? { onContextMenu } : {}),
         },
         firedRef,
