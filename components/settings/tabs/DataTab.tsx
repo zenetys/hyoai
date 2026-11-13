@@ -29,6 +29,7 @@ import { parseLlamaCppExport } from "@/lib/storage/llamacpp";
 import { localStorageAdapter } from "@/lib/storage/local";
 import { conversationsStore } from "@/lib/stores/conversations";
 import { refreshStorage, STORAGE_WARN_RATIO, storageStore, usageRatio } from "@/lib/stores/storage";
+import { uiStore } from "@/lib/stores/ui";
 import { applyImport } from "@/lib/transfer";
 import { cn } from "@/lib/utils";
 import type { ExportFile } from "@/types/storage";
@@ -59,7 +60,8 @@ function parseAnyImport(
 /**
  * Data page of the settings: selective JSON export (native or llama.cpp webui
  * format), import of both formats, a local storage meter with the full,
- * scrollable per-conversation breakdown and a confirmed clear-all action.
+ * scrollable per-conversation breakdown and a confirmed clear-all action. The export row
+ * also states that projects are not exported, except in an embed, which has no projects.
  */
 export function DataTab() {
     const t = useTranslations("settings");
@@ -70,6 +72,7 @@ export function DataTab() {
     const [importing, setImporting] = useState(false);
     const phone = useIsMobile();
     const usage = useStore(storageStore, (state) => state.usage);
+    const embed = useStore(uiStore, (state) => state.embed);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -110,7 +113,12 @@ export function DataTab() {
         <SettingGroup>
             <SettingRow
                 label={t("data.exportTitle")}
-                description={t("data.exportDescription")}
+                description={
+                    <>
+                        <p>{t("data.exportDescription")}</p>
+                        {!embed && <p>{t("data.projectsNotExported")}</p>}
+                    </>
+                }
                 stacked={phone}
             >
                 <Button type="button" variant="outline" onClick={() => setExportOpen(true)}>
