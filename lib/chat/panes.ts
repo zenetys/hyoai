@@ -5,6 +5,7 @@ import {
     adoptInstance,
     setActiveConversation,
     startNewForeground,
+    startNewForegroundInProject,
     takeFromForeground,
 } from "@/lib/chat/foreground";
 import { stashDraft } from "@/lib/chat/handoff";
@@ -181,11 +182,32 @@ export function closeCompare(): void {
  * do not toggle the compare.
  */
 export function startNewChat(): void {
+    leaveCompare();
+    startNewForeground();
+}
+
+/**
+ * Start a fresh single conversation inside a project, leaving the compare like
+ * startNewChat. A separate function: startNewChat is passed straight to onClick
+ * handlers and must not receive an optional argument.
+ *
+ * @param projectId - Project the conversation will be indexed in
+ */
+export function startNewChatInProject(projectId: string): void {
+    leaveCompare();
+    startNewForegroundInProject(projectId);
+}
+
+/**
+ * Close the compare without keeping its layout: empty the panes, drop the focus, disable the
+ * compare and clear the ?compare= URL. Shared by the actions that start a fresh single
+ * conversation.
+ */
+function leaveCompare(): void {
     setPanes([]);
     setFocusedPane(null);
     setCompareEnabled(false);
     setCompareInUrl(null);
-    startNewForeground();
 }
 
 /**

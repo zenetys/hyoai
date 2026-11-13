@@ -448,7 +448,8 @@ export class ChatInstance {
 
     /**
      * Make sure the open conversation exists in the index, creating its meta
-     * from the first user message when needed.
+     * from the first user message when needed. A new meta takes the project the
+     * draft was started in, if that project still exists.
      *
      * @param firstText - Text used for the auto-title
      * @param entry - Model entry used for this exchange
@@ -471,7 +472,11 @@ export class ChatInstance {
                 modelId: entry.id,
                 model: upstream,
                 tools: this.store.getState().toolsEnabled ?? undefined,
+                projectId: lifecycle.resolveDraftProject(this.store.getState().draftProjectId),
             });
+
+            // The meta now carries the project, so the draft marker is spent.
+            this.store.setState({ draftProjectId: null });
             this.syncUrlMaybe(conversationId);
         } else {
             patchMeta(conversationId, {
@@ -2608,6 +2613,14 @@ export class ChatInstance {
 
     // Reset to a fresh, unpersisted conversation; it enters the index on first send.
     startNewConversation = (): void => lifecycle.startNewConversation(this.lifecycleContext());
+
+    /**
+     * Reset to a fresh conversation that will be indexed in the given project.
+     *
+     * @param projectId - Project to start in; an unknown id leaves the conversation loose
+     */
+    startNewConversationInProject = (projectId: string): void =>
+        lifecycle.startNewConversation(this.lifecycleContext(), projectId);
 
     /**
      * Open a stored conversation, flushing pending writes first, restore the

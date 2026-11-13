@@ -11,6 +11,7 @@ import type { Store } from "@/lib/store";
 import { type ChatState, IDLE_STREAMING } from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
 import { modelsStore, setActiveModel } from "@/lib/stores/models";
+import { getProject } from "@/lib/stores/projects";
 import { cloneBranch } from "@/lib/tree";
 import type { ConversationData } from "@/types/chat";
 import { STORAGE_KEYS } from "@/types/storage";
@@ -27,6 +28,17 @@ export interface LifecycleContext {
     syncUrlMaybe: (id: string | null) => void;
     stopGeneration: () => void;
     isRunning: () => boolean;
+}
+
+/**
+ * Keep a draft's project only while it still exists: it may have been deleted
+ * before the first message.
+ *
+ * @param draftProjectId - Project the draft was started in
+ * @returns The project id to store on the new meta, undefined for a loose conversation
+ */
+export function resolveDraftProject(draftProjectId: string | null): string | undefined {
+    return draftProjectId !== null && getProject(draftProjectId) ? draftProjectId : undefined;
 }
 
 /**
@@ -72,7 +84,8 @@ export async function forkConversation(
 
 /**
  * Set or clear the per-conversation system message. A conversation not yet
- * indexed (no message sent) enters the index so the value survives.
+ * indexed (no message sent) enters the index so the value survives, in the
+ * project it was started in if that project still exists.
  *
  * @param ctx - Owning instance context
  * @param prompt - System message text; blank clears the override
@@ -88,6 +101,7 @@ export function setConversationSystemPrompt(ctx: LifecycleContext, prompt: strin
         patchMeta(conversationId, { systemPrompt: value });
     } else if (value) {
         const now = Date.now();
+        const projectId = resolveDraftProject(ctx.store.getState().draftProjectId);
         upsertMeta({
             id: conversationId,
             title: "",
@@ -95,7 +109,11 @@ export function setConversationSystemPrompt(ctx: LifecycleContext, prompt: strin
             createdAt: now,
             lastModified: now,
             systemPrompt: value,
+            projectId,
         });
+
+        // The meta now carries the project, so the draft marker is spent.
+        ctx.store.setState({ draftProjectId: null });
         ctx.syncUrlMaybe(conversationId);
     }
 }
@@ -104,8 +122,9 @@ export function setConversationSystemPrompt(ctx: LifecycleContext, prompt: strin
  * Reset to a fresh, unpersisted conversation; it enters the index on first send.
  *
  * @param ctx - Owning instance context
+ * @param projectId - Project to start the conversation in; an unknown id is ignored
  */
-export function startNewConversation(ctx: LifecycleContext): void {
+export function startNewConversation(ctx: LifecycleContext, projectId: string | null = null): void {
     // Capture the outgoing tree before the swap: flushKey builds its value synchronously.
     const outgoing = ctx.store.getState().conversationId;
     if (outgoing && getMeta(outgoing)) {
@@ -124,6 +143,7 @@ export function startNewConversation(ctx: LifecycleContext): void {
         agent: null,
         toolsEnabled: null,
         pendingReply: null,
+        draftProjectId: projectId !== null && getProject(projectId) ? projectId : null,
     });
     ctx.syncUrlMaybe(null);
 }
@@ -156,6 +176,7 @@ export async function openConversation(ctx: LifecycleContext, id: string): Promi
         agent: null,
         toolsEnabled: getMeta(id)?.tools ?? null,
         pendingReply: null,
+        draftProjectId: null,
     });
     ctx.syncUrlMaybe(id);
 

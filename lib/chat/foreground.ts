@@ -226,15 +226,29 @@ export function startNewForeground(): void {
 }
 
 /**
+ * Start a fresh conversation inside a project in a brand-new active instance,
+ * like startNewForeground.
+ *
+ * @param projectId - Project the conversation will be indexed in
+ */
+export function startNewForegroundInProject(projectId: string): void {
+    demote(activeChatStore.getState().instance);
+    openFresh(projectId);
+}
+
+/**
  * Put a brand-new empty conversation in the foreground. Leaves the previous
  * active instance alone: the caller has already demoted or taken it.
+ *
+ * @param projectId - Project to start the conversation in, if any
  */
-function openFresh(): void {
+function openFresh(projectId: string | null = null): void {
     const instance = new ChatInstance(undefined, { followGlobalModel: true });
     track(instance);
     instance.setActive(true);
     activeChatStore.setState({ instance, epoch: activeChatStore.getState().epoch + 1 });
-    instance.startNewConversation();
+    if (projectId === null) instance.startNewConversation();
+    else instance.startNewConversationInProject(projectId);
     register(instance);
 }
 

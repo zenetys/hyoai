@@ -139,6 +139,7 @@ export interface RevealTarget {
  * @param toolsEnabled - Tools switch of the conversation, null to follow the setting
  * @param pendingReply - Quote staged for the next reply, or null when none
  * @param revealTarget - Node and term to jump to, or null when none
+ * @param draftProjectId - Project a not yet indexed conversation was started in, or null
  */
 export interface ChatState {
     conversationId: string | null;
@@ -154,6 +155,7 @@ export interface ChatState {
     toolsEnabled: boolean | null;
     pendingReply: MessageQuote | null;
     revealTarget: RevealTarget | null;
+    draftProjectId: string | null;
 }
 
 export const IDLE_STREAMING: StreamingState = {
@@ -187,6 +189,7 @@ export function createChatStore(): Store<ChatState> {
         toolsEnabled: null,
         pendingReply: null,
         revealTarget: null,
+        draftProjectId: null,
     });
 }
 
