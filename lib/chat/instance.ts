@@ -33,6 +33,7 @@ import {
 import { resolveEffortLevel } from "@/lib/effort";
 import { getTranslator, translateKey } from "@/lib/i18n";
 import { providerIdsOutsideScope } from "@/lib/mcp/registry";
+import { effectiveSystemPrompt } from "@/lib/projects";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
 import {
@@ -47,6 +48,7 @@ import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
 import { reportRequest, watchConnection } from "@/lib/stores/health";
 import { liveStore, setGenerationDone, setLivePreview, setLiveStatus } from "@/lib/stores/live";
 import { modelsStore } from "@/lib/stores/models";
+import { getProject } from "@/lib/stores/projects";
 import { settingsStore, setToolPolicy } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
 import { uiStore } from "@/lib/stores/ui";
@@ -504,6 +506,23 @@ export class ChatInstance {
     };
 
     /**
+     * System prompt of the next request, read live: the conversation's own, else
+     * its project's, else the global one. A project id that no longer resolves
+     * counts as no project, and so does any project in an embed, which shows none.
+     *
+     * @param state - Chat state of the request
+     * @returns The system prompt to send
+     */
+    private systemPromptFor = (state: ChatState): string => {
+        const meta = state.conversationId ? getMeta(state.conversationId) : null;
+
+        // An unindexed draft carries its project in the state, an indexed one in its meta.
+        const projectId = meta ? meta.projectId : state.draftProjectId;
+        const project = projectId && !uiStore.getState().embed ? getProject(projectId) : null;
+        return effectiveSystemPrompt(meta, project, settingsStore.getState().settings.systemPrompt);
+    };
+
+    /**
      * Run one streamed generation into the given assistant placeholder node.
      * Token events accumulate in local buffers flushed to the store once per
      * animation frame, so the UI updates at display rate, not token rate.
@@ -551,16 +570,14 @@ export class ChatInstance {
             messages = messagesOverride;
         } else if (!entry.sendContext) {
             const path = getPath(state.nodes, nodeId);
-            const meta = state.conversationId ? getMeta(state.conversationId) : null;
-            const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
+            const systemPrompt = this.systemPromptFor(state);
             messages = buildApiMessages(currentTurn(path), systemPrompt, {
                 nativeTools,
                 preserveThinking,
             });
         } else {
             const path = getPath(state.nodes, nodeId);
-            const meta = state.conversationId ? getMeta(state.conversationId) : null;
-            const systemPrompt = meta?.systemPrompt ?? settings.systemPrompt;
+            const systemPrompt = this.systemPromptFor(state);
             messages = await this.compactForBudget(nodeId, path, systemPrompt, entry, model, {
                 nativeTools,
                 preserveThinking,
