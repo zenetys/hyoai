@@ -32,6 +32,7 @@ export function LanguageSwitcher() {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            className="pointer-coarse:size-9"
                             aria-label={t("language")}
                         >
                             <Languages aria-hidden="true" />

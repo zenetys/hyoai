@@ -49,14 +49,14 @@ export function AppHeader() {
     };
 
     return (
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
+        <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border px-3 md:gap-2">
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="hidden md:inline-flex"
+                        className="hidden md:inline-flex pointer-coarse:size-9"
                         aria-label={t("toggleSidebar")}
                         aria-pressed={sidebarOpen}
                         onClick={toggleSidebar}
@@ -77,7 +77,7 @@ export function AppHeader() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden pointer-coarse:size-9"
                 aria-label={t("toggleSidebar")}
                 onClick={() => setMobileSidebarOpen(true)}
             >
@@ -89,7 +89,7 @@ export function AppHeader() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className={cn(sidebarOpen && "md:hidden")}
+                        className={cn(sidebarOpen && "md:hidden", "pointer-coarse:size-9")}
                         aria-label={t("newChat")}
                         onClick={startNewChat}
                     >
@@ -107,7 +107,7 @@ export function AppHeader() {
                         type="button"
                         variant={compareEnabled ? "secondary" : "ghost"}
                         size="icon"
-                        className="hidden md:inline-flex"
+                        className="hidden md:inline-flex pointer-coarse:size-9"
                         aria-label={compareEnabled ? t("toggleSingleChat") : t("toggleCompare")}
                         aria-pressed={compareEnabled}
                         onClick={() => (compareEnabled ? closeCompare() : openCompare())}
@@ -126,6 +126,7 @@ export function AppHeader() {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            className="pointer-coarse:size-9"
                             disabled={paneCount >= MAX_PANES}
                             aria-label={td("addPane")}
                             onClick={() => addPane()}
@@ -139,14 +140,14 @@ export function AppHeader() {
                 </Tooltip>
             )}
             <HeaderTitle />
-            <div className="ml-auto flex items-center gap-0.5">
+            <div className="ml-auto flex items-center gap-1 md:gap-0.5">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="hidden md:inline-flex"
+                            className="hidden md:inline-flex pointer-coarse:size-9"
                             aria-label={tc("copyLink")}
                             onClick={() => void copyShareLink()}
                         >
@@ -167,6 +168,7 @@ export function AppHeader() {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            className="pointer-coarse:size-9"
                             aria-label={t("settings")}
                             onClick={() => openSettings()}
                         >

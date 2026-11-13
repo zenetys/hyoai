@@ -25,9 +25,10 @@ const SKINS: SkinId[] = ["soft", "flat", "contrast", "warm", "forest", "dim"];
 
 /**
  * Mobile-only overflow menu gathering the appearance switchers (theme, language,
- * skin) and the copy-link action, which stay inline in the header on desktop. It
- * renders as a bottom sheet on the phone-sized viewport it targets, flattening
- * each switcher's options into tap rows rather than nesting dropdowns.
+ * skin) and the copy-link action, which stay inline in the header on desktop, plus the way
+ * back to a single chat while comparing. It renders as a bottom sheet on the phone-sized
+ * viewport it targets, flattening each switcher's options into tap rows rather than nesting
+ * dropdowns.
  */
 export function HeaderOverflowMenu() {
     const t = useTranslations("header");
@@ -63,7 +64,7 @@ export function HeaderOverflowMenu() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="md:hidden"
+                    className="md:hidden pointer-coarse:size-9"
                     aria-label={t("more")}
                 >
                     <MoreVertical aria-hidden="true" />

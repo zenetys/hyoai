@@ -31,7 +31,13 @@ export function SkinSwitcher() {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" aria-label={t("label")}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="pointer-coarse:size-9"
+                            aria-label={t("label")}
+                        >
                             <Palette aria-hidden="true" />
                         </Button>
                     </DropdownMenuTrigger>

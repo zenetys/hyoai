@@ -26,7 +26,13 @@ export function ThemeToggle() {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" aria-label={t("label")}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="pointer-coarse:size-9"
+                            aria-label={t("label")}
+                        >
                             <Sun className="dark:hidden" aria-hidden="true" />
                             <Moon className="hidden dark:block" aria-hidden="true" />
                         </Button>
