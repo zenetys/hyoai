@@ -12,6 +12,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { SearchIcon, CheckIcon } from "lucide-react";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
@@ -44,13 +45,23 @@ function CommandDialog({
     shouldFilter?: boolean;
     filter?: React.ComponentProps<typeof CommandPrimitive>["filter"];
 }) {
+    const area = useVisualViewport();
+    const followed = props.open && area;
     return (
         <Dialog {...props}>
             <DialogContent
                 className={cn(
-                    "overflow-hidden p-0 max-md:flex max-md:flex-col md:top-1/3 md:translate-y-0 md:rounded-xl!",
+                    "overflow-hidden p-0 max-md:top-(--vv-top,0px) max-md:flex max-md:h-(--vv-h,100dvh) max-md:flex-col md:top-1/3 md:translate-y-0 md:rounded-xl!",
                     className,
                 )}
+                style={
+                    followed
+                        ? ({
+                              "--vv-h": `${area.height}px`,
+                              "--vv-top": `${area.offsetTop}px`,
+                          } as React.CSSProperties)
+                        : undefined
+                }
                 showCloseButton={showCloseButton}
                 scrollable={false}
             >
