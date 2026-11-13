@@ -28,6 +28,22 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
     );
 }
 
+/**
+ * A Command in a dialog. Below md it is a sheet that follows the visible area of the
+ * screen, so the on-screen keyboard does not cover its bottom. The remaining props go to the
+ * Dialog root.
+ *
+ * @param title - Accessible title of the dialog, hidden from sight
+ * @param description - Accessible description of the dialog, hidden from sight
+ * @param children - Content of the Command: the input, the list and its groups
+ * @param className - Extra classes of the dialog content
+ * @param showCloseButton - Show the close button of the dialog, false by default
+ * @param shouldFilter - Let cmdk filter the items, false when the caller filters
+ * @param filter - Custom scoring function of cmdk, used when it filters
+ * @param commandProps - Props of the Command (selection, layout), except the filtering ones
+ * @param contentProps - Props of the dialog content (focus on close), except the ones this
+ *   component sets itself
+ */
 function CommandDialog({
     title = "Command Palette",
     description = "Search for a command to run...",
@@ -36,6 +52,8 @@ function CommandDialog({
     showCloseButton = false,
     shouldFilter,
     filter,
+    commandProps,
+    contentProps,
     ...props
 }: React.ComponentProps<typeof Dialog> & {
     title?: string;
@@ -44,12 +62,18 @@ function CommandDialog({
     showCloseButton?: boolean;
     shouldFilter?: boolean;
     filter?: React.ComponentProps<typeof CommandPrimitive>["filter"];
+    commandProps?: Omit<React.ComponentProps<typeof CommandPrimitive>, "shouldFilter" | "filter">;
+    contentProps?: Omit<
+        React.ComponentProps<typeof DialogContent>,
+        "className" | "showCloseButton" | "scrollable"
+    >;
 }) {
     const area = useVisualViewport();
     const followed = props.open && area;
     return (
         <Dialog {...props}>
             <DialogContent
+                {...contentProps}
                 className={cn(
                     "overflow-hidden p-0 max-md:top-(--vv-top,0px) max-md:flex max-md:h-(--vv-h,100dvh) max-md:flex-col md:top-1/3 md:translate-y-0 md:rounded-xl!",
                     className,
@@ -59,8 +83,9 @@ function CommandDialog({
                         ? ({
                               "--vv-h": `${area.height}px`,
                               "--vv-top": `${area.offsetTop}px`,
+                              ...contentProps?.style,
                           } as React.CSSProperties)
-                        : undefined
+                        : contentProps?.style
                 }
                 showCloseButton={showCloseButton}
                 scrollable={false}
@@ -69,7 +94,7 @@ function CommandDialog({
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
-                <Command shouldFilter={shouldFilter} filter={filter}>
+                <Command {...commandProps} shouldFilter={shouldFilter} filter={filter}>
                     {children}
                 </Command>
             </DialogContent>
