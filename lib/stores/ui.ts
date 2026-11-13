@@ -63,6 +63,7 @@ interface UiState {
     composerFocusNonce: number;
     sidebarOpen: boolean;
     mobileSidebarOpen: boolean;
+    foldedProjects: string[];
     embed: boolean;
     embedSidebar: boolean;
     embedModelLock: boolean;
@@ -82,6 +83,7 @@ export const uiStore = createStore<UiState>({
     composerFocusNonce: 0,
     sidebarOpen: true,
     mobileSidebarOpen: false,
+    foldedProjects: [],
     embed: false,
     embedSidebar: false,
     embedModelLock: false,
@@ -262,6 +264,21 @@ export function toggleSidebar(): void {
  */
 export function setMobileSidebarOpen(open: boolean): void {
     uiStore.setState({ mobileSidebarOpen: open });
+}
+
+/**
+ * Fold or unfold a project section of the sidebar. The list lives in memory only:
+ * the sidebar remounts when its sheet closes and exists twice on desktop, so the
+ * folds must outlive the component without being written to storage.
+ *
+ * @param id - Project id
+ */
+export function toggleProjectFold(id: string): void {
+    uiStore.setState((state) => ({
+        foldedProjects: state.foldedProjects.includes(id)
+            ? state.foldedProjects.filter((folded) => folded !== id)
+            : [...state.foldedProjects, id],
+    }));
 }
 
 /**
