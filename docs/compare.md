@@ -148,7 +148,7 @@ already taken, it starts on the current global model.
 
 - the name of its conversation, or **New conversation** while it is empty;
 - its model button (**Select a model**), which opens the same model menu as the composer (except the
-  model information icon, which only the single chat's menu has), including the **Reasoning**
+  model information icon, which only the single chat's menu has), including the **Thinking and effort**
   submenu when the pane's model declares reasoning controls, and writes the choice to this pane
   only; the button shows the effort level after the model name when the model declares effort
   levels;
@@ -179,7 +179,7 @@ slot (the previous one when the last pane was closed).
 
 **Model and reasoning of a pane.** A pane is pinned to its own model (an entry and, for a server
 that lists several models, an upstream model), so changing the global model never moves it. The
-pane's model menu is the one described in [models.md](models.md), with the same **Reasoning**
+pane's model menu is the one described in [models.md](models.md), with the same **Thinking and effort**
 controls (offered when the pane's model declares them): the Thinking switch and the effort levels
 apply to this pane only. A pane follows the global thinking and effort only while it has none of its
 own. The first pane of a compare opened with the header toggle starts with the thinking and effort

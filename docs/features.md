@@ -543,8 +543,8 @@ reads **Reasoning**, unless **Expand reasoning** is on (**Settings → Appearanc
 answer**: "Keep the thinking block open once the answer is done."). Click the label to open or close
 it at any time.
 
-The **Thinking** switch and the **Reasoning** effort levels in the model menu appear when the model
-supports them, whether they are declared on the model's own `config.json` entry, at the top level of
+The **Thinking** switch and the effort levels, under **Thinking and effort**, in the model menu
+appear when the model supports them, whether they are declared on the model's own `config.json` entry, at the top level of
 `config.json` (applied to every model), or, for the switch, through the default reasoning support of
 the server type; see [Reasoning: thinking and effort](../README.md#reasoning-thinking-and-effort)
 and [models.md](models.md). In compare mode each pane keeps its own choice
@@ -850,7 +850,7 @@ width.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/responsive.png">
-    <img alt="The model menu as a bottom drawer on a phone-width screen: the model list, the Reasoning levels Low, Medium (Default) and High, and the Thinking switch" src="images/light/responsive.png" width="426">
+    <img alt="The model menu as a bottom drawer on a phone-width screen: the model list, the Thinking and effort levels Low, Medium (Default) and High, and the Thinking switch" src="images/light/responsive.png" width="426">
 </picture>
 
 - **Bottom drawers.** The model menu and the conversation menu open as bottom drawers instead of

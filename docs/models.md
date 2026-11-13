@@ -501,7 +501,7 @@ short name of the active model and the label of its active effort level.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/selection.png">
-    <img alt="The model menu opened from the composer: two models with a check on the active one, and the Reasoning submenu listing Low, Medium (Default) and High, with the Thinking switch" src="images/light/selection.png" width="830">
+    <img alt="The model menu opened from the composer: two models with a check on the active one, and the Thinking and effort submenu listing Low, Medium (Default) and High, with the Thinking switch" src="images/light/selection.png" width="830">
 </picture>
 
 - **Models.** One row per entry; a check mark marks the active one. An entry without a pinned
@@ -527,14 +527,14 @@ short name of the active model and the label of its active effort level.
 - **Greyed rows.** Disabled entries, entries with an unsupported type and unavailable models
   (unreachable ones only while automatic disabling is on) appear greyed out and cannot be picked
   (see [An entry that cannot be used](#an-entry-that-cannot-be-used)).
-- **Reasoning.** When the active model declares effort levels or offers the Thinking switch, a
-  **Reasoning** row follows a separator, with the active level on its right when there are levels.
+- **Thinking and effort.** When the active model declares effort levels or offers the Thinking
+  switch, a **Thinking and effort** row follows a separator, with the active level on its right when there are levels.
   It opens a submenu to the side: the levels as a radio group when the model declares effort levels
   (the entry's `default` level is tagged **Default**), then, when it also offers the Thinking
   switch, a separator and the **Thinking** switch ("Can think through more complex tasks"). A model
   that has only one of the two shows only that one, so there is no separator between them. The info
   icon next to the last level explains that "Higher effort means more thorough but slower answers".
-  Toggling Thinking leaves the menu open. A model that has neither control has no Reasoning row.
+  Toggling Thinking leaves the menu open. A model that has neither control has no Thinking and effort row.
 
 The Thinking switch and the effort level are global settings in the single chat: they follow you
 when you change model, and a level the new model does not have falls back to that model's default,
@@ -551,7 +551,7 @@ mouse keeps the dropdown.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/responsive.png">
-    <img alt="The model menu as a bottom drawer on a phone, headed Select a model, with two models, the Reasoning levels Low, Medium (Default) and High, and the Thinking switch" src="images/light/responsive.png" width="426">
+    <img alt="The model menu as a bottom drawer on a phone, headed Select a model, with two models, the Thinking and effort levels Low, Medium (Default) and High, and the Thinking switch" src="images/light/responsive.png" width="426">
 </picture>
 
 - The drawer has a drag handle, is headed **Select a model**, and is dismissed by swiping it down.
@@ -564,7 +564,7 @@ mouse keeps the dropdown.
   the red triangle (under the conditions listed for the desktop dropdown) expands its error under
   the row when the triangle is tapped.
 - The reasoning controls are flattened into the drawer rather than placed in a submenu, which would
-  overflow the screen: a **Reasoning** label, the levels when the model declares effort levels (the
+  overflow the screen: a **Thinking and effort** label, the levels when the model declares effort levels (the
   active one checked, the default one tagged **Default**), then, when it also offers the Thinking
   switch, a separator and the **Thinking** row, whose whole line toggles the switch. A model that
   has only one of the two shows only that one, so there is no separator between them. Choosing a
