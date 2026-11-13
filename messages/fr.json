@@ -108,6 +108,7 @@
         },
         "language": "Langue",
         "settings": "Paramètres",
+        "search": "Rechercher",
         "more": "Plus",
         "newChat": "Nouvelle conversation",
         "toggleSidebar": "Afficher ou masquer la barre latérale",
@@ -124,6 +125,13 @@
         "thinkingDescription": "Peut réfléchir aux tâches plus complexes",
         "effortDescription": "Un effort plus élevé donne des réponses plus complètes mais plus lentes",
         "default": "Défaut"
+    },
+    "palette": {
+        "themeAction": "Changer de thème",
+        "back": "Retour",
+        "noResultTitle": "Aucun résultat pour « {query} »",
+        "noResultHint": "Essaie moins de mots ou une autre orthographe, ou pose directement ta question.",
+        "startChat": "Démarrer une conversation sur « {query} »"
     },
     "chat": {
         "emptyTitle": "Discute avec les modèles {name}",

@@ -108,6 +108,7 @@
         },
         "language": "Language",
         "settings": "Settings",
+        "search": "Search",
         "more": "More",
         "newChat": "New conversation",
         "toggleSidebar": "Toggle sidebar",
@@ -124,6 +125,13 @@
         "thinkingDescription": "Can think through more complex tasks",
         "effortDescription": "Higher effort means more thorough but slower answers",
         "default": "Default"
+    },
+    "palette": {
+        "themeAction": "Change theme",
+        "back": "Back",
+        "noResultTitle": "No results for \"{query}\"",
+        "noResultHint": "Try fewer words or another spelling, or ask your question directly.",
+        "startChat": "Start a conversation about \"{query}\""
     },
     "chat": {
         "emptyTitle": "Chat with {name} models",
