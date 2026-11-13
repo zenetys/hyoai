@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/hooks/useStore";
 import { activeChatStore } from "@/lib/chat/foreground";
 import { searchContent } from "@/lib/search";
+import { inScope } from "@/lib/sidebar";
 import { conversationsStore, sortMetas } from "@/lib/stores/conversations";
 import type { ConversationMeta } from "@/types/chat";
 
@@ -40,18 +41,20 @@ export interface ConversationSearchResults {
 
 /**
  * Sorted (pinned first, then most recent) and optionally title-filtered
- * conversation list for the sidebar.
+ * conversation list for the sidebar, optionally restricted to one project.
  *
  * @param filter - Case-insensitive title filter, empty for all
+ * @param projectId - Project to restrict the list to, omitted for every conversation
+ * @returns The matching conversations, in sidebar order
  */
-export function useConversationList(filter = ""): ConversationMeta[] {
+export function useConversationList(filter = "", projectId?: string): ConversationMeta[] {
     const index = useStore(conversationsStore, (state) => state.index);
     return useMemo(() => {
-        const sorted = sortMetas(index);
+        const scoped = sortMetas(index).filter((meta) => inScope(meta, projectId));
         const query = filter.trim().toLowerCase();
-        if (!query) return sorted;
-        return sorted.filter((meta) => meta.title.toLowerCase().includes(query));
-    }, [index, filter]);
+        if (!query) return scoped;
+        return scoped.filter((meta) => meta.title.toLowerCase().includes(query));
+    }, [index, filter, projectId]);
 }
 
 /**
@@ -61,10 +64,11 @@ export function useConversationList(filter = ""): ConversationMeta[] {
  * already surfaced by their title.
  *
  * @param filter - Case-insensitive query, empty for the full title list
+ * @param projectId - Project to restrict titles and contents to, omitted for every conversation
  */
-export function useConversationSearch(filter = ""): ConversationSearchResults {
+export function useConversationSearch(filter = "", projectId?: string): ConversationSearchResults {
     const index = useStore(conversationsStore, (state) => state.index);
-    const titleMatches = useConversationList(filter);
+    const titleMatches = useConversationList(filter, projectId);
     const [contentMatches, setContentMatches] = useState<ContentSearchHit[]>([]);
     const query = filter.trim().toLowerCase();
     const active = query.length >= MIN_CONTENT_QUERY;
@@ -82,7 +86,8 @@ export function useConversationSearch(filter = ""): ConversationSearchResults {
                 const enriched = hits
                     .map((hit): ContentSearchHit | null => {
                         const meta = metaById.get(hit.convId);
-                        if (!meta || titleIds.has(meta.id)) return null;
+                        if (!meta || titleIds.has(meta.id) || !inScope(meta, projectId))
+                            return null;
                         return {
                             meta,
                             nodeId: hit.nodeId,
@@ -98,7 +103,7 @@ export function useConversationSearch(filter = ""): ConversationSearchResults {
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [query, active, index, titleMatches]);
+    }, [query, active, index, titleMatches, projectId]);
 
     return { titleMatches, contentMatches: active ? contentMatches : [] };
 }
