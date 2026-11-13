@@ -103,6 +103,13 @@ an embed, except where noted.
   defaults.
 - **Compare models**: the conversation menu of the sidebar variant does not offer
   it, so [compare mode](compare.md#compare-mode) cannot be started from a widget.
+- **Projects**: the widget shows no project. The sidebar variant lists its conversations in one
+  flat list, with no project section and no project name on the rows, its conversation menu has no
+  **Move to a project** entry, and neither the header nor the composer shows a project or its
+  instructions. The Data page has no note about projects. The instructions of a project are not
+  sent either, even for a conversation that belongs to one. See [Projects](features.md#projects).
+- **The command palette**: there is no palette and no search button; the sidebar variant keeps its
+  own search field, a plain field on touch devices too.
 - **Global shortcuts**: Ctrl/Cmd+K, Ctrl/Cmd+B and Ctrl/Cmd+Shift+O are
   registered by the full application shell only, see
   [Keyboard shortcuts](features.md#keyboard-shortcuts). The sidebar of the widget does not show
