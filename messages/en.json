@@ -563,7 +563,7 @@
             "capabilityOn": "Yes",
             "capabilityOff": "No",
             "thinking": "Global thinking",
-            "thinkingHint": "Request-body fragments sent when reasoning is on or off. Inherited by models that do not define their own.",
+            "thinkingHint": "Request-body fragments sent when thinking is on or off. Inherited by models that do not define their own.",
             "thinkingOn": "On (JSON)",
             "thinkingOff": "Off (JSON)",
             "effort": "Global effort",
