@@ -1,6 +1,7 @@
 import type { ChatModelSelection } from "@/lib/chat/model";
 import { createConversation } from "@/lib/conversation";
 import { newId } from "@/lib/id";
+import { usableDefaultModel } from "@/lib/projects";
 import {
     flushAll,
     flushKey,
@@ -120,6 +121,8 @@ export function setConversationSystemPrompt(ctx: LifecycleContext, prompt: strin
 
 /**
  * Reset to a fresh, unpersisted conversation; it enters the index on first send.
+ * Started in a project, it switches the global model to the project's default
+ * one when it can be used, unless the instance has a model of its own.
  *
  * @param ctx - Owning instance context
  * @param projectId - Project to start the conversation in; an unknown id is ignored
@@ -146,6 +149,16 @@ export function startNewConversation(ctx: LifecycleContext, projectId: string | 
         draftProjectId: projectId !== null && getProject(projectId) ? projectId : null,
     });
     ctx.syncUrlMaybe(null);
+
+    // A new conversation of a project starts on its model; an instance with its own model keeps it.
+    const project = projectId !== null ? getProject(projectId) : null;
+    if (project && ctx.followGlobalModel) {
+        const models = modelsStore.getState();
+        const entryId = usableDefaultModel(project, models.entries);
+
+        // An entry that is already active needs no rewrite of the selection nor a refresh.
+        if (entryId && entryId !== models.activeEntryId) setActiveModel(entryId);
+    }
 }
 
 /**
