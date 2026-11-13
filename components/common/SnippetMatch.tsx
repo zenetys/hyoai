@@ -1,5 +1,24 @@
 import type { ContentSearchHit } from "@/hooks/useConversations";
+import type { TextSplit } from "@/lib/match";
 import { cn } from "@/lib/utils";
+
+/**
+ * A text with its matched part highlighted. Used by the search snippets and by the
+ * titles of the command palette.
+ *
+ * @param split - Text cut around the match (before / match / after)
+ */
+export function MatchedText({ split }: { split: TextSplit }) {
+    return (
+        <>
+            {split.before}
+            <mark className="rounded-sm bg-primary/15 px-1 font-medium text-foreground">
+                {split.match}
+            </mark>
+            {split.after}
+        </>
+    );
+}
 
 /**
  * One-line search snippet with the matched substring highlighted. Used by both
@@ -17,11 +36,7 @@ export function SnippetMatch({
 }) {
     return (
         <p className={cn("text-xs leading-snug text-muted-foreground", className)}>
-            {snippet.before}
-            <mark className="rounded-sm bg-primary/15 px-0.5 font-medium text-foreground">
-                {snippet.match}
-            </mark>
-            {snippet.after}
+            <MatchedText split={snippet} />
         </p>
     );
 }

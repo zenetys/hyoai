@@ -3,23 +3,27 @@
 import { MessageSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { SnippetMatch } from "@/components/common/SnippetMatch";
+import { MatchedText, SnippetMatch } from "@/components/common/SnippetMatch";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import type { ContentSearchHit } from "@/hooks/useConversations";
 import { openConversationAtNode, openConversationInView } from "@/lib/actions";
+import { splitMatch } from "@/lib/match";
 import type { ConversationMeta } from "@/types/chat";
 
 /**
  * The conversations whose title matched the search.
  *
  * @param metas - The matching conversations
+ * @param query - The search, highlighted in the titles
  * @param onRun - Closes the palette, then runs the action it receives
  */
 export function PaletteTitles({
     metas,
+    query,
     onRun,
 }: {
     metas: ConversationMeta[];
+    query: string;
     onRun: (action: () => void) => void;
 }) {
     const t = useTranslations("sidebar");
@@ -27,16 +31,22 @@ export function PaletteTitles({
 
     return (
         <CommandGroup heading={t("recent")}>
-            {metas.map((meta) => (
-                <CommandItem
-                    key={meta.id}
-                    value={meta.id}
-                    onSelect={() => onRun(() => void openConversationInView(meta.id))}
-                >
-                    <MessageSquare aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate">{meta.title || t("untitled")}</span>
-                </CommandItem>
-            ))}
+            {metas.map((meta) => {
+                // Same comparison as the title filter: case ignored, accents kept
+                const split = splitMatch(meta.title, query.trim(), false);
+                return (
+                    <CommandItem
+                        key={meta.id}
+                        value={meta.id}
+                        onSelect={() => onRun(() => void openConversationInView(meta.id))}
+                    >
+                        <MessageSquare aria-hidden="true" />
+                        <span className="min-w-0 flex-1 truncate">
+                            {split ? <MatchedText split={split} /> : meta.title || t("untitled")}
+                        </span>
+                    </CommandItem>
+                );
+            })}
         </CommandGroup>
     );
 }
@@ -77,7 +87,10 @@ export function PaletteMessages({
                     <MessageSquare aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                         <span className="block truncate">{hit.meta.title || t("untitled")}</span>
-                        <SnippetMatch snippet={hit.snippet} className="line-clamp-1" />
+                        <SnippetMatch
+                            snippet={hit.snippet}
+                            className="line-clamp-2 md:line-clamp-1"
+                        />
                     </div>
                 </CommandItem>
             ))}

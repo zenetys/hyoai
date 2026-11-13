@@ -48,7 +48,7 @@ export function CommandPalette() {
             <CommandList className="max-md:min-h-0 max-md:max-h-none max-md:flex-1">
                 <CommandEmpty>{t("sidebar.noResults")}</CommandEmpty>
                 {!searching && <PaletteActions onRun={runAndClose} />}
-                <PaletteTitles metas={titleMatches} onRun={runAndClose} />
+                <PaletteTitles metas={titleMatches} query={query} onRun={runAndClose} />
                 <PaletteMessages hits={contentMatches} onRun={runAndClose} />
             </CommandList>
         </CommandDialog>
