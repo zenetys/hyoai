@@ -469,6 +469,7 @@
         "data": {
             "exportTitle": "Exporter",
             "exportDescription": "Télécharge tes conversations en JSON natif, en JSONL au format OpenAI, en Markdown ou au format de l'interface web llama.cpp.",
+            "projectsNotExported": "Les projets ne sont pas exportés : seules les conversations le sont, sans leur projet.",
             "exportOpen": "Exporter des conversations...",
             "exportDialogTitle": "Exporter des conversations",
             "exportDialogDescription": "Choisis les conversations à inclure dans le fichier téléchargé.",
