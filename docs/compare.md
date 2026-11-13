@@ -302,13 +302,13 @@ never carries a draft along.
 
 ### What is shared and what is per pane
 
-| Per pane                                                                                                         | Shared by every pane                                                                                                |
-| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| The conversation: history, branches, its own stored copy and its own name                                        | The composer at the bottom: the draft, the attachments and the **All** / **Active** target                          |
-| The model: entry and upstream model, pinned                                                                      | The settings: sampling and penalties, the global system prompt (unless the conversation has its own system message) |
-| The reasoning: Thinking switch and effort level, following the global setting while the pane has none of its own | The list of conversations in the sidebar                                                                            |
-| The tools switch (wrench), see [tools.md](tools.md)                                                              | The layout and its `?compare=` link                                                                                 |
-| The status: generating, awaiting approval, unavailable                                                           |                                                                                                                     |
+| Per pane                                                                                                         | Shared by every pane                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The conversation: history, branches, its own stored copy and its own name                                        | The composer at the bottom: the draft, the attachments and the **All** / **Active** target                                                          |
+| The model: entry and upstream model, pinned                                                                      | The settings: sampling and penalties, the global system prompt (unless the conversation has its own system message or its project has instructions) |
+| The reasoning: Thinking switch and effort level, following the global setting while the pane has none of its own | The list of conversations in the sidebar                                                                                                            |
+| The tools switch (wrench), see [tools.md](tools.md)                                                              | The layout and its `?compare=` link                                                                                                                 |
+| The status: generating, awaiting approval, unavailable                                                           |                                                                                                                                                     |
 
 ### On a phone
 
