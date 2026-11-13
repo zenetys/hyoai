@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { confirmOnKey } from "@/components/ui/confirm";
 import { XIcon } from "lucide-react";
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -39,12 +40,24 @@ function DialogOverlay({
     );
 }
 
+/**
+ * Content of a dialog, full screen below md. Ctrl+Enter (Cmd+Enter on Apple platforms)
+ * clicks the main action marked with data-confirm, and a click on a toast does not dismiss it.
+ *
+ * @param showCloseButton - Show the close button, true by default
+ * @param scrollable - Wrap the children in a scrolling body, true by default; false renders
+ *   them directly in a padded grid, for a caller that lays out its own content
+ * @param onInteractOutside - Called when the pointer goes down or the focus moves outside,
+ *   except on a toast
+ * @param onKeyDown - Called before the confirm shortcut is handled
+ */
 function DialogContent({
     className,
     children,
     showCloseButton = true,
     scrollable = true,
     onInteractOutside,
+    onKeyDown,
     ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
     showCloseButton?: boolean;
@@ -61,6 +74,10 @@ function DialogContent({
                     className,
                 )}
                 {...props}
+                onKeyDown={(event) => {
+                    onKeyDown?.(event);
+                    confirmOnKey(event);
+                }}
                 onInteractOutside={(event) => {
                     if ((event.target as Element | null)?.closest?.("[data-sonner-toaster]")) {
                         event.preventDefault();
