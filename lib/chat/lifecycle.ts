@@ -44,7 +44,8 @@ export function resolveDraftProject(draftProjectId: string | null): string | und
 
 /**
  * Fork a conversation into a new one containing the branch up to the given
- * message, then open it in the instance.
+ * message, then open it in the instance. The fork keeps the model, the system
+ * message and the project of its source.
  *
  * @param ctx - Owning instance context
  * @param nodeId - Last message included in the fork
@@ -72,6 +73,7 @@ export async function forkConversation(
         modelId: source?.modelId,
         model: source?.model,
         systemPrompt: source?.systemPrompt,
+        projectId: source?.projectId,
     });
 
     await writeConversationNow(id, {
