@@ -39,16 +39,17 @@ The full application is a collapsible conversation sidebar on the left, a header
 with its composer at the bottom, and a few global dialogs (Settings, the command palette, the model
 information dialog and the system message editor). The header, from left to right:
 
-| Control                               | What it does                                                                                                                                                                                                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Toggle sidebar**                    | Collapses or opens the docked conversation list (Ctrl/Cmd+B, from 768 px up). On a phone the same label belongs to a menu button that opens the sidebar as a sheet, and the shortcut has no visible effect there.                                                              |
-| **New conversation**                  | Starts an empty conversation (Ctrl/Cmd+Shift+O). On desktop this header button only shows while the sidebar is collapsed, since the sidebar has its own button. In compare mode this leaves compare mode and returns to a single empty conversation.                           |
-| **Compare** / **Single conversation** | Switches [compare mode](compare.md) on and off. Hidden below the `md` breakpoint, where **Single conversation** is the first entry of the **More** menu while compare is on.                                                                                                   |
-| **Add a pane** (compare mode only)    | A **+** button that adds a pane to the comparison. It is disabled once the maximum of four panes is reached (see [compare.md](compare.md#the-panes)).                                                                                                                          |
-| The conversation title                | Click it to rename the conversation in place (Enter confirms, Escape cancels), once the conversation exists: a new empty chat has nothing to rename yet and shows "New conversation" as plain text. It is not shown in compare mode, where no single conversation is in focus. |
-| **Copy link**                         | Copies the address of the page as it is, including the open conversation (see [Where conversations are stored](#where-conversations-are-stored)). On wide screens (768 px and above); on a phone it is in the **More** menu.                                                   |
-| **Style**, **Theme**, **Language**    | The skin, colour theme and interface language switchers (see [Appearance and display](#appearance-and-display)). On a phone they move into the **More** menu.                                                                                                                  |
-| **Settings**                          | Opens the Settings dialog.                                                                                                                                                                                                                                                     |
+| Control                               | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Toggle sidebar**                    | Collapses or opens the docked conversation list (Ctrl/Cmd+B, from 768 px up). On a phone the same label belongs to a menu button that opens the sidebar as a sheet, and the shortcut has no visible effect there.                                                                                                                                                                                                                                                                                                                |
+| **Search** (touch devices only)       | Opens the [command palette](#command-palette). Shown only when the primary pointer is coarse, since the keyboard shortcut is out of reach there.                                                                                                                                                                                                                                                                                                                                                                                 |
+| **New conversation**                  | Starts an empty conversation (Ctrl/Cmd+Shift+O). On desktop this header button only shows while the sidebar is collapsed, since the sidebar has its own button. In compare mode this leaves compare mode and returns to a single empty conversation.                                                                                                                                                                                                                                                                             |
+| **Compare** / **Single conversation** | Switches [compare mode](compare.md) on and off. Hidden below the `md` breakpoint, where **Single conversation** is the first entry of the **More** menu while compare is on.                                                                                                                                                                                                                                                                                                                                                     |
+| **Add a pane** (compare mode only)    | A **+** button that adds a pane to the comparison. It is disabled once the maximum of four panes is reached (see [compare.md](compare.md#the-panes)).                                                                                                                                                                                                                                                                                                                                                                            |
+| The conversation title                | When the conversation is in a [project](#projects), its name leads the title: "Project / Conversation". Click the title to rename the conversation in place (Enter confirms, Escape cancels), once the conversation exists: a new empty chat has nothing to rename yet and shows "New conversation" as plain text. It is not shown in compare mode, where no single conversation is in focus. When the project has instructions, its name opens them in a read-only popover (see [Project instructions](#project-instructions)). |
+| **Copy link**                         | Copies the address of the page as it is, including the open conversation (see [Where conversations are stored](#where-conversations-are-stored)). On wide screens (768 px and above); on a phone it is in the **More** menu.                                                                                                                                                                                                                                                                                                     |
+| **Style**, **Theme**, **Language**    | The skin, colour theme and interface language switchers (see [Appearance and display](#appearance-and-display)). On a phone they move into the **More** menu.                                                                                                                                                                                                                                                                                                                                                                    |
+| **Settings**                          | Opens the Settings dialog.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 The **More** menu (a vertical-dots button next to **Settings**) exists only below the `md`
 breakpoint (768 px). From 768 px up the switchers and **Copy link** stay in the header, a landscape
@@ -71,7 +72,7 @@ pages hold:
 - **Tools**: the global settings of the tool loop (see [tools.md](tools.md)).
 - **Data**: export, import and the storage gauge.
 - **Configuration**: the global settings of the configuration (app name, default model, thinking,
-  integrations), the generated JSON and **Reset…** (see [models.md](models.md)).
+  integrations), the generated JSON and **Reset** (see [models.md](models.md)).
 - **Sampling**: the sampling parameters and the **Penalties** group.
 - **Chunking**: the chunking of oversized inputs and the **Conversation compaction** group.
 - **Changelog**: the release notes of every version, newest first, with the version of the build at
@@ -112,10 +113,11 @@ and `npm run check`. The page is loaded when it is opened.
 HYOAI has no backend of its own: conversations live in the browser's `localStorage`, under keys
 prefixed `lc:`. The layout is deliberately split in two:
 
-| Key            | Content                                                                                                                                                         |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lc:convs`     | The lightweight index: one small record per conversation (id, title, pinned flag, creation and last-modification dates, last model, system message, tools flag) |
-| `lc:conv:<id>` | One key per conversation holding its whole message tree (every branch), compressed with lz-string                                                               |
+| Key            | Content                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lc:convs`     | The lightweight index: one small record per conversation (id, title, pinned flag, creation and last-modification dates, last model, system message, tools flag, project) |
+| `lc:projects`  | The list of [projects](#projects): id, name, creation date, and the optional instructions and default model                                                              |
+| `lc:conv:<id>` | One key per conversation holding its whole message tree (every branch), compressed with lz-string                                                                        |
 
 Listing, pinning and renaming only read and write the index; only a content search loads the message
 trees (see [Search](#search)). Writes are debounced: while an answer streams, the conversation is
@@ -134,20 +136,21 @@ The open conversation is mirrored in the address bar as `?chat=<id>`, updated in
 adding history entries, so a reload lands on the same conversation. Since the data is in the
 browser, such a link opens the conversation only in a browser that holds it; anywhere else a fresh
 conversation opens. Two tabs of the same origin follow each other: a conversation written by one tab
-is reloaded by the other when it is idle.
+is reloaded by the other when it is idle, and the projects follow the same way.
 
 ### The sidebar
 
 The top of the sidebar has the **New conversation** button and a search field (placeholder
 **Search...**). Hovering or focusing them reveals the shortcut that does the same thing
 (Ctrl/Cmd+Shift+O and Ctrl/Cmd+K), except on touch devices and in the embedded widget, where the
-hints are not shown. Below, the list is split into **Pinned** and **Recent**: pinned
-conversations come first, then everything else by last modification, most recent first. With no
-conversation the list reads **No conversations**.
+hints are not shown. Below, the list is split into **Pinned** at the top, then one collapsible
+section per [project](#projects), then the conversations that belong to no project, in a last group
+named **Other conversations**. While you have no project, that group reads **Recent** and holds every
+conversation, newest first. With no conversation the list reads **No conversations**.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/sidebar.png">
-    <img alt="Conversation list split into Pinned and Recent, with a green check on a conversation whose background generation finished and its hover card reading Generation complete — click to view" src="images/light/sidebar.png" width="596">
+    <img alt="Conversation list: a pinned conversation on top, project sections (the third one folded, with an activity dot), the conversations under Other conversations, and the hover card of a conversation whose background generation finished, reading Generation complete — click to view" src="images/light/sidebar.png" width="578">
 </picture>
 
 Hovering a row for a moment opens a card to its right with the title (up to two lines) and,
@@ -175,24 +178,118 @@ stays in the sidebar.
 
 ### Row menu
 
-Each row has a **…** button (shown on hover or focus, and always on touch devices; a long press on
-the row opens the same menu). It opens:
+Each row has a **…** button (shown on hover or focus, and always on touch devices). A right click on
+the title or a long press on the row opens the same menu. It opens:
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/compare-enter.png">
     <img alt="Conversation row menu with Rename, Pin, Copy link, Export as JSON, Compare models (highlighted) and Delete" src="images/light/compare-enter.png" width="455">
 </picture>
 
-| Entry               | Effect                                                                                                                                                                                                                                                                                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Rename**          | Turns the row into an input; Enter or leaving the field confirms, Escape cancels.                                                                                                                                                                                                                                                                                          |
-| **Pin** / **Unpin** | Moves the conversation to or from the **Pinned** group.                                                                                                                                                                                                                                                                                                                    |
-| **Copy link**       | Copies a link to this conversation alone, in the single-chat view (`?chat=<id>`, any comparison is dropped from the address).                                                                                                                                                                                                                                              |
-| **Export as JSON**  | Downloads this conversation as a native HYOAI file named `hyoai-<first 8 characters of the id>.json`, without settings.                                                                                                                                                                                                                                                    |
-| **Compare models**  | When compare is off, opens [compare mode](compare.md) with this conversation in the first pane and a second, empty pane. When compare is already on, the pane that holds the conversation is focused; otherwise the conversation is added as a new pane if there is room, or loaded into the focused pane. Not offered in an [embed](embed.md#what-the-widget-leaves-out). |
-| **Delete**          | Asks "Delete conversation": "This conversation and all its branches will be permanently deleted." Shift-click on the entry skips the confirmation. A running answer is aborted first.                                                                                                                                                                                      |
+| Entry                 | Effect                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rename**            | Turns the row into an input; Enter or leaving the field confirms, Escape cancels.                                                                                                                                                                                                                                                                                          |
+| **Pin** / **Unpin**   | Moves the conversation to or from the **Pinned** group.                                                                                                                                                                                                                                                                                                                    |
+| **Move to a project** | Puts the conversation in a [project](#projects), or takes it out of every project. On desktop it opens a searchable picker; on touch devices and in a narrow window the entry is named **Move to** and the menu itself shows the list. Not offered in an [embed](embed.md#what-the-widget-leaves-out).                                                                     |
+| **Copy link**         | Copies a link to this conversation alone, in the single-chat view (`?chat=<id>`, any comparison is dropped from the address).                                                                                                                                                                                                                                              |
+| **Export as JSON**    | Downloads this conversation as a native HYOAI file named `hyoai-<first 8 characters of the id>.json`, without settings.                                                                                                                                                                                                                                                    |
+| **Compare models**    | When compare is off, opens [compare mode](compare.md) with this conversation in the first pane and a second, empty pane. When compare is already on, the pane that holds the conversation is focused; otherwise the conversation is added as a new pane if there is room, or loaded into the focused pane. Not offered in an [embed](embed.md#what-the-widget-leaves-out). |
+| **Delete**            | Asks "Delete conversation": "This conversation and all its branches will be permanently deleted." Shift-click on the entry skips the confirmation. A running answer is aborted first.                                                                                                                                                                                      |
 
 If the deleted conversation was the open one, the view resets to a fresh conversation.
+
+### Projects
+
+A project groups conversations that share instructions and a model. It has a name, optional
+instructions and an optional default model, nothing more: there is no icon or colour. Projects are
+kept in the browser, like conversations, and listed in the order they were created.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/project.png">
+    <img alt="A new conversation in the project Website redesign: the header reads Website redesign / New conversation" src="images/light/project.png" width="788">
+</picture>
+
+#### Creating and organising
+
+A first project appears from a conversation: **Move to a project** offers **New project**, which
+creates a project with that name and moves the conversation into it. While you have conversations
+but no project yet, the sidebar also shows a box that says so, with a **Create a project** button
+that only creates an empty project named **New project**. Rename the project afterwards, or open
+its settings.
+
+Each project is a section of the sidebar, headed by its name and the number of conversations it
+holds:
+
+- Click the header to fold or unfold the section. The folds are kept for the session only, not in
+  storage, so a reload unfolds every section. A folded section shows a dot while one of its
+  unpinned conversations generates (pulsing) or waits for your approval (amber).
+- A section lists its first five conversations that are not pinned, newest first, then **See all
+  ({count})** and **See less**. Pinned conversations stay at the top of the sidebar under
+  **Pinned**, whatever their project, and show the name of their project next to the title. A
+  project whose conversations are all pinned says "Its pinned conversations are at the top of the
+  list."
+- An empty project reads "This project has no conversation yet." with a **New conversation** link.
+- The **+** button of the header, shown on hover or focus and not on touch devices, starts a
+  conversation in the project, like the first entry of its menu.
+
+The **…** button of the header opens the project menu, always visible on touch devices where it is a
+bottom drawer:
+
+| Entry                                | Effect                                                                                                                                                                                                                                                                                  |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **New conversation in this project** | Starts an empty conversation that is indexed in the project on its first message. It starts on the default model of the project when there is one.                                                                                                                                      |
+| **Search in this project**           | Limits the sidebar search to the project, see [Search](#search).                                                                                                                                                                                                                        |
+| **Project settings**                 | Opens the settings dialog: **Name**, **Project instructions**, **Default model**, and a **Danger zone** with **Delete project**. **Save** applies the draft, closing discards it.                                                                                                       |
+| **Rename**                           | Turns the header into an input; Enter or leaving the field confirms, Escape cancels. A blank name is ignored.                                                                                                                                                                           |
+| **Delete project**                   | Asks "Delete "{name}"?" and what becomes of the conversations: **Keep the conversations** (they leave the project and become loose), **Delete everything** (they go with it, a running answer is aborted) or **Cancel**. A project without conversation has a single **Delete** button. |
+
+A conversation of a project keeps it when you [fork](#forking) it. A conversation whose project no
+longer exists reads as having none.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/project-menu.png">
+    <img alt="The + menu of the composer with the Project instructions entry under System message" src="images/light/project-menu.png" width="788">
+</picture>
+
+#### Project instructions
+
+The instructions of a project are a system prompt for its conversations. The system prompt of a
+request is chosen in this order, and the first one that is not blank wins:
+
+1. the system message of the conversation itself (see [System message](#system-message));
+2. the instructions of its project;
+3. the global **System prompt** of **Settings → Behavior**.
+
+So the instructions of a project replace the global system prompt for its conversations, and a
+conversation with its own system message still wins over both. They are read when each request is
+built: editing them in the project settings applies to the next message of the existing
+conversations, nothing is copied into them.
+
+To check what a project adds, the **+** menu of the composer has a **Project instructions** entry,
+under **System message**, that opens them in a read-only dialog. Clicking the project name in the
+header, before the conversation title, opens the same text in a read-only popover. Both exist only
+when the project of the open conversation has instructions, and a conversation that is not saved
+yet already shows the project it was started in. Editing is done in the project settings.
+
+#### The default model
+
+A conversation started in a project (from its menu or **+** button, from the empty section, or from
+**New conversation** while the search is limited to it) starts on the **Default model** of the
+project, chosen among the entries of `config.json`. The model is ignored when it is disabled or no
+longer in the configuration. Without a default model the conversation starts on the model currently selected. Moving an existing
+conversation to a project never changes its model.
+
+#### Moving, storage and export
+
+The projects live under the key `lc:projects`, written by the storage migration to schema version 3,
+which only creates the empty list; a conversation points to its project by an optional id in its
+index record. **Export** does not carry projects: the exported conversations have no project, so an
+imported one lands outside every project. **Settings → Data** says it under the
+export: "Projects are not exported: only conversations are, without their project."
+
+The [embedded widget](embed.md#what-the-widget-leaves-out) shows no project at all: no section, no
+project name on the rows or in the header, no **Move to a project** entry, no **Project
+instructions** entry and no note in the Data page.
 
 ### Search
 
@@ -212,21 +309,60 @@ Clicking a content match opens the conversation, moves to the branch holding the
 not the displayed one, scrolls to it and flashes the matched word for about two seconds, or the
 whole message when the exact word cannot be located. With no result the list reads **No results**.
 
+While a search is typed, the list is flat (**Pinned**, **Recent**, **Messages**) and each row shows
+the name of its project after the title, except in a search limited to a project.
+
+**Searching in a project.** **Search in this project**, in the menu of a project section, limits the
+search to that project: the field takes the focus and reads "Search in the project...", a chip
+"Project: {name}" appears under it (click it to search every conversation again), and the list
+shows only the conversations of the project, matching by title and by message content, even with
+nothing typed. The **New conversation** button of the sidebar then starts a conversation in the
+project and says "in {name}" on a second line. The limit is dropped when the project is deleted.
+The command palette is not limited by it.
+
+On touch devices the sidebar search field is a button that opens the [command palette](#command-palette)
+instead of filtering the list, except while the search is limited to a project, which needs a real
+field.
+
 ### Command palette
 
-Ctrl/Cmd+K opens a palette from anywhere in the full application.
+Ctrl/Cmd+K opens a palette from anywhere in the full application. On touch devices, where the
+shortcut is out of reach, it also opens from the **Search** button of the header and from the search
+field of the sidebar, which is then a button. The embedded widget has no palette.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/palette.png">
-    <img alt="Command palette with the query latency: one matching conversation under Recent and one matching message under Messages with the term highlighted" src="images/light/palette.png" width="526">
+    <img alt="Command palette searching theme: the Change theme action, two matching titles with their project names and two matching messages with the term highlighted" src="images/light/palette.png" width="566">
 </picture>
 
-With an empty field it offers two actions, **New conversation** and **Settings**, followed by every
-conversation under **Recent**. As soon as you type, the actions disappear and the palette shows the
-same two kinds of result as the sidebar, with the same rules: matching titles under **Recent**,
-matching messages under **Messages**. Choose a result with the arrow keys and Enter, or click it;
-Escape closes the palette. In [compare mode](compare.md) a conversation that is already in a pane
-focuses that pane; otherwise it opens in the focused pane.
+With an empty field it offers three actions, **New conversation**, **Settings** and **Change
+theme** (which shows the current theme), followed by every conversation under **Recent**. As soon
+as you type, the actions whose name matches stay, ignoring case and accents (typing "theme" keeps
+**Change theme**), and the palette shows the same two kinds of result as the sidebar, with the same
+rules: matching titles under **Recent**, matching messages under **Messages**. The searched word is
+highlighted in the titles as well as in the message excerpts, and a conversation that belongs to a
+project shows its name on its row, at the right of the title or, on a phone, under it. The palette
+always searches every conversation, whatever the limit of the sidebar search. Choose a result with
+the arrow keys and Enter, or click it; Escape closes the palette. In [compare mode](compare.md) a
+conversation that is already in a pane focuses that pane; otherwise it opens in the focused pane.
+
+- **Change theme** replaces the list with a page: **Back**, then **Light**, **Dark** and
+  **System**, with a check on the current one. Choosing a theme applies it and leaves the palette
+  open. The page shows while the field is empty.
+- When nothing matches, the palette says "No results for "{query}"" and offers **Start a
+  conversation about "{query}"**. It opens a new conversation with the typed text in the composer,
+  which takes the focus. Nothing is sent: read the text, complete it, then send it or not.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/palette-phone.png">
+    <img alt="The command palette on a phone: the results above, the search field at the bottom with a Cancel button" src="images/light/palette-phone.png" width="426">
+</picture>
+
+Below the `md` breakpoint (768 px) the palette is a sheet that follows the visible area of the
+screen, so the on-screen keyboard does not cover it. The list sits above the field, which is at the bottom
+with a **Cancel** button, and it reads from the bottom up: the best match is the row closest to the
+field and is the one selected, so Enter opens it. The rows are larger, with the project name under
+the title.
 
 ## Storage, export and import
 
@@ -257,7 +393,7 @@ browser, conversations and settings alike, and reloads the page.
 
 ### Export
 
-**Export conversations...** opens a dialog: pick the conversations (all are selected when it opens;
+**Export conversations** opens a dialog: pick the conversations (all are selected when it opens;
 the header checkbox shows "{count}/{total} selected"), pick a **Format**, then press the **Export**
 button, which shows the number of selected conversations, for example **Export (3)**.
 
@@ -296,7 +432,8 @@ stripped (only `a` to `z` and `0` to `9` are kept in a name).
 
 The Markdown and OpenAI formats keep only the branch shown on screen and leave out the model
 reasoning; the dialog repeats it as "Only the displayed branch of each conversation is exported,
-without the model reasoning." A toast confirms the export, for example "3 conversations exported".
+without the model reasoning." A toast confirms the export, for example "3 conversations exported". Projects are not part of the
+file, which holds conversations only; the page notes it next to the button.
 
 ### Import
 
@@ -360,14 +497,14 @@ whole flow (see [tools.md](tools.md)).
 - **An assistant message** opens an editor with **Save** and **Cancel**. Saving adds an edited
   sibling version without asking the model anything.
 
-In both editors Escape cancels and Ctrl/Cmd+Enter saves.
+In both editors Escape cancels and Ctrl/Cmd+Enter saves (see [Keyboard shortcuts](#keyboard-shortcuts)).
 
 ### Forking
 
 **Create a new conversation from this message** copies the branch that leads to that message, and
 only that branch, into a new conversation titled "{title} (fork)". The copy keeps the content,
-attachments, statistics and dates of each message, the model and the system message, opens right
-away, and a toast says "New conversation created from this message". The original is untouched. Use
+attachments, statistics and dates of each message, the model, the system message and the
+[project](#projects), opens right away, and a toast says "New conversation created from this message". The original is untouched. Use
 it to try a different direction without cluttering the first conversation with branches.
 
 ### Quote and reply
@@ -559,6 +696,10 @@ button. After sending they appear above your message.
 | **Text files**  | Any text file, up to 1 MB |
 | **PDF files**   | PDF                       |
 
+After a separator, the menu offers **System message** and, when the project of the conversation has
+instructions, **Project instructions**: a read-only view of them (see
+[Project instructions](#project-instructions)).
+
 - **Images** are resized in the browser, before they are sent and before they are stored, so that
   the longest side fits **Max image size (px)** (1024 by default, 256 at least). They are never
   upscaled; a PNG stays PNG and everything else becomes a JPEG at 0.85 quality. They go out in the
@@ -588,12 +729,13 @@ toast, "Could not read "{name}"" or a short message with the cause.
 ### System message
 
 **System message** at the bottom of the attachment menu opens an editor for this conversation's
-system message: "Sent at the top of this conversation, overriding the global system prompt setting."
+system message: "Sent at the top of this conversation, overriding the project instructions and the global system prompt setting."
 Once saved, a **System message** chip appears above the composer: click it to edit (hovering shows
 the full text), or use its **Remove the system message** button; saving an empty text clears it. The
 global **System prompt** ("Sent at the top of every conversation. Empty: no system prompt.") is in
-**Settings → Behavior**. The entry is offered in the single chat only, not in compare
-panes.
+**Settings → Behavior**. When the conversation belongs to a project that has
+[instructions](#project-instructions), the system message wins over them and they win over the
+global prompt. The entry is offered in the single chat only, not in compare panes.
 
 ## Model availability
 
@@ -663,11 +805,20 @@ on Apple platforms and Ctrl elsewhere, with Shift as an arrow icon.
 | Shift+Enter                 | New line                                         | composer                                                          |
 | Up / Down arrow             | Recall the messages sent on the displayed branch | composer, see [Sending](#sending)                                 |
 | Ctrl/Cmd+Enter              | Save the edit                                    | message editor                                                    |
+| Ctrl/Cmd+Enter              | Confirm the main action                          | dialogs and forms, see below                                      |
 | Escape                      | Cancel the edit                                  | message editor                                                    |
 | Enter / Escape              | Confirm / cancel a rename                        | sidebar row, header title                                         |
 | Escape                      | Hide the floating **Reply** button               | text selection in an answer                                       |
 | Shift + click on **Delete** | Delete a conversation without the confirmation   | conversation row menu                                             |
 | Arrow keys, Enter, Escape   | Choose a result, open it, close the palette      | command palette                                                   |
+
+Ctrl/Cmd+Enter also confirms the main action of a dialog or a form without reaching for the mouse:
+the project settings, the system message, **Export**, **Reset**, the MCP server form, the deletion of
+a conversation or of a project that holds no conversation, the message editor and the comment of a
+feedback. The button shows the shortcut as a **↵** chip on desktop (a wide window with a fine
+pointer) and announces it to assistive technology. It is ignored while an input method composes
+text, and it is deliberately not offered where one keystroke would wipe several things: deleting a
+project that holds conversations and **Clear all data**.
 
 The global shortcuts are registered by the full application shell: the compact shell of the embedded
 widget does not install them (see [embed.md](embed.md#what-the-widget-leaves-out)). They are
@@ -715,9 +866,13 @@ width.
   inside it. The other actions run once the sheet has finished closing.
 - **Sidebar.** Below the `md` breakpoint only, the conversation list opens as a left sheet from the
   menu button; at 768 px and above, including a landscape touch tablet, the sidebar stays docked.
-  The rest follows the coarse pointer, whatever the width: a row's **…** button is always visible, a
-  long press on the row opens its menu, and the hover card is not used.
-- **Header.** **Compare** is hidden below the `md` breakpoint (while compare is on, **Single
+  The rest follows the coarse pointer, whatever the width: the rows and buttons are larger, a row's
+  **…** button is always visible, a long press on the row opens its menu, and the hover card is not
+  used. The menu of a project is a drawer too, the **+** button of its header is left out (the menu
+  has the same entry), and **Move to** drills into the list of projects inside the menu. The search
+  field of the sidebar opens the [command palette](#command-palette).
+- **Header.** A **Search** button opens the [command palette](#command-palette) on a coarse pointer, and
+  the header buttons are larger. **Compare** is hidden below the `md` breakpoint (while compare is on, **Single
   conversation** is the first entry of **More**); the skin, theme and language switchers and **Copy
   link** move into **More**.
 - **Composer.** Three separate signals apply. With a coarse pointer, whatever the width, the
