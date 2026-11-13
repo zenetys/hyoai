@@ -18,7 +18,7 @@ import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
 import { useProjects } from "@/hooks/useProjects";
 import { useStore } from "@/hooks/useStore";
 import { startNewChatInProject } from "@/lib/chat/panes";
-import { setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
+import { setCommandOpen, setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,7 +28,9 @@ import { cn } from "@/lib/utils";
  * query, a search limited to one project, and the embed that has no project UI, show
  * the flat pinned, recent and content-match sections. The limit is kept as a project
  * id and looked up on every render, so a project deleted meanwhile (here or in another
- * tab) simply lifts it. The shortcut hints are left out on touch devices and wherever
+ * tab) simply lifts it. On touch devices the search field is a button that opens the
+ * command palette, except in the embed (no palette) and for a search limited to a project
+ * (it needs a real field). The shortcut hints are left out on touch devices and wherever
  * the shortcuts are not bound.
  *
  * @param shortcuts - Whether the keyboard shortcuts exist in the host shell
@@ -44,6 +46,10 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
     const [scopeId, setScopeId] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const scoped = projects.find((project) => project.id === scopeId);
+    const viaPalette = coarse && !embed && !scoped;
+
+    // Without the field, a typed query would keep filtering the list with no way to clear it
+    if (viaPalette && query !== "") setQuery("");
     const { titleMatches, contentMatches } = useConversationSearch(query, scoped?.id);
     const grouped = !embed && !scoped && query.trim() === "";
     const projectById = new Map(projects.map((project) => [project.id, project]));
@@ -83,21 +89,32 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
                 </div>
                 <div className="group/search relative">
                     <Search
-                        className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                        className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
                         aria-hidden="true"
                     />
-                    <Input
-                        ref={inputRef}
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder={scoped ? t("searchIn") : t("searchPlaceholder")}
-                        className={cn(
-                            "pl-8 pr-2.5",
-                            hints &&
-                                "transition-[padding-right] duration-200 group-hover/search:pr-14 group-focus-within/search:pr-14",
-                        )}
-                        aria-label={t("searchPlaceholder")}
-                    />
+                    {viaPalette ? (
+                        <button
+                            type="button"
+                            aria-haspopup="dialog"
+                            onClick={() => setCommandOpen(true)}
+                            className="flex h-9 w-full items-center rounded-lg border border-input bg-transparent pr-2.5 pl-8 text-left text-sm text-muted-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                        >
+                            {t("searchPlaceholder")}
+                        </button>
+                    ) : (
+                        <Input
+                            ref={inputRef}
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder={scoped ? t("searchIn") : t("searchPlaceholder")}
+                            className={cn(
+                                "pl-8 pr-2.5 pointer-coarse:h-9",
+                                hints &&
+                                    "transition-[padding-right] duration-200 group-hover/search:pr-14 group-focus-within/search:pr-14",
+                            )}
+                            aria-label={t("searchPlaceholder")}
+                        />
+                    )}
                     {hints && (
                         <Shortcut
                             keyName="K"

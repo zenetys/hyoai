@@ -15,7 +15,7 @@ import { usePaletteSelection } from "@/hooks/usePaletteSelection";
 import { useStore } from "@/hooks/useStore";
 import { stashText } from "@/lib/chat/handoff";
 import { startNewChat } from "@/lib/chat/panes";
-import { setCommandOpen, uiStore } from "@/lib/stores/ui";
+import { setCommandOpen, setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 /**
@@ -71,6 +71,9 @@ export function CommandPalette() {
     // Set when the palette hands the focus to the composer, so closing does not take it back
     const keepFocus = useRef(false);
 
+    // The element that had the focus when the palette opened, to give it back on close
+    const opener = useRef<HTMLElement | null>(null);
+
     const close = (next: boolean) => {
         setCommandOpen(next);
         if (!next) {
@@ -87,6 +90,9 @@ export function CommandPalette() {
 
     const runAndClose = (action: () => void) => {
         close(false);
+
+        // The palette can be opened from the sidebar drawer, which a choice leaves too
+        setMobileSidebarOpen(false);
         action();
     };
 
@@ -153,10 +159,32 @@ export function CommandPalette() {
             description={t("sidebar.searchPlaceholder")}
             commandProps={{ ...selection, label: t("sidebar.searchPlaceholder") }}
             contentProps={{
+                onOpenAutoFocus: () => {
+                    const active = document.activeElement;
+                    opener.current = active instanceof HTMLElement ? active : null;
+                },
                 onCloseAutoFocus: (event) => {
-                    if (!keepFocus.current) return;
-                    keepFocus.current = false;
                     event.preventDefault();
+                    const target = opener.current;
+                    opener.current = null;
+                    if (keepFocus.current) {
+                        keepFocus.current = false;
+                        return;
+                    }
+
+                    // A drawer closed meanwhile takes its button away: nothing to focus then
+                    if (!target?.isConnected) return;
+
+                    // A choice that moved the focus elsewhere, such as a composer, keeps it
+                    const active = document.activeElement;
+                    if (
+                        active &&
+                        active !== document.body &&
+                        !active.closest('[data-slot="dialog-content"]')
+                    ) {
+                        return;
+                    }
+                    target.focus();
                 },
             }}
         >
