@@ -29,6 +29,7 @@ interface ComposerShellProps {
     visionBlocked?: boolean;
     audioBlocked?: boolean;
     onSystemMessage?: () => void;
+    onProjectInstructions?: () => void;
     banner?: React.ReactNode;
     notice?: React.ReactNode;
     reply?: React.ReactNode;
@@ -47,8 +48,8 @@ interface ComposerShellProps {
 /**
  * Reusable message input: auto-growing textarea, an attachment menu covering
  * images, audio, text and PDF files (gated by the given model modalities) plus
- * an optional system-message entry, a slot for model controls and a single
- * morphing send/stop button. Shared by the single chat and the compare
+ * optional system-message and project instructions entries, a slot for model
+ * controls and a single morphing send/stop button. Shared by the single chat and the compare
  * broadcast bar so the rich file handling lives in one place.
  *
  * The compact layout only holds while the message fits on one line: as soon as
@@ -67,6 +68,7 @@ interface ComposerShellProps {
  * @param visionBlocked - The model rejects images
  * @param audioBlocked - The model rejects audio
  * @param onSystemMessage - Opens the system message dialog when provided
+ * @param onProjectInstructions - Opens the read-only project instructions when provided
  * @param banner - Indicator rendered above the input, e.g. the system chip
  * @param notice - Strip at the top of the input card, e.g. why the model cannot answer
  * @param reply - Quoted excerpt chip rendered just above the input
@@ -76,10 +78,12 @@ interface ComposerShellProps {
  * @param wrapperClassName - Class for the drop-zone wrapper
  * @param autoFocus - Focus the textarea on mount (e.g. landing on the home screen)
  * @param focusKey - When this value changes, refocus the textarea (e.g. after a model change)
- * @param focusSignal - A nonce that refocuses the textarea on each change (e.g. dismissing a sidebar menu)
+ * @param focusSignal - A nonce that refocuses the textarea on each change (e.g. dismissing a
+ *        sidebar menu)
  * @param replyKey - The pending reply quote; refocuses the textarea when a new reply is set
  * @param history - Past user messages (newest first) for arrow-up recall
- * @param carryDraft - Hand the unsent draft over to the composer that replaces this one when the compare opens or closes, and start from the one handed over
+ * @param carryDraft - Hand the unsent draft over to the composer that replaces this one when the
+ *        compare opens or closes, and start from the one handed over
  */
 export function ComposerShell({
     onSubmit,
@@ -90,6 +94,7 @@ export function ComposerShell({
     visionBlocked = false,
     audioBlocked = false,
     onSystemMessage,
+    onProjectInstructions,
     banner,
     notice,
     reply,
@@ -279,6 +284,7 @@ export function ComposerShell({
             onTextFiles={(files) => void att.addTextFiles(files)}
             onPdfFiles={(files) => void att.addPdfFiles(files)}
             onSystemMessage={onSystemMessage}
+            onProjectInstructions={onProjectInstructions}
             onAfterPick={focusInput}
         />
     );

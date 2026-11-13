@@ -1,6 +1,14 @@
 "use client";
 
-import { File, FileText, Image as ImageIcon, MessageSquareText, Mic, Plus } from "lucide-react";
+import {
+    File,
+    FileText,
+    Image as ImageIcon,
+    MessageSquareText,
+    Mic,
+    Plus,
+    ScrollText,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef } from "react";
 import type { ComponentProps, ReactNode, RefObject } from "react";
@@ -83,14 +91,16 @@ interface AttachmentMenuProps {
     onTextFiles: (files: File[]) => void;
     onPdfFiles: (files: File[]) => void;
     onSystemMessage?: () => void;
+    onProjectInstructions?: () => void;
     onAfterPick?: () => void;
 }
 
 /**
  * The "+" trigger that opens the attachment menu (images, audio, text, PDF) and
  * owns the hidden file inputs behind each entry. The image and audio entries are
- * gated by the model modalities; the optional system-message entry only shows
- * when a handler is given. Shared by the composer and the inline message editor.
+ * gated by the model modalities; the optional system-message and project
+ * instructions entries only show when a handler is given. Shared by the composer and
+ * the inline message editor.
  *
  * @param visionBlocked - The model rejects images
  * @param audioBlocked - The model rejects audio
@@ -99,7 +109,9 @@ interface AttachmentMenuProps {
  * @param onTextFiles - Receives the picked text files
  * @param onPdfFiles - Receives the picked PDF files
  * @param onSystemMessage - Opens the system message dialog when provided
- * @param onAfterPick - Runs after a file dialog closes with a selection, e.g. to refocus the textarea
+ * @param onProjectInstructions - Opens the read-only project instructions when provided
+ * @param onAfterPick - Runs after a file dialog closes with a selection, e.g. to refocus the
+ *        textarea
  */
 export function AttachmentMenu({
     visionBlocked,
@@ -109,6 +121,7 @@ export function AttachmentMenu({
     onTextFiles,
     onPdfFiles,
     onSystemMessage,
+    onProjectInstructions,
     onAfterPick,
 }: AttachmentMenuProps) {
     const t = useTranslations("composer");
@@ -180,15 +193,20 @@ export function AttachmentMenu({
                     label={t("attachPdf")}
                     onSelect={() => pdfInputRef.current?.click()}
                 />
+                {(onSystemMessage || onProjectInstructions) && <ResponsiveMenuSeparator />}
                 {onSystemMessage && (
-                    <>
-                        <ResponsiveMenuSeparator />
-                        <MenuEntry
-                            icon={<MessageSquareText aria-hidden="true" />}
-                            label={t("systemMessage")}
-                            onSelect={onSystemMessage}
-                        />
-                    </>
+                    <MenuEntry
+                        icon={<MessageSquareText aria-hidden="true" />}
+                        label={t("systemMessage")}
+                        onSelect={onSystemMessage}
+                    />
+                )}
+                {onProjectInstructions && (
+                    <MenuEntry
+                        icon={<ScrollText aria-hidden="true" />}
+                        label={t("projectInstructions")}
+                        onSelect={onProjectInstructions}
+                    />
                 )}
             </ResponsiveMenu>
         </>

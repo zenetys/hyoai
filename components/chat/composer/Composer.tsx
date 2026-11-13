@@ -1,11 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
 import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
 import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
+import { ProjectInstructionsDialog } from "@/components/chat/composer/ProjectInstructionsDialog";
 import { SystemMessageChip } from "@/components/chat/composer/SystemMessageChip";
 import { ToolsOffNotice } from "@/components/chat/composer/ToolsOffNotice";
 import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
@@ -17,6 +19,7 @@ import {
     useUserHistory,
 } from "@/hooks/useActiveChat";
 import { useAutoDisable, useModelAvailability, useReasonText } from "@/hooks/useAvailability";
+import { useChatProject } from "@/hooks/useChatProject";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useRotatingPlaceholder } from "@/hooks/useRotatingPlaceholder";
 import { useStore } from "@/hooks/useStore";
@@ -33,7 +36,9 @@ import { CHAT_WIDTH_CLASS } from "@/types/settings";
  * instance, so it shows the global model selector for the single chat and the
  * pane selector inside a compare pane, while delegating the input mechanics
  * to the shared ComposerShell. A model that cannot answer is greyed and blocked
- * with its reason, and is never swapped for another one.
+ * with its reason, and is never swapped for another one. When the conversation
+ * belongs to a project that has instructions, the attachment menu gets an entry that
+ * opens them in a read-only dialog.
  *
  * @param home - Whether the composer is rendered on the home page, where the full
  *        app keeps a narrower centred composer under its welcome heading. A widget
@@ -51,6 +56,9 @@ export function Composer({ home = false }: { home?: boolean }) {
     const chatWidth = useStore(settingsStore, (state) => state.settings.display.chatWidth);
     const focusNonce = useStore(uiStore, (state) => state.composerFocusNonce);
     const { entry, upstream, props, resolveFailed } = useResolvedModel();
+    const project = useChatProject();
+    const [instructionsOpen, setInstructionsOpen] = useState(false);
+    const hasInstructions = !!project?.systemPrompt?.trim();
 
     const availability = useModelAvailability();
     const autoDisable = useAutoDisable();
@@ -104,6 +112,9 @@ export function Composer({ home = false }: { home?: boolean }) {
                 onSystemMessage={
                     chat.controlsGlobalModel ? () => setSystemPromptOpen(true) : undefined
                 }
+                onProjectInstructions={
+                    hasInstructions ? () => setInstructionsOpen(true) : undefined
+                }
                 notice={blocked ? <ModelUnavailable availability={blocked} /> : null}
                 banner={
                     <>
@@ -124,6 +135,13 @@ export function Composer({ home = false }: { home?: boolean }) {
                     </>
                 }
             />
+            {hasInstructions && (
+                <ProjectInstructionsDialog
+                    open={instructionsOpen}
+                    onOpenChange={setInstructionsOpen}
+                    instructions={project?.systemPrompt ?? ""}
+                />
+            )}
         </div>
     );
 }
