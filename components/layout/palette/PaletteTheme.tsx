@@ -32,29 +32,34 @@ export function useThemeChoice(): {
  * applies it and keeps the palette open.
  *
  * @param onBack - Returns to the main list
+ * @param upward - List the rows from the last to the first, for a list that reads bottom-up
  */
-export function PaletteTheme({ onBack }: { onBack: () => void }) {
+export function PaletteTheme({ onBack, upward = false }: { onBack: () => void; upward?: boolean }) {
     const t = useTranslations();
     const { theme, setTheme } = useThemeChoice();
 
+    const rows = [
+        <CommandItem key="back" value="theme-back" onSelect={onBack}>
+            <ChevronLeft aria-hidden="true" />
+            {t("palette.back")}
+        </CommandItem>,
+        ...THEMES.map(({ id, Icon }) => (
+            <CommandItem
+                key={id}
+                value={`theme-${id}`}
+                aria-checked={theme === id}
+                data-checked={theme === id}
+                onSelect={() => setTheme(id)}
+            >
+                <Icon aria-hidden="true" />
+                {t(`header.theme.${id}`)}
+            </CommandItem>
+        )),
+    ];
+
     return (
         <CommandGroup heading={t("palette.themeAction")}>
-            <CommandItem value="theme-back" onSelect={onBack}>
-                <ChevronLeft aria-hidden="true" />
-                {t("palette.back")}
-            </CommandItem>
-            {THEMES.map(({ id, Icon }) => (
-                <CommandItem
-                    key={id}
-                    value={`theme-${id}`}
-                    aria-checked={theme === id}
-                    data-checked={theme === id}
-                    onSelect={() => setTheme(id)}
-                >
-                    <Icon aria-hidden="true" />
-                    {t(`header.theme.${id}`)}
-                </CommandItem>
-            ))}
+            {upward ? rows.reverse() : rows}
         </CommandGroup>
     );
 }
