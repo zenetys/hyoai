@@ -149,7 +149,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const titleButton = (
         <button
             type="button"
-            className="min-w-0 flex-1 py-1.5 pr-2 pl-2.5 text-left text-sm"
+            className="min-w-0 flex-1 py-1.5 pr-2 pl-2.5 text-left text-sm pointer-coarse:py-2"
             onClick={() => {
                 if (longPress.firedRef.current) return;
                 handleOpen();
@@ -254,7 +254,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                         variant="ghost"
                         size="icon-xs"
                         aria-label={tc("edit")}
-                        className="max-w-0 overflow-hidden opacity-0 duration-200 group-hover/item:max-w-7 group-hover/item:opacity-100 group-focus-within/item:max-w-7 group-focus-within/item:opacity-100 data-[state=open]:max-w-7 data-[state=open]:opacity-100 pointer-coarse:max-w-7 pointer-coarse:opacity-100"
+                        className="max-w-0 overflow-hidden opacity-0 duration-200 group-hover/item:max-w-7 group-hover/item:opacity-100 group-focus-within/item:max-w-7 group-focus-within/item:opacity-100 data-[state=open]:max-w-7 data-[state=open]:opacity-100 pointer-coarse:size-9 pointer-coarse:max-w-9 pointer-coarse:opacity-100 pointer-coarse:group-hover/item:max-w-9 pointer-coarse:group-focus-within/item:max-w-9 pointer-coarse:data-[state=open]:max-w-9"
                     >
                         <MoreHorizontal aria-hidden="true" />
                     </Button>

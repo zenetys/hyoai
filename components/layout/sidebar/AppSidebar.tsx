@@ -61,7 +61,7 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="md:hidden"
+                        className="md:hidden pointer-coarse:size-9"
                         onClick={() => setMobileSidebarOpen(false)}
                         aria-label={tCommon("close")}
                     >
