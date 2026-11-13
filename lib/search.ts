@@ -1,3 +1,4 @@
+import { fold } from "@/lib/match";
 import {
     flushAll,
     listConversationIds,
@@ -17,30 +18,6 @@ interface IndexedMessage {
     nodeId: string;
     text: string;
     haystack: string;
-}
-
-/**
- * Fold a string to a lowercase, accent-stripped form for matching, preserving
- * UTF-16 length so a match offset still indexes into the original text. Each
- * code unit maps to exactly one: accented Latin letters lose their diacritic,
- * everything else (surrogate halves, symbols) is kept as-is.
- *
- * @param text - String to fold
- */
-function fold(text: string): string {
-    let out = "";
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        const code = text.charCodeAt(i);
-        if (code >= 0xd800 && code <= 0xdfff) {
-            out += ch;
-            continue;
-        }
-        const lower = ch.toLowerCase();
-        const base = lower.length === 1 ? lower.normalize("NFD") : ch;
-        out += base.length > 0 ? base[0] : ch;
-    }
-    return out;
 }
 
 // The searchable messages of one conversation.
