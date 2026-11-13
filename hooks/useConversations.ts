@@ -33,10 +33,12 @@ export interface ContentSearchHit {
  *
  * @param titleMatches - Conversations whose title matched the query
  * @param contentMatches - Content search hits whose body matched the query
+ * @param pending - The content search of the current query has not answered yet
  */
 export interface ConversationSearchResults {
     titleMatches: ConversationMeta[];
     contentMatches: ContentSearchHit[];
+    pending: boolean;
 }
 
 /**
@@ -65,11 +67,17 @@ export function useConversationList(filter = "", projectId?: string): Conversati
  *
  * @param filter - Case-insensitive query, empty for the full title list
  * @param projectId - Project to restrict titles and contents to, omitted for every conversation
+ * @returns The title and content matches, and whether the content search is still pending
  */
 export function useConversationSearch(filter = "", projectId?: string): ConversationSearchResults {
     const index = useStore(conversationsStore, (state) => state.index);
     const titleMatches = useConversationList(filter, projectId);
-    const [contentMatches, setContentMatches] = useState<ContentSearchHit[]>([]);
+
+    // The hits and the query they answer, so the pending state follows from one value
+    const [resolved, setResolved] = useState<{ query: string; hits: ContentSearchHit[] }>({
+        query: "",
+        hits: [],
+    });
     const query = filter.trim().toLowerCase();
     const active = query.length >= MIN_CONTENT_QUERY;
 
@@ -79,25 +87,30 @@ export function useConversationSearch(filter = "", projectId?: string): Conversa
         }
         let cancelled = false;
         const timer = setTimeout(() => {
-            void searchContent(query).then((hits) => {
-                if (cancelled) return;
-                const metaById = new Map(index.map((meta) => [meta.id, meta]));
-                const titleIds = new Set(titleMatches.map((meta) => meta.id));
-                const enriched = hits
-                    .map((hit): ContentSearchHit | null => {
-                        const meta = metaById.get(hit.convId);
-                        if (!meta || titleIds.has(meta.id) || !inScope(meta, projectId))
-                            return null;
-                        return {
-                            meta,
-                            nodeId: hit.nodeId,
-                            snippet: { before: hit.before, match: hit.match, after: hit.after },
-                        };
-                    })
-                    .filter((hit): hit is ContentSearchHit => hit !== null)
-                    .sort((a, b) => b.meta.lastModified - a.meta.lastModified);
-                setContentMatches(enriched);
-            });
+            void searchContent(query)
+                .then((hits) => {
+                    if (cancelled) return;
+                    const metaById = new Map(index.map((meta) => [meta.id, meta]));
+                    const titleIds = new Set(titleMatches.map((meta) => meta.id));
+                    const enriched = hits
+                        .map((hit): ContentSearchHit | null => {
+                            const meta = metaById.get(hit.convId);
+                            if (!meta || titleIds.has(meta.id) || !inScope(meta, projectId))
+                                return null;
+                            return {
+                                meta,
+                                nodeId: hit.nodeId,
+                                snippet: { before: hit.before, match: hit.match, after: hit.after },
+                            };
+                        })
+                        .filter((hit): hit is ContentSearchHit => hit !== null)
+                        .sort((a, b) => b.meta.lastModified - a.meta.lastModified);
+                    setResolved({ query, hits: enriched });
+                })
+                .catch(() => {
+                    // A failed search settles with no hit, so the pending state cannot stay stuck
+                    if (!cancelled) setResolved({ query, hits: [] });
+                });
         }, CONTENT_SEARCH_DEBOUNCE_MS);
         return () => {
             cancelled = true;
@@ -105,7 +118,11 @@ export function useConversationSearch(filter = "", projectId?: string): Conversa
         };
     }, [query, active, index, titleMatches, projectId]);
 
-    return { titleMatches, contentMatches: active ? contentMatches : [] };
+    return {
+        titleMatches,
+        contentMatches: active ? resolved.hits : [],
+        pending: active && resolved.query !== query,
+    };
 }
 
 /**
