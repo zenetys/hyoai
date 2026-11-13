@@ -120,7 +120,7 @@
         "modelDisabled": "Model disabled",
         "modelUnknownType": "No installed plugin handles the type \"{type}\".",
         "modelRequiresPin": "This server type does not list its models: set the entry's \"model\" field.",
-        "reasoning": "Reasoning",
+        "reasoning": "Thinking and effort",
         "thinking": "Thinking",
         "thinkingDescription": "Can think through more complex tasks",
         "effortDescription": "Higher effort means more thorough but slower answers",
