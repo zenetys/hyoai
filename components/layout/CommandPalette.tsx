@@ -20,7 +20,6 @@ export function CommandPalette() {
     const open = useStore(uiStore, (state) => state.commandOpen);
     const [query, setQuery] = useState("");
     const { titleMatches, contentMatches } = useConversationSearch(query);
-    const searching = query.trim().length > 0;
 
     const close = (next: boolean) => {
         setCommandOpen(next);
@@ -47,7 +46,7 @@ export function CommandPalette() {
             />
             <CommandList className="max-md:min-h-0 max-md:max-h-none max-md:flex-1">
                 <CommandEmpty>{t("sidebar.noResults")}</CommandEmpty>
-                {!searching && <PaletteActions onRun={runAndClose} />}
+                <PaletteActions query={query} onRun={runAndClose} />
                 <PaletteTitles metas={titleMatches} query={query} onRun={runAndClose} />
                 <PaletteMessages hits={contentMatches} onRun={runAndClose} />
             </CommandList>
