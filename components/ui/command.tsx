@@ -66,17 +66,23 @@ function CommandDialog({
     );
 }
 
+/**
+ * Search field of a Command, with a larger touch target below md and on coarse pointers.
+ *
+ * @param className - Extra classes of the input
+ * @param wrapperClassName - Extra classes of the element around the input group
+ */
 function CommandInput({
     className,
     ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
     return (
         <div data-slot="command-input-wrapper" className="p-1 pb-0">
-            <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+            <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2! max-md:h-11! max-md:rounded-xl! pointer-coarse:md:h-9!">
                 <CommandPrimitive.Input
                     data-slot="command-input"
                     className={cn(
-                        "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+                        "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50 max-md:text-base",
                         className,
                     )}
                     {...props}
@@ -123,7 +129,7 @@ function CommandGroup({
         <CommandPrimitive.Group
             data-slot="command-group"
             className={cn(
-                "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground",
+                "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground max-md:**:[[cmdk-group-heading]]:px-3 max-md:**:[[cmdk-group-heading]]:pt-3 max-md:**:[[cmdk-group-heading]]:text-[13px]",
                 className,
             )}
             {...props}
@@ -153,7 +159,7 @@ function CommandItem({
         <CommandPrimitive.Item
             data-slot="command-item"
             className={cn(
-                "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
+                "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground max-md:min-h-12 max-md:gap-3 max-md:px-3 max-md:py-2 max-md:text-base max-md:dark:data-selected:bg-foreground/10 max-md:[&_svg:not([class*='size-'])]:size-5 pointer-coarse:md:min-h-9 pointer-coarse:md:py-2",
                 className,
             )}
             {...props}
