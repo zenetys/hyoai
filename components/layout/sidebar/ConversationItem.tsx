@@ -94,13 +94,13 @@ function refocusRow(id: string, projectId?: string) {
 }
 
 /**
- * Sidebar row of one conversation: opens it on click, with inline rename,
- * pin, JSON export and confirmed deletion behind a hover menu. While the
- * conversation is the one being generated, a stop button is shown inline.
- * Shift-clicking the delete entry skips the confirmation dialog. The finished mark pops in
- * only on the render where the row finishes: playing the animation from the class alone would
- * restart it whenever React moves the row, for instance when another row finishes and the list
- * is reordered.
+ * Sidebar row of one conversation: opens it on click, with inline rename, pin, move to a
+ * project, link copy, JSON export, compare and confirmed deletion behind a hover menu. While the
+ * conversation is the one being generated, a stop button is shown inline. A right click on the
+ * title, like a long press, opens the same menu. Shift-clicking the delete entry skips the
+ * confirmation dialog. The finished mark pops in only on the render where the row finishes:
+ * playing the animation from the class alone would restart it whenever React moves the row, for
+ * instance when another row finishes and the list is reordered.
  *
  * @param meta - Conversation metadata from the index
  */
@@ -123,6 +123,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [moveOpen, setMoveOpen] = useState(false);
     const [drilled, setDrilled] = useState(false);
+    const [cardOpen, setCardOpen] = useState(false);
     const [popping, setPopping] = useState(false);
     const [seenDone, setSeenDone] = useState(done);
     if (done !== seenDone) {
@@ -135,10 +136,15 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const { projects } = useProjects();
     const changeMenu = (open: boolean) => {
         // Every opening starts on the main rows; resetting on close would flash them mid-animation
-        if (open) setDrilled(false);
+        if (open) {
+            setDrilled(false);
+
+            // A right click can land while the hover card is open, which would stay over the menu
+            setCardOpen(false);
+        }
         setMenuOpen(open);
     };
-    const longPress = useLongPress({ onLongPress: () => changeMenu(true) });
+    const longPress = useLongPress({ onLongPress: () => changeMenu(true), contextMenu: true });
     const active = compare.enabled ? compare.inPane : activeId === meta.id;
     const dateFormat = useMemo(
         () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
@@ -268,7 +274,12 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
             {coarse ? (
                 titleButton
             ) : (
-                <HoverCard openDelay={300} closeDelay={100}>
+                <HoverCard
+                    open={cardOpen}
+                    onOpenChange={setCardOpen}
+                    openDelay={300}
+                    closeDelay={100}
+                >
                     <HoverCardTrigger asChild>{titleButton}</HoverCardTrigger>
                     <HoverCardContent
                         side={mobile ? "bottom" : "right"}
