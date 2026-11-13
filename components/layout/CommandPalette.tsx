@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { PaletteActions } from "@/components/layout/palette/PaletteActions";
 import { PaletteMessages, PaletteTitles } from "@/components/layout/palette/PaletteHits";
+import { PaletteTheme } from "@/components/layout/palette/PaletteTheme";
 import { CommandDialog, CommandEmpty, CommandInput, CommandList } from "@/components/ui/command";
 import { useConversationSearch } from "@/hooks/useConversations";
 import { useStore } from "@/hooks/useStore";
@@ -19,11 +20,24 @@ export function CommandPalette() {
     const t = useTranslations();
     const open = useStore(uiStore, (state) => state.commandOpen);
     const [query, setQuery] = useState("");
+    const [drilled, setDrilled] = useState(false);
     const { titleMatches, contentMatches } = useConversationSearch(query);
+
+    const needle = query.trim();
+    const themePage = drilled && needle === "";
 
     const close = (next: boolean) => {
         setCommandOpen(next);
-        if (!next) setQuery("");
+        if (!next) {
+            setQuery("");
+            setDrilled(false);
+        }
+    };
+
+    const openTheme = () => {
+        // The page only shows while the field is empty, so the query is cleared with it
+        setQuery("");
+        setDrilled(true);
     };
 
     const runAndClose = (action: () => void) => {
@@ -46,9 +60,15 @@ export function CommandPalette() {
             />
             <CommandList className="max-md:min-h-0 max-md:max-h-none max-md:flex-1">
                 <CommandEmpty>{t("sidebar.noResults")}</CommandEmpty>
-                <PaletteActions query={query} onRun={runAndClose} />
-                <PaletteTitles metas={titleMatches} query={query} onRun={runAndClose} />
-                <PaletteMessages hits={contentMatches} onRun={runAndClose} />
+                {themePage ? (
+                    <PaletteTheme onBack={() => setDrilled(false)} />
+                ) : (
+                    <>
+                        <PaletteActions query={query} onRun={runAndClose} onOpenTheme={openTheme} />
+                        <PaletteTitles metas={titleMatches} query={query} onRun={runAndClose} />
+                        <PaletteMessages hits={contentMatches} onRun={runAndClose} />
+                    </>
+                )}
             </CommandList>
         </CommandDialog>
     );
