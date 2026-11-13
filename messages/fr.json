@@ -34,7 +34,31 @@
         "deleteTitle": "Supprimer la conversation",
         "deleteDescription": "Cette conversation et toutes ses branches seront définitivement supprimées.",
         "awaitingApproval": "En attente de ton approbation",
-        "runningTool": "Exécution d'un outil…"
+        "runningTool": "Exécution d'un outil…",
+        "newProjectName": "Nouveau projet",
+        "searchIn": "Rechercher dans le projet...",
+        "scopeChip": "Projet : {name}",
+        "clearScope": "Chercher dans toutes les conversations",
+        "otherSection": "Autres conversations",
+        "seeAll": "Voir tout ({count})",
+        "seeLess": "Voir moins",
+        "noProjects": "Tu n'as pas encore de projet. Un projet regroupe des conversations qui partagent des consignes et un modèle.",
+        "createProject": "Créer un projet",
+        "emptyProject": "Ce projet n'a pas encore de conversation.",
+        "newChatInProject": "Nouvelle conversation dans {name}",
+        "newChatIn": "dans {name}",
+        "pinnedAbove": "Ses conversations épinglées sont en haut de la liste.",
+        "conversationMenu": {
+            "move": "Déplacer vers un projet"
+        },
+        "projectMenu": {
+            "label": "Options de {name}",
+            "newChat": "Nouvelle conversation dans ce projet",
+            "search": "Rechercher dans ce projet",
+            "settings": "Réglages du projet",
+            "rename": "Renommer",
+            "delete": "Supprimer le projet"
+        }
     },
     "header": {
         "selectModel": "Choisir un modèle",

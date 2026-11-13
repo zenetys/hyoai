@@ -34,7 +34,31 @@
         "deleteTitle": "Delete conversation",
         "deleteDescription": "This conversation and all its branches will be permanently deleted.",
         "awaitingApproval": "Waiting for your approval",
-        "runningTool": "Running a tool…"
+        "runningTool": "Running a tool…",
+        "newProjectName": "New project",
+        "searchIn": "Search in the project...",
+        "scopeChip": "Project: {name}",
+        "clearScope": "Search all conversations",
+        "otherSection": "Other conversations",
+        "seeAll": "See all ({count})",
+        "seeLess": "See less",
+        "noProjects": "You have no project yet. A project groups conversations that share instructions and a model.",
+        "createProject": "Create a project",
+        "emptyProject": "This project has no conversation yet.",
+        "newChatInProject": "New conversation in {name}",
+        "newChatIn": "in {name}",
+        "pinnedAbove": "Its pinned conversations are at the top of the list.",
+        "conversationMenu": {
+            "move": "Move to a project"
+        },
+        "projectMenu": {
+            "label": "Options of {name}",
+            "newChat": "New conversation in this project",
+            "search": "Search in this project",
+            "settings": "Project settings",
+            "rename": "Rename",
+            "delete": "Delete project"
+        }
     },
     "header": {
         "selectModel": "Select a model",
