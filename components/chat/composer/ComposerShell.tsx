@@ -58,7 +58,9 @@ interface ComposerShellProps {
  * message.
  *
  * With carryDraft, the handed-over draft is consumed once at mount, and the
- * latest draft is kept in a ref so the next composer can pick it up.
+ * latest draft is kept in a ref so the next composer can pick it up. When the
+ * handed-over draft asks for the focus, the field takes it with the caret at the
+ * end of the text, even on a touch device.
  *
  * @param onSubmit - Receives the trimmed text and attachments on send
  * @param onStop - Aborts the current generation while busy
@@ -145,6 +147,19 @@ export function ComposerShell({
 
     useEffect(() => {
         if (handoff) clearDraft();
+    }, [handoff]);
+
+    useEffect(() => {
+        if (!handoff?.focus) return;
+
+        // The person chose to write here, so the keyboard is welcome even on a touch device
+        const frame = requestAnimationFrame(() => {
+            const el = textareaRef.current;
+            if (!el) return;
+            el.focus();
+            el.setSelectionRange(el.value.length, el.value.length);
+        });
+        return () => cancelAnimationFrame(frame);
     }, [handoff]);
 
     useEffect(() => {
