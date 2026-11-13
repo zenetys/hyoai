@@ -58,6 +58,35 @@
             "settings": "Réglages du projet",
             "rename": "Renommer",
             "delete": "Supprimer le projet"
+        },
+        "move": {
+            "title": "Déplacer vers un projet",
+            "description": "Choisis le projet de « {title} ».",
+            "search": "Chercher un projet...",
+            "heading": "Projets",
+            "none": "Aucun projet",
+            "create": "Nouveau projet",
+            "empty": "Aucun projet trouvé.",
+            "submenu": "Déplacer vers",
+            "back": "{label}, retour"
+        },
+        "settings": {
+            "title": "Réglages du projet",
+            "description": "Ces réglages valent pour toutes les conversations du projet, sauf si une conversation fait autrement.",
+            "name": "Nom",
+            "systemPrompt": "Consignes du projet",
+            "systemPromptHint": "Envoyées en début de chaque conversation du projet. Les consignes propres à une conversation passent avant.",
+            "defaultModel": "Modèle par défaut",
+            "noDefaultModel": "Celui des réglages globaux",
+            "dangerZone": "Zone dangereuse",
+            "save": "Enregistrer"
+        },
+        "delete": {
+            "title": "Supprimer « {name} » ?",
+            "description": "Ce projet contient {count, plural, one {# conversation} other {# conversations}}. Tu peux les garder, elles sortent alors du projet, ou les supprimer avec lui.",
+            "descriptionEmpty": "Ce projet ne contient aucune conversation.",
+            "keep": "Garder les conversations",
+            "removeAll": "Tout supprimer"
         }
     },
     "header": {

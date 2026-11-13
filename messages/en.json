@@ -58,6 +58,35 @@
             "settings": "Project settings",
             "rename": "Rename",
             "delete": "Delete project"
+        },
+        "move": {
+            "title": "Move to a project",
+            "description": "Choose the project of “{title}”.",
+            "search": "Search for a project...",
+            "heading": "Projects",
+            "none": "No project",
+            "create": "New project",
+            "empty": "No project found.",
+            "submenu": "Move to",
+            "back": "{label}, back"
+        },
+        "settings": {
+            "title": "Project settings",
+            "description": "These settings apply to every conversation of the project, unless a conversation does otherwise.",
+            "name": "Name",
+            "systemPrompt": "Project instructions",
+            "systemPromptHint": "Sent at the start of every conversation of the project. A conversation’s own instructions come first.",
+            "defaultModel": "Default model",
+            "noDefaultModel": "The one from the global settings",
+            "dangerZone": "Danger zone",
+            "save": "Save"
+        },
+        "delete": {
+            "title": "Delete “{name}”?",
+            "description": "This project holds {count, plural, one {# conversation} other {# conversations}}. You can keep them, so they leave the project, or delete them with it.",
+            "descriptionEmpty": "This project holds no conversation.",
+            "keep": "Keep the conversations",
+            "removeAll": "Delete everything"
         }
     },
     "header": {
