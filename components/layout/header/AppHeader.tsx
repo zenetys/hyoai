@@ -8,6 +8,7 @@ import {
     Menu,
     PenLine,
     Plus,
+    Search,
     Settings,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -24,12 +25,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useStore } from "@/hooks/useStore";
 import { addPane, closeCompare, openCompare, startNewChat } from "@/lib/chat/panes";
 import { compareStore, MAX_PANES } from "@/lib/stores/compare";
-import { openSettings, setMobileSidebarOpen, toggleSidebar, uiStore } from "@/lib/stores/ui";
+import {
+    openSettings,
+    setCommandOpen,
+    setMobileSidebarOpen,
+    toggleSidebar,
+    uiStore,
+} from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 /**
- * Top bar: sidebar toggles, the active conversation title, then the appearance
- * switchers and the settings entry point.
+ * Top bar: sidebar toggles, a search button on touch screens, new chat and compare controls,
+ * the active conversation title, then the copy-link action and the appearance switchers (both
+ * behind the overflow menu below md) and the settings entry point.
  */
 export function AppHeader() {
     const t = useTranslations("header");
@@ -82,6 +90,16 @@ export function AppHeader() {
                 onClick={() => setMobileSidebarOpen(true)}
             >
                 <Menu aria-hidden="true" />
+            </Button>
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="hidden pointer-coarse:inline-flex pointer-coarse:size-9"
+                aria-label={t("search")}
+                onClick={() => setCommandOpen(true)}
+            >
+                <Search aria-hidden="true" />
             </Button>
             <Tooltip>
                 <TooltipTrigger asChild>
