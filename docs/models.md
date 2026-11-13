@@ -361,6 +361,10 @@ pane keeps its own choice (otherwise the global setting applies; see [compare.md
 An entry's own `thinking` or `effort` replaces the top-level one as a whole: the `on` and `off`
 fragments, or the `levels`, are not merged key by key with the global ones.
 
+In the app, the detail of each model edits its own `thinking`, `supportsThinking` and `effort` with
+switches and a list of levels instead of JSON: see
+[The reasoning controls of the form](#the-reasoning-controls-of-the-form).
+
 ### `thinking`: an on/off toggle
 
 `thinking` is an on/off toggle. Its `on`/`off` fragments are sent when the **Thinking** switch of
@@ -593,7 +597,7 @@ and ends with an **Add a model** button.
    **Add a level**, and one card per level with **Identifier**, **Label** and **Request body
    (JSON)**): the top-level `thinking` and `effort` of [Reasoning](#reasoning-thinking-and-effort).
 3. **Integrations**, with **Add an integration** (see [Integrations](../README.md#integrations)).
-4. The **Generated JSON** preview, with a **Copy** button, and the **Reset…** button.
+4. The **Generated JSON** preview, with a **Copy** button, and the **Reset** button.
 
 MCP servers are not edited here but in Settings → MCP servers (see [mcp.md](mcp.md)); the model
 detail only sets which servers a model uses. The root keys that no page edits, such as `notice`,
@@ -607,15 +611,9 @@ list and opens its detail, headed **New model** until it has an identifier. It s
 everything else empty, off or on **Auto** (note that a `type` missing from a hand-written
 `config.json` defaults to `vllm`, not to `llama.cpp`).
 
-<picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/dark/config.png">
-    <img alt="The Models page in Settings: a model entry named claude as a form, with Identifier, Model id, Display name, Short name, Base URL, Server type, API key, the Streaming and Send context switches and the folded Advanced settings row" src="images/light/config.png" width="692">
-</picture>
-
-The detail of a model shows the entry as a form. The screenshot shows a `claude` entry modelled on the Anthropic recipe above, with a different
-display name and a short name added; the **Advanced settings** row, below the switches, is shown
-folded. Each field maps to a key of the [entry table](#keys-of-a-models-entry). The text fields and
-the server type list carry a short hint under their label; the two switches have none:
+The detail of a model shows the entry as a form, with the **Advanced settings** row, below the
+switches, folded. Each field maps to a key of the [entry table](#keys-of-a-models-entry). The text
+fields and the server type list carry a short hint under their label; the two switches have none:
 
 | Form field       | Key           | Hint and notes                                                                                                                 |
 | ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -638,16 +636,14 @@ Once saved, the new model is in the model menu straight away, and `defaultModel`
 
 ### Advanced settings
 
-In the detail of a model, under the switches, the collapsible **Advanced settings** section unfolds the less common keys.
+In the detail of a model, under the switches, the collapsible **Advanced settings** section unfolds the less common keys. It starts with **Headers (JSON)** and the two attachment fields, then the
+[reasoning controls](#the-reasoning-controls-of-the-form), then the rows below.
 
 | Form field                             | Key                  | Notes                                                                                                                                                       |
 | -------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Headers (JSON)**                     | `headers`            | A JSON object of strings, for example the Anthropic opt-in of the recipe above                                                                              |
-| **Thinking (JSON)**                    | `thinking`           | The `on` and `off` fragments of this entry, or `disabled`                                                                                                   |
-| **Effort (JSON)**                      | `effort`             | The `default` and `levels` of this entry                                                                                                                    |
 | **Image attachments**                  | `modalities.image`   | **Auto**, **Yes** or **No**. Auto follows the server when it reports its modalities                                                                         |
 | **Audio attachments**                  | `modalities.audio`   | **Auto**, **Yes** or **No**, like the image attachments                                                                                                     |
-| **Supports thinking**                  | `supportsThinking`   | **Auto**, **Yes** or **No**                                                                                                                                 |
 | **Runtime props**                      | `runtimeProps`       | **Auto**, **Yes** or **No**                                                                                                                                 |
 | **Tool calling**                       | `tools`              | **Auto**, **Yes** or **No**. Hint: "Auto: on only when llama.cpp's chat template supports tools. vLLM needs --enable-auto-tool-choice --tool-call-parser."  |
 | **Parallel tool calls**                | `parallelToolCalls`  | **Auto**, **Yes** or **No**                                                                                                                                 |
@@ -656,10 +652,9 @@ In the detail of a model, under the switches, the collapsible **Advanced setting
 | **MCP servers**                        | `mcpServers`         | "Which servers of the catalog this model may use."                                                                                                          |
 
 For the three-way fields, **Auto** leaves the key out of the entry, so the default described for
-that key in the [key table](#keys-of-a-models-entry) applies: it follows the `type` for **Supports
-thinking**, **Runtime props** and **Send tool_choice**, the llama.cpp chat template for **Tool
-calling**, and **Parallel tool calls** is simply not sent. **Yes** and **No** write `true` and
-`false`.
+that key in the [key table](#keys-of-a-models-entry) applies: it follows the `type` for **Runtime
+props** and **Send tool_choice**, the llama.cpp chat template for **Tool calling**, and **Parallel
+tool calls** is simply not sent. **Yes** and **No** write `true` and `false`.
 
 The **MCP servers** field has an **Every enabled server** switch, on by default, which leaves
 `mcpServers` out. Turning it off lists the servers of the catalog as checkboxes, all ticked at
@@ -673,6 +668,97 @@ exists yet, the field says "No server is set up yet. Add one in the MCP servers 
 A text field that is not valid JSON does not break the rest of the form: the preview is replaced by
 the message `Invalid JSON in field {field}.`, where `{field}` is the path of the offending field
 (for example `models[0].headers`), and the draft is not applied until the text is fixed.
+
+### The reasoning controls of the form
+
+In **Advanced settings**, after the attachment fields, the **Thinking** group edits the `thinking`
+and `supportsThinking` keys of the entry ([Reasoning](#reasoning-thinking-and-effort)) and the
+**Effort levels** group edits its `effort`, without writing JSON. Each setting says which key it
+writes ("Written as ..."), and a **Preview of the written JSON** button after the effort levels
+shows the result.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/config.png">
+    <img alt="The thinking controls of a model entry in Settings: the Thinking group with its Edit as JSON button, the Allow thinking and Show the Thinking switch rows and the Sent to the server row, then a list of three effort levels with a drag handle, a default star and a delete button each, and the Preview of the written JSON button below" src="images/light/config.png" width="692">
+</picture>
+
+The **Thinking** group reads "Whether this model can think, how the menu offers it, and what is sent
+in each state." It has an **Edit as JSON** button in its header and holds, in this order:
+
+- **Allow thinking** is on by default. It is written as `thinking.disabled`, which is true when the
+  switch is off. Off, the model has no **Thinking** switch and no fragment is sent, not even the
+  global one. The effort levels are not affected, and the fragments are kept next to `disabled`, so
+  turning the switch on again brings them back. While it is off, the form hides the **Show the Thinking
+  switch in the model menu** and **Sent to the server** rows, since nothing applies.
+- **Show the Thinking switch in the model menu** is `supportsThinking`. While it is unset an **Auto**
+  pill stands next to the switch, and the row says what automatic gives: "Automatic: on because a
+  fragment is set." (the entry's own or the global one, see
+  [`thinking`](#thinking-an-onoff-toggle)), or "Automatic: off because no fragment is set and the
+  server type does not think by default." A server type that reasons by default turns the switch on
+  as well. Moving the switch writes `true` or `false`, and the **Back to automatic** button that
+  replaces the pill removes the key again. When the switch is off but a fragment exists, a note
+  recalls that the **On** fragment is still sent while thinking is on, and that the **Off** fragment
+  is still sent when thinking was turned off on another model; leave it empty, or turn off **Allow
+  thinking**, to stop that.
+- **Sent to the server** is a folded row that reads "The request fields merged when thinking is on
+  or off." and carries badges: **Global** while the entry inherits, then **On**, **Off**, **Nothing
+  sent** or **Invalid** for its own fragments. It unfolds on its own when a side turns invalid. Its
+  two JSON fields, **When thinking is on** (`thinking.on`) and **When thinking is off**
+  (`thinking.off`), check the text as you type ("Valid JSON object.", "Invalid JSON.", "It must be a
+  JSON object, between braces.", or "Empty: nothing is sent, the model keeps its own default."), and
+  offer **Format** and ready-made fragments (**Insert enable_thinking**, and **Insert
+  reasoning_budget 0** for the off side). While the entry inherits, the global fragments are shown
+  read-only; **Customize for this model** copies both into the entry, and they are not merged with
+  the global ones afterwards. **Use the global ones** gives the inheritance back.
+
+**Edit as JSON** is a button that stays pressed while it is on. It replaces **Allow thinking** and
+**Sent to the server** with one editor of the whole `thinking` object (`on`, `off` and `disabled`),
+and a note says so. **Show the Thinking switch in the model menu** is another key, outside this
+object, and keeps its own row while thinking is allowed. A text the controls cannot read, for example a `thinking` with a side that is not an object,
+opens in this editor, and the button is disabled while the JSON is invalid ("Fix the JSON to go back
+to the fields."). The editor reports an error for a side that is not an object and for a `disabled`
+that is not a boolean, and only a warning for an unknown key, which the schema drops. While the text
+is empty the entry inherits the global `thinking`, shown in grey as the placeholder; typing replaces
+it as a whole.
+
+The **Effort levels** group reads "Listed in the model menu, in this order." While the entry has no
+levels of its own it shows the global ones, with their default marked, and **Customize for this
+model** copies them into the entry; as for the fragments, they are then not merged with the global
+ones, and **Use the global levels** goes back. An own, empty list of levels shows "No effort
+level": the model menu has no effort for this model even when the global configuration has levels,
+and the group offers **Add a level** and **Start from Low, Medium, High**.
+
+Each level is a row with its position, a drag handle, its name, a default star and a delete button,
+then its **Identifier** and **Label** and a folded **Request body** with a one-line summary ("none:
+the id is sent as reasoning_effort" while empty):
+
+- Drag the handle to reorder the levels, which is the order of the model menu. The arrow keys work
+  on the focused handle too, and each row has hidden move up and move down buttons for a screen
+  reader or a touch screen.
+- **Make default** marks the default level, written as `effort.default` by its identifier, so that
+  renaming the level keeps it. The marked level reads **Default**, and clicking it again clears the
+  mark, after which the first level applies.
+- An empty identifier or label, or a body that is not a JSON object, is an error, counted in the
+  footer: "{count} problems to fix before the configuration can be saved."
+- A duplicate identifier is only an amber warning and does not block saving: "{count} duplicate
+  identifiers: saving is still possible, only the first level found applies." Two levels with the
+  same label get a hint too, since the menu would show them alike.
+- Otherwise the footer reads "{count} levels, the menu starts on {label}." (with a further line, "No
+  default marked: the first level applies.", when no level is starred) and "Written as
+  `effort.levels` `effort.default`".
+
+An `effort` text that is not shaped like a list of levels opens as a plain JSON field ("This text
+is not shaped like a list of levels: edit it as JSON."), which stays while you fix it; **Back to the
+list** appears once the text is readable.
+
+The **Preview of the written JSON** button, placed after the effort levels, unfolds a read-only
+panel, "Read-only: thinking, supportsThinking and effort, as saved in this model": the keys the
+controls produce, or "Nothing is written: the entry inherits." It adds "An invalid field prevents
+saving the configuration." when that is the case. It is a review tool, not a field.
+
+An invalid fragment, thinking object or level keeps the configuration from being applied, like any
+other JSON field of the form (see the paragraph on invalid JSON above). While **Allow thinking**
+is off, an invalid fragment does not block, since it is not sent.
 
 ### The model controls
 
@@ -729,13 +815,13 @@ invalid and was not applied. Its colour follows the health of the configuration:
 `model` could not list its models, `{models}` being the names of those entries) and red for
 `Invalid configuration, not applied: {detail}` (giving the reason). Clicking it opens a read-only
 summary headed by that message, then everything the override changes, grouped by category, with a
-**Reset…** shortcut. The model, effort level, integration and MCP server lines (and the **Restore**
+**Reset** shortcut. The model, effort level, integration and MCP server lines (and the **Restore**
 lines) are tagged **added**, **modified** or **removed**; the **App name**, **Default model**,
 **Thinking**, **Model order** and **Default effort** lines carry no tag.
 
 ### The Reset dialog
 
-**Reset…** at the bottom of the **Configuration** page (disabled while there is no override) opens the **Reset
+**Reset** at the bottom of the **Configuration** page (disabled while there is no override) opens the **Reset
 settings** dialog: "Pick which overrides to reset back to the deployed config.json. Unchecked ones
 are kept." The dialog says "No override to reset." when it has nothing to list, for example while a
 JSON field of the form is invalid.
