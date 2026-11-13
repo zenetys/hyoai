@@ -6,20 +6,26 @@ import { useState } from "react";
 
 import { ContentMatchItem } from "@/components/layout/sidebar/ContentMatchItem";
 import { ConversationItem } from "@/components/layout/sidebar/ConversationItem";
+import { ConversationList } from "@/components/layout/sidebar/ConversationList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shortcut } from "@/components/ui/shortcut";
 import { useConversationSearch } from "@/hooks/useConversations";
 import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
+import { useProjects } from "@/hooks/useProjects";
+import { useStore } from "@/hooks/useStore";
 import { startNewChat } from "@/lib/chat/panes";
-import { setMobileSidebarOpen } from "@/lib/stores/ui";
+import { setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 /**
- * Sidebar content: new chat button, title plus content search and the
- * conversation list split into pinned, recent and content-match sections. The shortcut
- * hints are left out on touch devices and wherever the shortcuts are not bound.
+ * Sidebar content: new chat button, title plus content search and the conversation
+ * list. With nothing typed the list is grouped by project (pinned on top, one
+ * collapsible section per project, then the conversations without a project); a typed
+ * query, and the embed that has no project UI, show the flat pinned, recent and
+ * content-match sections. The shortcut hints are left out on touch devices and wherever
+ * the shortcuts are not bound.
  *
  * @param shortcuts - Whether the keyboard shortcuts exist in the host shell
  */
@@ -29,7 +35,14 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
     const [query, setQuery] = useState("");
     const coarse = useIsCoarsePointer();
     const hints = shortcuts && !coarse;
+    const embed = useStore(uiStore, (state) => state.embed);
+    const { projects } = useProjects();
     const { titleMatches, contentMatches } = useConversationSearch(query);
+    const grouped = !embed && query.trim() === "";
+    const projectById = new Map(projects.map((project) => [project.id, project]));
+    // The embed has no project UI, so its rows never carry a project name
+    const projectOf = (projectId?: string) =>
+        embed || !projectId ? undefined : projectById.get(projectId);
     const pinned = titleMatches.filter((meta) => meta.pinned);
     const recent = titleMatches.filter((meta) => !meta.pinned);
     const empty = titleMatches.length === 0 && contentMatches.length === 0;
@@ -93,31 +106,40 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
                 </div>
             </div>
             <ScrollArea className="min-h-0 flex-1 px-3 pb-3">
-                {pinned.length > 0 && (
+                {grouped && <ConversationList />}
+                {!grouped && pinned.length > 0 && (
                     <section aria-label={t("pinned")}>
                         <h3 className="px-2 pt-1 pb-1.5 text-xs font-medium text-muted-foreground">
                             {t("pinned")}
                         </h3>
                         <div className="space-y-0.5">
                             {pinned.map((meta) => (
-                                <ConversationItem key={meta.id} meta={meta} />
+                                <ConversationItem
+                                    key={meta.id}
+                                    meta={meta}
+                                    project={projectOf(meta.projectId)}
+                                />
                             ))}
                         </div>
                     </section>
                 )}
-                {recent.length > 0 && (
+                {!grouped && recent.length > 0 && (
                     <section aria-label={t("recent")}>
                         <h3 className="px-2 pt-3 pb-1.5 text-xs font-medium text-muted-foreground">
                             {t("recent")}
                         </h3>
                         <div className="space-y-0.5">
                             {recent.map((meta) => (
-                                <ConversationItem key={meta.id} meta={meta} />
+                                <ConversationItem
+                                    key={meta.id}
+                                    meta={meta}
+                                    project={projectOf(meta.projectId)}
+                                />
                             ))}
                         </div>
                     </section>
                 )}
-                {contentMatches.length > 0 && (
+                {!grouped && contentMatches.length > 0 && (
                     <section aria-label={t("messageMatches")}>
                         <h3 className="px-2 pt-3 pb-1.5 text-xs font-medium text-muted-foreground">
                             {t("messageMatches")}
@@ -129,7 +151,7 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
                         </div>
                     </section>
                 )}
-                {empty && (
+                {!grouped && empty && (
                     <p className="px-2 py-4 text-sm text-muted-foreground">
                         {query ? t("noResults") : t("noConversations")}
                     </p>
