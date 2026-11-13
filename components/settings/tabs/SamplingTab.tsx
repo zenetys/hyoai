@@ -10,7 +10,7 @@ import type { SamplingSettings } from "@/types/settings";
 
 /**
  * The sampling page of the settings, with temperature, top-k, top-p, min-p and max-tokens.
- * Some of these are not used by all models.
+ * Some of these are not used by all models. Max tokens is kept to a whole number of at least -1.
  */
 export function SamplingTab() {
     const t = useTranslations("settings");
@@ -40,6 +40,7 @@ export function SamplingTab() {
                 value={sampling.topK}
                 onChange={(value) => setSampling({ topK: value })}
                 placeholder={t("unsetPlaceholder")}
+                min={0}
                 step={1}
             />
             <UnsetNumberField
@@ -69,8 +70,14 @@ export function SamplingTab() {
                 label={t("sampling.maxTokens")}
                 description={t("sampling.maxTokensDescription")}
                 value={sampling.maxTokens}
-                onChange={(value) => setSampling({ maxTokens: value })}
+                onChange={(value) =>
+                    setSampling({
+                        maxTokens:
+                            value === undefined ? undefined : Math.max(-1, Math.trunc(value)),
+                    })
+                }
                 placeholder={t("unsetPlaceholder")}
+                min={-1}
                 step={1}
             />
         </SettingGroup>

@@ -10,7 +10,8 @@ import type { PenaltySettings } from "@/types/settings";
 
 /**
  * Repetition penalty parameters; the DRY group is llama.cpp only.
- * All of these are optional, and empty fields fall back to the server defaults.
+ * All of these are optional, and empty fields fall back to the server defaults. Fields with a
+ * lower bound set it on the input.
  */
 export function PenaltiesTab() {
     const t = useTranslations("settings");
@@ -30,6 +31,7 @@ export function PenaltiesTab() {
                     value={penalties.repeatPenalty}
                     onChange={(value) => setPenalties({ repeatPenalty: value })}
                     placeholder={t("unsetPlaceholder")}
+                    min={0}
                     step={0.05}
                 />
                 <UnsetNumberField
@@ -56,6 +58,7 @@ export function PenaltiesTab() {
                     value={penalties.dryMultiplier}
                     onChange={(value) => setPenalties({ dryMultiplier: value })}
                     placeholder={t("unsetPlaceholder")}
+                    min={0}
                     step={0.05}
                 />
                 <UnsetNumberField
@@ -64,6 +67,7 @@ export function PenaltiesTab() {
                     value={penalties.dryBase}
                     onChange={(value) => setPenalties({ dryBase: value })}
                     placeholder={t("unsetPlaceholder")}
+                    min={0}
                     step={0.05}
                 />
                 <UnsetNumberField
@@ -72,6 +76,7 @@ export function PenaltiesTab() {
                     value={penalties.dryAllowedLength}
                     onChange={(value) => setPenalties({ dryAllowedLength: value })}
                     placeholder={t("unsetPlaceholder")}
+                    min={0}
                     step={1}
                 />
                 <UnsetNumberField
@@ -80,6 +85,7 @@ export function PenaltiesTab() {
                     value={penalties.dryPenaltyLastN}
                     onChange={(value) => setPenalties({ dryPenaltyLastN: value })}
                     placeholder={t("unsetPlaceholder")}
+                    min={-1}
                     step={1}
                 />
             </SettingGroup>
