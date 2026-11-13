@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { McpServerEditor } from "@/components/settings/editors/McpServerEditor";
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { Button } from "@/components/ui/button";
+import { ConfirmHint, confirmProps } from "@/components/ui/confirm";
 import type { DraftMcpServer } from "@/lib/draft";
 import { patchMcpServer, saveMcpServer } from "@/lib/mcp/edit";
 import { checkMcpServer } from "@/lib/mcp/origin";
@@ -101,8 +102,14 @@ export function McpServerForm({
                 <Button type="button" variant="outline" size="sm" onClick={cancel}>
                     {t("cancel")}
                 </Button>
-                <Button type="submit" size="sm" disabled={busy || problem !== null}>
+                <Button
+                    type="submit"
+                    size="sm"
+                    disabled={busy || problem !== null}
+                    {...confirmProps}
+                >
                     {t("save")}
+                    <ConfirmHint />
                 </Button>
             </div>
         </form>

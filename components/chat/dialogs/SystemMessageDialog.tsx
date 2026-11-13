@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmHint, confirmProps } from "@/components/ui/confirm";
 import {
     Dialog,
     DialogContent,
@@ -69,8 +70,9 @@ export function SystemMessageDialog() {
                     >
                         {tc("cancel")}
                     </Button>
-                    <Button type="button" onClick={save}>
+                    <Button type="button" onClick={save} {...confirmProps}>
                         {tc("save")}
+                        <ConfirmHint />
                     </Button>
                 </DialogFooter>
             </DialogContent>

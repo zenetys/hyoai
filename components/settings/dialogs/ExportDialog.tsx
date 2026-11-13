@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmHint, confirmProps } from "@/components/ui/confirm";
 import {
     Dialog,
     DialogContent,
@@ -45,7 +46,13 @@ interface ExportDialogProps {
 /**
  * Selective conversation export: pick the conversations, the file format
  * (native, OpenAI JSONL, markdown or llama.cpp webui compatible) and whether
- * settings ride along. Markdown and OpenAI keep the branch shown on screen only.
+ * settings ride along. Markdown and OpenAI keep the branch shown on screen only. All
+ * conversations start selected each time the dialog opens, and the confirm button can also be
+ * triggered with Ctrl+Enter.
+ *
+ * @param open - Whether the dialog is shown
+ * @param onOpenChange - Called with the new state when the dialog asks to open or close, and
+ *   with false once the export is done
  */
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     const t = useTranslations("settings");
@@ -224,6 +231,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                         type="button"
                         disabled={selected.size === 0 || exporting}
                         onClick={() => void handleExport()}
+                        {...confirmProps}
                     >
                         {exporting ? (
                             <Loader2 aria-hidden="true" className="animate-spin" />
@@ -233,6 +241,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                         {exporting
                             ? t("data.exporting")
                             : t("data.exportSelected", { count: selected.size })}
+                        <ConfirmHint />
                     </Button>
                 </DialogFooter>
             </DialogContent>

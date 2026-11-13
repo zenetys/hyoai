@@ -4,6 +4,7 @@ import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmHint, confirmOnKey, confirmProps } from "@/components/ui/confirm";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,8 +14,9 @@ import type { MessageNode } from "@/types/chat";
 /**
  * Thumb up/down rating on an assistant message, shown only when a "feedback"
  * integration is declared for the active model. Hover-revealed on desktop;
- * clicking a thumb opens a popover with an optional comment before sending. The
- * touch equivalent lives in the message action sheet.
+ * clicking a thumb opens a popover with an optional comment before sending, which
+ * Ctrl+Enter (Cmd+Enter on Apple platforms) also confirms. The touch equivalent lives
+ * in the message action sheet.
  *
  * @param node - Assistant node being rated
  */
@@ -77,7 +79,7 @@ export function MessageFeedback({ node }: { node: MessageNode }) {
                     </Tooltip>
                 </div>
             </PopoverAnchor>
-            <PopoverContent align="start">
+            <PopoverContent align="start" onKeyDown={confirmOnKey}>
                 <Textarea
                     value={feedback.comment}
                     placeholder={t("feedbackCommentPlaceholder")}
@@ -91,8 +93,10 @@ export function MessageFeedback({ node }: { node: MessageNode }) {
                     className="self-end"
                     disabled={feedback.sending}
                     onClick={() => void feedback.submit()}
+                    {...confirmProps}
                 >
                     {t("feedbackSend")}
+                    <ConfirmHint />
                 </Button>
             </PopoverContent>
         </Popover>

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
 import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
 import { Button } from "@/components/ui/button";
+import { ConfirmHint, confirmOnKey, confirmProps } from "@/components/ui/confirm";
 import { Textarea } from "@/components/ui/textarea";
 import { useAttachments } from "@/hooks/useAttachments";
 import type { Attachment } from "@/types/chat";
@@ -27,6 +28,8 @@ interface MessageEditorProps {
  * initialAttachments turns on attachment editing (user messages only): the
  * existing files show in a removable strip with the same add menu, drag-drop and
  * paste as the composer, and a non-empty input may be text, attachments or both.
+ * Escape in the text field cancels the edit, and Ctrl+Enter (Cmd+Enter on Apple platforms)
+ * anywhere in the editor submits it.
  *
  * @param initial - Current message text
  * @param submitLabel - Submit button label, set by the caller per role
@@ -69,15 +72,12 @@ export function MessageEditor({
 
     const handleKeyDown = (event: React.KeyboardEvent) => {
         if (event.key === "Escape") onCancel();
-        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-            event.preventDefault();
-            submit();
-        }
     };
 
     return (
         <div
             className="w-full space-y-2"
+            onKeyDown={confirmOnKey}
             onDrop={withAttachments ? att.handleDrop : undefined}
             onDragOver={withAttachments ? (event) => event.preventDefault() : undefined}
         >
@@ -107,8 +107,15 @@ export function MessageEditor({
                     <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
                         {tc("cancel")}
                     </Button>
-                    <Button type="button" size="sm" disabled={!hasInput} onClick={submit}>
+                    <Button
+                        type="button"
+                        size="sm"
+                        disabled={!hasInput}
+                        onClick={submit}
+                        {...confirmProps}
+                    >
                         {submitLabel}
+                        <ConfirmHint />
                     </Button>
                 </div>
             </div>

@@ -37,6 +37,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { confirmProps } from "@/components/ui/confirm";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -431,6 +432,7 @@ export function ConversationItem({ meta, project }: { meta: ConversationMeta; pr
                         <AlertDialogAction
                             variant="destructive"
                             onClick={() => void deleteConversationById(meta.id)}
+                            {...confirmProps}
                         >
                             {tc("delete")}
                         </AlertDialogAction>

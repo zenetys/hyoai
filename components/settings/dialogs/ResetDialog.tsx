@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { confirmProps } from "@/components/ui/confirm";
 import {
     Dialog,
     DialogContent,
@@ -43,7 +44,13 @@ const MODE_VARIANT = {
 /**
  * Selective config reset: every override entry is listed grouped by category;
  * the checked ones are reset back to the deployed config.json while the rest
- * are kept. Checkboxes start unchecked, with a master "select all".
+ * are kept. Checkboxes start unchecked, with a master "select all". The confirm button can
+ * also be triggered with Ctrl+Enter.
+ *
+ * @param open - Whether the dialog is shown
+ * @param onOpenChange - Called with the new state when the dialog asks to open or close
+ * @param items - The override entries to list, each identified by its key
+ * @param onConfirm - Called with the keys of the checked entries when the reset is confirmed
  */
 export function ResetDialog({ open, onOpenChange, items, onConfirm }: ResetDialogProps) {
     const t = useTranslations("settings");
@@ -181,6 +188,7 @@ export function ResetDialog({ open, onOpenChange, items, onConfirm }: ResetDialo
                         variant="destructive"
                         disabled={selected.size === 0}
                         onClick={handleConfirm}
+                        {...confirmProps}
                     >
                         <RotateCcw aria-hidden="true" />
                         {t("config.resetSelected", { count: selected.size })}
