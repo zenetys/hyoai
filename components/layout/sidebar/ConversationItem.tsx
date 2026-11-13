@@ -52,6 +52,7 @@ import {
     openConversationInView,
 } from "@/lib/actions";
 import { compareConversation } from "@/lib/chat/panes";
+import { displayName } from "@/lib/projects";
 import { compareStore } from "@/lib/stores/compare";
 import { patchMeta } from "@/lib/stores/conversations";
 import {
@@ -65,6 +66,7 @@ import { downloadJson, exportOneConversation } from "@/lib/transfer";
 import { conversationShareUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import type { ConversationMeta } from "@/types/chat";
+import type { Project } from "@/types/projects";
 
 /**
  * Give the focus back to a conversation row after it moved to another section. The
@@ -103,8 +105,9 @@ function refocusRow(id: string, projectId?: string) {
  * instance when another row finishes and the list is reordered.
  *
  * @param meta - Conversation metadata from the index
+ * @param project - Project whose name follows the title, for the lists that mix projects
  */
-export function ConversationItem({ meta }: { meta: ConversationMeta }) {
+export function ConversationItem({ meta, project }: { meta: ConversationMeta; project?: Project }) {
     const t = useTranslations("sidebar");
     const tc = useTranslations("common");
     const locale = useLocale();
@@ -212,14 +215,19 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
         <button
             type="button"
             data-conversation-id={meta.id}
-            className="min-w-0 flex-1 py-1.5 pr-2 pl-2.5 text-left text-sm pointer-coarse:py-2"
+            className="flex min-w-0 flex-1 items-baseline gap-2 py-1.5 pr-2 pl-2.5 text-left text-sm pointer-coarse:py-2"
             onClick={() => {
                 if (longPress.firedRef.current) return;
                 handleOpen();
             }}
             {...longPress.handlers}
         >
-            <span className="block truncate">{meta.title || t("untitled")}</span>
+            <span className="min-w-0 truncate">{meta.title || t("untitled")}</span>
+            {project && (
+                <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">
+                    {displayName(project, t("newProjectName"))}
+                </span>
+            )}
         </button>
     );
 
