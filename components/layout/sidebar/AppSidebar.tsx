@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ContentMatchItem } from "@/components/layout/sidebar/ContentMatchItem";
 import { ConversationItem } from "@/components/layout/sidebar/ConversationItem";
 import { ConversationList } from "@/components/layout/sidebar/ConversationList";
+import { NewChatButton } from "@/components/layout/sidebar/NewChatButton";
 import { ScopeChip } from "@/components/layout/sidebar/ScopeChip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import { useConversationSearch } from "@/hooks/useConversations";
 import { useIsCoarsePointer } from "@/hooks/useMediaQuery";
 import { useProjects } from "@/hooks/useProjects";
 import { useStore } from "@/hooks/useStore";
-import { startNewChat, startNewChatInProject } from "@/lib/chat/panes";
+import { startNewChatInProject } from "@/lib/chat/panes";
 import { setMobileSidebarOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
@@ -68,25 +69,7 @@ export function AppSidebar({ shortcuts = true }: { shortcuts?: boolean }) {
         <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
             <div className="space-y-2 p-3">
                 <div className="flex items-center gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="group/new min-w-0 flex-1 justify-start gap-3"
-                        onClick={() => {
-                            startNewChat();
-                            setMobileSidebarOpen(false);
-                        }}
-                    >
-                        <PenLine aria-hidden="true" />
-                        <span className="truncate">{t("newChat")}</span>
-                        {hints && (
-                            <Shortcut
-                                keyName="O"
-                                shift
-                                className="ml-auto max-w-0 overflow-hidden bg-transparent px-0 opacity-0 transition-[max-width,opacity] duration-200 group-hover/new:max-w-24 group-hover/new:opacity-100 group-focus-visible/new:max-w-24 group-focus-visible/new:opacity-100"
-                            />
-                        )}
-                    </Button>
+                    <NewChatButton scope={scoped} hints={hints} />
                     <Button
                         type="button"
                         variant="ghost"
