@@ -151,6 +151,7 @@ interface ResponsiveMenuItemProps {
     className?: string;
     closeOnSelect?: boolean;
     disabled?: boolean;
+    ariaLabel?: string;
 }
 
 /**
@@ -159,9 +160,13 @@ interface ResponsiveMenuItemProps {
  * modifiers (e.g. shiftKey for a desktop power shortcut); on mobile it closes
  * the drawer afterwards unless closeOnSelect is false.
  *
+ * @param children - Content of the row, usually an icon and a label
  * @param onSelect - Action to run when chosen, given the click modifiers
  * @param variant - "destructive" tints the row like a delete action
+ * @param className - Extra classes of the row
+ * @param closeOnSelect - Close the drawer after choosing on mobile, true by default
  * @param disabled - Greys the row out and ignores it
+ * @param ariaLabel - Accessible name when it must differ from the visible text
  */
 export function ResponsiveMenuItem({
     children,
@@ -170,6 +175,7 @@ export function ResponsiveMenuItem({
     className,
     closeOnSelect = true,
     disabled = false,
+    ariaLabel,
 }: ResponsiveMenuItemProps) {
     const { isMobile, close } = useResponsiveMenuSurface();
     // Captured before Radix selects the item, so onSelect can read the modifier.
@@ -181,6 +187,7 @@ export function ResponsiveMenuItem({
                 variant={variant}
                 className={className}
                 disabled={disabled}
+                aria-label={ariaLabel}
                 onPointerDownCapture={(event) => {
                     shiftRef.current = event.shiftKey;
                 }}
@@ -198,6 +205,7 @@ export function ResponsiveMenuItem({
         <button
             type="button"
             disabled={disabled}
+            aria-label={ariaLabel}
             className={cn(
                 "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
                 variant === "destructive" && "text-destructive [&_svg]:text-destructive",
