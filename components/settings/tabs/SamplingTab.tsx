@@ -65,7 +65,7 @@ export function SamplingTab() {
                 step={0.01}
             />
             <UnsetNumberField
-                id="sampling-max-tokens"
+                id="sampling-max-output"
                 label={t("sampling.maxTokens")}
                 description={t("sampling.maxTokensDescription")}
                 value={sampling.maxTokens}

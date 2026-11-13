@@ -19,6 +19,8 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
  * @param placeholder - Shown while the input is empty
  * @param wide - Put the input under the text, over the full width (a phone always does)
  * @param mono - Show the value in a monospace font
+ * @param credential - The value is a secret, such as an API key: browsers are asked not to fill
+ *   it with a saved password, though password managers may still offer to store it
  * @param action - Control inside the input, on the right
  */
 export function SettingText({
@@ -30,6 +32,7 @@ export function SettingText({
     placeholder,
     wide = false,
     mono = false,
+    credential = false,
     action,
 }: {
     id: string;
@@ -40,6 +43,7 @@ export function SettingText({
     placeholder?: string;
     wide?: boolean;
     mono?: boolean;
+    credential?: boolean;
     action?: ReactNode;
 }) {
     const className = mono ? "font-mono text-xs" : undefined;
@@ -55,6 +59,7 @@ export function SettingText({
                 <InputGroup className={width}>
                     <InputGroupInput
                         id={id}
+                        credential={credential}
                         value={value}
                         placeholder={placeholder}
                         className={className}
@@ -65,6 +70,7 @@ export function SettingText({
             ) : (
                 <Input
                     id={id}
+                    credential={credential}
                     value={value}
                     placeholder={placeholder}
                     className={[width, className].filter(Boolean).join(" ")}

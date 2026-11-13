@@ -62,7 +62,7 @@ export const SETTINGS_SEARCH: SettingsSearchEntry[] = [
         ["sampling-top-k", "topK", "topKDescription"],
         ["sampling-top-p", "topP", "topPDescription"],
         ["sampling-min-p", "minP", "minPDescription"],
-        ["sampling-max-tokens", "maxTokens", "maxTokensDescription"],
+        ["sampling-max-output", "maxTokens", "maxTokensDescription"],
     ]),
     ...entries("sampling", "settings.penalties", [
         ["penalties-repeat", "repeatPenalty", "repeatPenaltyDescription"],

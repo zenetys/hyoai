@@ -90,7 +90,7 @@ export function McpServerEditor({
                     <InputGroupInput
                         id={`${id}-token`}
                         type={revealed ? "text" : "password"}
-                        autoComplete="off"
+                        credential
                         spellCheck={false}
                         value={server.token}
                         onChange={(event) => onChange({ token: event.target.value })}

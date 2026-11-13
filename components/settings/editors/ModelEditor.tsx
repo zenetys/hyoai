@@ -151,6 +151,7 @@ export function ModelEditor({
                     placeholder={t("apiKeyPlaceholder")}
                     value={model.apiKey}
                     onChange={(value) => onChange({ apiKey: value })}
+                    credential
                     action={<InputCopyButton value={model.apiKey} label={t("copyApiKey")} />}
                     wide
                 />

@@ -109,7 +109,10 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
     );
 }
 
-function InputGroupInput({ className, ...props }: React.ComponentProps<"input">) {
+/**
+ * Borderless Input that fills an InputGroup. It takes the props of Input, credential included.
+ */
+function InputGroupInput({ className, ...props }: React.ComponentProps<typeof Input>) {
     return (
         <Input
             data-slot="input-group-control"
