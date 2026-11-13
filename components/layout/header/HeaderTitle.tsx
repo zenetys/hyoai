@@ -3,7 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { ProjectInstructionsText } from "@/components/common/ProjectInstructionsText";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useActiveProject } from "@/hooks/useChatProject";
 import { useActiveConversationId } from "@/hooks/useConversations";
 import { useStore } from "@/hooks/useStore";
@@ -11,6 +13,7 @@ import { displayName } from "@/lib/projects";
 import { compareStore } from "@/lib/stores/compare";
 import { conversationsStore, patchMeta } from "@/lib/stores/conversations";
 import { focusComposer } from "@/lib/stores/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Header anchor showing the active conversation title. Selects the raw
@@ -18,11 +21,13 @@ import { focusComposer } from "@/lib/stores/ui";
  * a conversation switch - which changes the active id but not the index - still
  * refreshes the label. Clicking the title swaps it for an inline rename input,
  * mirroring the sidebar row and committing through patchMeta. When the conversation
- * belongs to a project, its name leads the title, saved or not. Renders nothing in
- * compare mode, where no single conversation is in focus.
+ * belongs to a project, its name leads the title, saved or not, and opens the
+ * instructions of the project in a read-only popover when it has any. Renders
+ * nothing in compare mode, where no single conversation is in focus.
  */
 export function HeaderTitle() {
     const t = useTranslations("sidebar");
+    const tc = useTranslations("composer");
     const compareEnabled = useStore(compareStore, (state) => state.enabled);
     const index = useStore(conversationsStore, (state) => state.index);
     const activeId = useActiveConversationId();
@@ -61,12 +66,41 @@ export function HeaderTitle() {
 
     const label = title || t("untitled");
 
-    // The project name is plain text, only the conversation title can be renamed here
+    const instructions = project?.systemPrompt?.trim();
+    const projectClass = "max-w-[40%] shrink-0 truncate text-sm text-muted-foreground";
+
     const prefix = project && (
         <>
-            <span className="max-w-[40%] shrink-0 truncate text-sm text-muted-foreground">
-                {displayName(project, t("newProjectName"))}
-            </span>
+            {instructions ? (
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button
+                            type="button"
+                            className={cn(
+                                projectClass,
+                                "cursor-pointer rounded-sm underline-offset-4 outline-none transition-colors decoration-dotted hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-9",
+                            )}
+                        >
+                            {displayName(project, t("newProjectName"))}
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        align="start"
+                        side="bottom"
+                        collisionPadding={8}
+                        className="w-80 max-w-[calc(100vw-2rem)]"
+                    >
+                        <p className="text-xs font-medium text-muted-foreground">
+                            {tc("projectInstructions")}
+                        </p>
+                        <div className="max-h-64 overflow-y-auto">
+                            <ProjectInstructionsText instructions={instructions} />
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            ) : (
+                <span className={projectClass}>{displayName(project, t("newProjectName"))}</span>
+            )}
             <span className="shrink-0 px-1.5 text-sm text-muted-foreground" aria-hidden="true">
                 /
             </span>
