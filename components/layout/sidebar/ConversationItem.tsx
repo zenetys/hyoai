@@ -2,8 +2,10 @@
 
 import {
     Check,
+    ChevronRight,
     Columns2,
     Download,
+    FolderInput,
     Link,
     MoreHorizontal,
     Pencil,
@@ -22,6 +24,8 @@ import {
     ResponsiveMenuItem,
     ResponsiveMenuSeparator,
 } from "@/components/common/ResponsiveMenu";
+import { MoveDialog } from "@/components/layout/sidebar/MoveDialog";
+import { MoveList } from "@/components/layout/sidebar/MoveList";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -38,9 +42,15 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useActiveConversationId } from "@/hooks/useConversations";
 import { useLongPress } from "@/hooks/useLongPress";
-import { useIsCoarsePointer, useIsMobile } from "@/hooks/useMediaQuery";
+import { useIsCoarsePointer, useIsCompact, useIsMobile } from "@/hooks/useMediaQuery";
+import { useProjects } from "@/hooks/useProjects";
 import { useStore } from "@/hooks/useStore";
-import { deleteConversationById, openConversationInView } from "@/lib/actions";
+import {
+    deleteConversationById,
+    moveConversationToNewProject,
+    moveConversationToProject,
+    openConversationInView,
+} from "@/lib/actions";
 import { compareConversation } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
 import { patchMeta } from "@/lib/stores/conversations";
@@ -55,6 +65,33 @@ import { downloadJson, exportOneConversation } from "@/lib/transfer";
 import { conversationShareUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import type { ConversationMeta } from "@/types/chat";
+
+/**
+ * Give the focus back to a conversation row after it moved to another section. The
+ * row remounts there and takes its menu and dialog with it, so the focus would fall
+ * back on the page. Does nothing when the focus already sits on an element. When the
+ * row is not drawn, because the section it moved to is folded or shows only a preview,
+ * the focus goes to the header of that section instead.
+ *
+ * @param id - Id of the conversation that moved
+ * @param projectId - Project it moved to, if any
+ */
+function refocusRow(id: string, projectId?: string) {
+    window.setTimeout(() => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const row = document.querySelector<HTMLElement>(
+            `[data-conversation-id="${CSS.escape(id)}"]`,
+        );
+        if (row) {
+            row.focus();
+            return;
+        }
+        if (!projectId) return;
+        document
+            .querySelector<HTMLElement>(`[data-project-id="${CSS.escape(projectId)}"]`)
+            ?.focus();
+    }, 100);
+}
 
 /**
  * Sidebar row of one conversation: opens it on click, with inline rename,
@@ -84,6 +121,8 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const [renaming, setRenaming] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [moveOpen, setMoveOpen] = useState(false);
+    const [drilled, setDrilled] = useState(false);
     const [popping, setPopping] = useState(false);
     const [seenDone, setSeenDone] = useState(done);
     if (done !== seenDone) {
@@ -92,7 +131,14 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     }
     const coarse = useIsCoarsePointer();
     const mobile = useIsMobile();
-    const longPress = useLongPress({ onLongPress: () => setMenuOpen(true) });
+    const compact = useIsCompact();
+    const { projects } = useProjects();
+    const changeMenu = (open: boolean) => {
+        // Every opening starts on the main rows; resetting on close would flash them mid-animation
+        if (open) setDrilled(false);
+        setMenuOpen(open);
+    };
+    const longPress = useLongPress({ onLongPress: () => changeMenu(true) });
     const active = compare.enabled ? compare.inPane : activeId === meta.id;
     const dateFormat = useMemo(
         () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
@@ -113,6 +159,16 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
         if (title && title !== meta.title) patchMeta(meta.id, { title });
         setRenaming(false);
         focusComposer();
+    };
+
+    const pickProject = (projectId: string | undefined) => {
+        moveConversationToProject(meta.id, projectId ?? null);
+        refocusRow(meta.id, projectId);
+    };
+
+    const createProjectAndMove = () => {
+        const created = moveConversationToNewProject(meta.id, t("newProjectName"));
+        refocusRow(meta.id, created?.id);
     };
 
     const handleExport = async () => {
@@ -149,6 +205,7 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
     const titleButton = (
         <button
             type="button"
+            data-conversation-id={meta.id}
             className="min-w-0 flex-1 py-1.5 pr-2 pl-2.5 text-left text-sm pointer-coarse:py-2"
             onClick={() => {
                 if (longPress.firedRef.current) return;
@@ -244,8 +301,9 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
             )}
             <ResponsiveMenu
                 open={menuOpen}
-                onOpenChange={setMenuOpen}
+                onOpenChange={changeMenu}
                 onDismiss={focusComposer}
+                isMobile={compact}
                 align="start"
                 title={meta.title || t("untitled")}
                 trigger={
@@ -260,39 +318,89 @@ export function ConversationItem({ meta }: { meta: ConversationMeta }) {
                     </Button>
                 }
             >
-                <ResponsiveMenuItem onSelect={() => setRenaming(true)}>
-                    <Pencil aria-hidden="true" />
-                    {t("rename")}
-                </ResponsiveMenuItem>
-                <ResponsiveMenuItem onSelect={() => patchMeta(meta.id, { pinned: !meta.pinned })}>
-                    {meta.pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
-                    {meta.pinned ? t("unpin") : t("pin")}
-                </ResponsiveMenuItem>
-                <ResponsiveMenuItem onSelect={() => void handleCopyLink()}>
-                    <Link aria-hidden="true" />
-                    {tc("copyLink")}
-                </ResponsiveMenuItem>
-                <ResponsiveMenuItem onSelect={() => void handleExport()}>
-                    <Download aria-hidden="true" />
-                    {t("exportConversation")}
-                </ResponsiveMenuItem>
-                {!embed && (
-                    <ResponsiveMenuItem onSelect={() => compareConversation(meta.id)}>
-                        <Columns2 aria-hidden="true" />
-                        {t("compare")}
-                    </ResponsiveMenuItem>
+                {compact && drilled ? (
+                    <MoveList
+                        projects={projects}
+                        currentId={meta.projectId}
+                        onBack={() => setDrilled(false)}
+                        onPick={pickProject}
+                        onCreate={createProjectAndMove}
+                    />
+                ) : (
+                    <>
+                        <ResponsiveMenuItem onSelect={() => setRenaming(true)}>
+                            <Pencil aria-hidden="true" />
+                            {t("rename")}
+                        </ResponsiveMenuItem>
+                        <ResponsiveMenuItem
+                            onSelect={() => patchMeta(meta.id, { pinned: !meta.pinned })}
+                        >
+                            {meta.pinned ? (
+                                <PinOff aria-hidden="true" />
+                            ) : (
+                                <Pin aria-hidden="true" />
+                            )}
+                            {meta.pinned ? t("unpin") : t("pin")}
+                        </ResponsiveMenuItem>
+                        {!embed &&
+                            (compact ? (
+                                <ResponsiveMenuItem
+                                    closeOnSelect={false}
+                                    onSelect={() => setDrilled(true)}
+                                >
+                                    <FolderInput aria-hidden="true" />
+                                    {t("move.submenu")}
+                                    <ChevronRight
+                                        className="ml-auto text-muted-foreground"
+                                        aria-hidden="true"
+                                    />
+                                </ResponsiveMenuItem>
+                            ) : (
+                                <ResponsiveMenuItem onSelect={() => setMoveOpen(true)}>
+                                    <FolderInput aria-hidden="true" />
+                                    {t("conversationMenu.move")}
+                                </ResponsiveMenuItem>
+                            ))}
+                        <ResponsiveMenuItem onSelect={() => void handleCopyLink()}>
+                            <Link aria-hidden="true" />
+                            {tc("copyLink")}
+                        </ResponsiveMenuItem>
+                        <ResponsiveMenuItem onSelect={() => void handleExport()}>
+                            <Download aria-hidden="true" />
+                            {t("exportConversation")}
+                        </ResponsiveMenuItem>
+                        {!embed && (
+                            <ResponsiveMenuItem onSelect={() => compareConversation(meta.id)}>
+                                <Columns2 aria-hidden="true" />
+                                {t("compare")}
+                            </ResponsiveMenuItem>
+                        )}
+                        <ResponsiveMenuSeparator />
+                        <ResponsiveMenuItem
+                            variant="destructive"
+                            onSelect={({ shiftKey }) =>
+                                shiftKey
+                                    ? void deleteConversationById(meta.id)
+                                    : setConfirmDelete(true)
+                            }
+                        >
+                            <Trash2 aria-hidden="true" />
+                            {tc("delete")}
+                        </ResponsiveMenuItem>
+                    </>
                 )}
-                <ResponsiveMenuSeparator />
-                <ResponsiveMenuItem
-                    variant="destructive"
-                    onSelect={({ shiftKey }) =>
-                        shiftKey ? void deleteConversationById(meta.id) : setConfirmDelete(true)
-                    }
-                >
-                    <Trash2 aria-hidden="true" />
-                    {tc("delete")}
-                </ResponsiveMenuItem>
             </ResponsiveMenu>
+            {moveOpen && (
+                <MoveDialog
+                    open
+                    conversationTitle={meta.title || t("untitled")}
+                    projects={projects}
+                    currentId={meta.projectId}
+                    onPick={pickProject}
+                    onCreate={createProjectAndMove}
+                    onClose={() => setMoveOpen(false)}
+                />
+            )}
             <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
