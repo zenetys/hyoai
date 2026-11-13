@@ -145,9 +145,9 @@ models" and "Edit {name}".
   address and a **Restore {name}** button.
 - A server of `config.json` that you changed shows **Back to config.json** in its detail, which puts
   it back as the file declares it.
-- Settings → Configuration has a [**Reset…** dialog](models.md#the-reset-dialog) that lists "MCP servers"
+- Settings → Configuration has a [**Reset** dialog](models.md#the-reset-dialog) that lists "MCP servers"
   among the overrides it can reset to the deployed `config.json`. The heading appears once at least
-  one MCP server was changed, added or removed here; **Reset…** is disabled while there is no
+  one MCP server was changed, added or removed here; **Reset** is disabled while there is no
   override at all, and the dialog says "No override to reset." when it has nothing to list.
 
 Each of these changes goes through the same local override as the Configuration page, so it applies live and
