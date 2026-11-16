@@ -7,6 +7,7 @@ import {
     moveConversationToProject,
 } from "../actions";
 import { conversationsStore, getMeta, upsertMeta } from "../stores/conversations";
+import { documentsOf, documentsStore } from "../stores/documents";
 import { setLiveStatus } from "../stores/live";
 import { createProject, getProject, projectsStore } from "../stores/projects";
 
@@ -206,6 +207,29 @@ describe("conversation and project actions", () => {
             expect(ids()).toEqual(["b", "c"]);
             expect(mocks.deletePayload.mock.calls.map(([id]) => id)).toEqual(["a"]);
             expect(mocks.releaseFromForeground).toHaveBeenCalledWith("a");
+        });
+
+        it("deletes the documents of the project in both modes", async () => {
+            const document = (id: string, projectId: string) => ({
+                id,
+                projectId,
+                name: id,
+                text: id,
+                size: 1,
+                createdAt: 1,
+            });
+            const project = newProject("A");
+            const other = newProject("B");
+            documentsStore.setState({
+                documents: [document("d1", project.id), document("d2", other.id)],
+            });
+            await deleteProjectById(project.id, "keep");
+            expect(documentsOf(project.id)).toEqual([]);
+            expect(documentsOf(other.id)).toHaveLength(1);
+
+            documentsStore.setState({ documents: [document("d3", other.id)] });
+            await deleteProjectById(other.id, "delete");
+            expect(documentsOf(other.id)).toEqual([]);
         });
 
         it("removes the project even when a payload fails to delete", async () => {

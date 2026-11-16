@@ -22,6 +22,7 @@ import {
     removeMeta,
     removeMetas,
 } from "@/lib/stores/conversations";
+import { removeProjectDocuments } from "@/lib/stores/documents";
 import { setLiveStatus } from "@/lib/stores/live";
 import { createProject, getProject, removeProject } from "@/lib/stores/projects";
 import { refreshStorage } from "@/lib/stores/storage";
@@ -198,6 +199,7 @@ export async function deleteProjectById(
     if (conversations === "keep") {
         detachProject(id);
         removeProject(id);
+        await dropProjectDocuments(id);
         return;
     }
     const ids = conversationsStore
@@ -205,5 +207,23 @@ export async function deleteProjectById(
         .index.filter((meta) => meta.projectId === id)
         .map((meta) => meta.id);
     removeProject(id);
+
+    // Started together: the conversations leave the list before any payload is awaited.
+    const documents = dropProjectDocuments(id);
     await deleteConversationsById(ids);
+    await documents;
+}
+
+/**
+ * Delete the documents of a project that was just removed. A failure is ignored: the sweep at
+ * the next boot removes what is left.
+ *
+ * @param id - Project id
+ */
+async function dropProjectDocuments(id: string): Promise<void> {
+    try {
+        await removeProjectDocuments(id);
+    } catch {
+        // Left for the orphan sweep
+    }
 }

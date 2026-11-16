@@ -10,9 +10,14 @@ import {
     setCompareEnabled,
 } from "@/lib/stores/compare";
 import { hydrateConversations } from "@/lib/stores/conversations";
+import {
+    enableDocumentsSync,
+    hydrateDocuments,
+    sweepOrphanDocuments,
+} from "@/lib/stores/documents";
 import { hydrateLocale, setLocale } from "@/lib/stores/locale";
 import { initModels, modelsStore, pruneStaleOverride, setActiveModel } from "@/lib/stores/models";
-import { hydrateProjects } from "@/lib/stores/projects";
+import { hydrateProjects, projectsStore } from "@/lib/stores/projects";
 import { hydrateSettings, setSkin, settingsStore, updateSettings } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
 import { enableSettingsUrlSync, openSettingsFromUrl, setEmbed, uiStore } from "@/lib/stores/ui";
@@ -38,8 +43,12 @@ export async function bootApp(): Promise<void> {
         initModels(),
         hydrateConversations(),
         hydrateProjects(),
+        hydrateDocuments(),
         hydrateCompare(),
     ]);
+    await sweepOrphanDocuments(
+        projectsStore.getState().projects.map((project) => project.id),
+    ).catch(() => {});
     await hydrateLocale();
     registerLifecycleFlush();
 
@@ -77,6 +86,9 @@ let crossTabWired = false;
 function enableCrossTabRefresh(): void {
     if (crossTabWired || typeof window === "undefined") return;
     crossTabWired = true;
+
+    // IndexedDB raises no storage event, so the documents have a channel of their own.
+    enableDocumentsSync();
     window.addEventListener("storage", (event) => {
         if (event.storageArea !== window.localStorage || !event.key) return;
         if (event.key === STORAGE_KEYS.conversationsIndex) {
