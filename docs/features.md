@@ -116,8 +116,11 @@ prefixed `lc:`. The layout is deliberately split in two:
 | Key            | Content                                                                                                                                                                  |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `lc:convs`     | The lightweight index: one small record per conversation (id, title, pinned flag, creation and last-modification dates, last model, system message, tools flag, project) |
-| `lc:projects`  | The list of [projects](#projects): id, name, creation date, and the optional instructions and default model                                                              |
+| `lc:projects`  | The list of [projects](#projects): id, name, creation date, and the optional instructions, default model and [context](#project-context) options                         |
 | `lc:conv:<id>` | One key per conversation holding its whole message tree (every branch), compressed with lz-string                                                                        |
+
+The text of the documents of the [projects](#project-context) is too large for `localStorage`: it
+lives in an IndexedDB database named `lc-documents`.
 
 Listing, pinning and renaming only read and write the index; only a content search loads the message
 trees (see [Search](#search)). Writes are debounced: while an answer streams, the conversation is
@@ -239,7 +242,7 @@ bottom drawer:
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **New conversation in this project** | Starts an empty conversation that is indexed in the project on its first message. It starts on the default model of the project when there is one.                                                                                                                                      |
 | **Search in this project**           | Limits the sidebar search to the project, see [Search](#search).                                                                                                                                                                                                                        |
-| **Project settings**                 | Opens the settings dialog: **Name**, **Project instructions**, **Default model**, and a **Danger zone** with **Delete project**. **Save** applies the draft, closing discards it.                                                                                                       |
+| **Project settings**                 | Opens the settings dialog: **Name**, **Project instructions**, **Default model**, a **Context** entry that opens the [context pages](#project-context), and a **Danger zone** with **Delete project**. **Save** applies the draft, closing discards it.                                 |
 | **Rename**                           | Turns the header into an input; Enter or leaving the field confirms, Escape cancels. A blank name is ignored.                                                                                                                                                                           |
 | **Delete project**                   | Asks "Delete "{name}"?" and what becomes of the conversations: **Keep the conversations** (they leave the project and become loose), **Delete everything** (they go with it, a running answer is aborted) or **Cancel**. A project without conversation has a single **Delete** button. |
 
@@ -279,17 +282,134 @@ project, chosen among the entries of `config.json`. The model is ignored when it
 longer in the configuration. Without a default model the conversation starts on the model currently selected. Moving an existing
 conversation to a project never changes its model.
 
+#### Project context
+
+Besides its instructions, a project can carry documents: text files that the model should know in
+every conversation of the project, such as a style guide, a price list or a product FAQ. The
+**Context** entry of the project settings opens the context pages. They replace the dialog while
+they are open, and fill the whole screen on a phone; the breadcrumb at the top goes back, one level
+at a time.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/project-context.png">
+    <img alt="The Context page of a project: the switch that sends the instructions, the Documents row with four documents, the When the context overflows list on Truncate, and a gauge for each of three models, the smallest one truncated" src="images/light/project-context.png" width="612">
+</picture>
+
+The **Context** page holds, from top to bottom:
+
+- **Send the instructions**, a switch, on by default. Off, the project sends no instructions: the
+  global system prompt applies to its conversations as if the project had none, and the header and
+  the composer stop offering them. It is greyed out while the project has no instructions.
+- **Documents**, which opens the documents page.
+- **When the context overflows**, the choice of **Truncate** or **Exclude** (see below).
+- **Budget per window**, one gauge for each enabled model: the context of the project (blue), the
+  conversation (here empty, so the budget is the one of a new conversation) and the room kept for the
+  answer, with a tick where a request stops being allowed to grow. A badge says whether everything
+  fits, or whether the window truncates the documents or sends none. A model whose server does not
+  tell its context window shows "Not computed" instead of a gauge, in this page and in the model menu.
+
+The instructions switch and the overflow choice belong to the draft of the project settings: they
+apply when you press **Save** on the settings or the context page, and closing the dialog discards
+them. The gauges follow the draft, so you see the effect before saving. The documents are the
+exception: they are written as soon as they are added or removed.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/project-documents.png">
+    <img alt="The Documents page of a project: a drop zone with the Add documents button, then four documents with their estimated tokens and a delete button each" src="images/light/project-documents.png" width="612">
+</picture>
+
+##### Adding documents
+
+The documents page has an **Add documents** button and accepts files dropped on the framed area. Text
+(`.txt`), Markdown (`.md`, `.markdown`), CSV (`.csv`) and PDF files are read once, when they are
+added, and only their text is kept: a PDF goes through the same reader as the PDF
+[attachments](#attachments), and a scanned one with no text layer is refused. The files are read one
+after the other. A refused file explains why, under the drop zone, and does not stop the others:
+
+| Message                                          | Cause                                                                           |
+| ------------------------------------------------ | ------------------------------------------------------------------------------- |
+| "is not an accepted type"                        | Anything else than the formats above                                            |
+| "is larger than 1 MB"                            | A file above 1 MB, before any reading                                           |
+| "does not look like a text file"                 | A file with binary content under a text name                                    |
+| "has no text to read"                            | An empty file, or a PDF without text                                            |
+| "The project cannot hold more than 5 MB of text" | The text of the documents of the project would pass 5 MB, counted in characters |
+| "The browser has no room left"                   | The browser refused the write: free some space or remove a document             |
+
+Each document shows its name and its size in estimated tokens, at four characters per token, like
+every other count of the application; the heading shows how much of the 5 MB the project uses. The
+trash button removes a document at once. Documents are sent in the order they were added, oldest
+first.
+
+##### How a request carries them
+
+The documents are added to the system message of the request, after the instructions, behind a
+short introduction that says they are reference documents shared by the conversations of the
+project, each one under its name. Nothing is stored in the conversation: like the instructions, they
+are read when each request is built, so adding or removing a document applies to the next message of
+the existing conversations.
+
+The documents are fitted to the window of the model that answers, after the compaction of the
+conversation, which never counts them: the room they get is the part of the window a request may
+fill (the compaction threshold, or the safety fraction of the chunking settings when compaction is
+off), less the room kept for the answer and the conversation as it will be sent. The instructions
+are always sent, even when they alone exceed the window. When the documents do not all fit, the
+**When the context overflows** choice decides:
+
+- **Truncate** (the default) sends the documents in order, whole, until the room runs out, cuts the
+  one that crosses the limit at the end of a line when one is close, with a note that its end was
+  removed, and sends none of the following ones.
+- **Exclude** sends no document at all when they do not all fit, so the model never works from
+  half a document.
+
+The room is counted in steps of a thirty-second of the window, so the cut does not move at every
+message of a growing conversation: a request that starts like the previous one lets a llama.cpp
+server reuse what it already computed. The sizes are estimates. When the server still refuses a
+request for exceeding its context, and the excess the server counts is no larger than what was sent
+of the documents, the request is sent once more with the documents cut by that excess, before the
+conversation is split into chapters or summarized, since the conversation is not the cause.
+
+The documents are not sent in the embedded widget, with a model whose **Send context** (`sendContext`)
+is off, or to the steps of the chapter-by-chapter analysis of a message too long for the window (see
+[Sampling and penalty settings](#sampling-and-penalty-settings)).
+
+##### The gauge of the model menu
+
+A conversation of a project that has instructions or documents adds a **Project context** section to
+the end of the model menu, after the list of models and the thinking and effort entry, with the same
+gauges as the context page, this time measured with the conversation as it stands. It tells which
+model takes the whole context and which one truncates it, before you pick one. In a
+[compare](compare.md#compare-mode) pane, the menu of the pane shows the conversation of that pane.
+**Project context in the model menu**, in **Settings → Appearance**, turns the section off; the
+context page keeps its gauges.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/context-gauge.png">
+    <img alt="The model menu of a conversation of the project Website redesign: three models, the Thinking and effort entry, then a Project context section with a gauge for each, the first one truncated" src="images/light/context-gauge.png" width="826">
+</picture>
+
+##### Storage
+
+The documents live in IndexedDB, in the `lc-documents` database, which has a quota of its own: they
+are not counted in the localStorage gauge, and **Settings → Data** shows their size under it. The
+other tabs follow the changes through a `BroadcastChannel`. A browser that refuses IndexedDB, as a
+private window can, keeps the documents in memory until the tab closes, and the documents page says
+so. Deleting a project deletes its documents, and so does **Clear all data**; a document left
+behind by a project deleted in another tab is swept at the next start. Like the projects, the
+documents are not exported.
+
 #### Moving, storage and export
 
 The projects live under the key `lc:projects`, written by the storage migration to schema version 3,
 which only creates the empty list; a conversation points to its project by an optional id in its
 index record. **Export** does not carry projects: the exported conversations have no project, so an
-imported one lands outside every project. **Settings → Data** says it under the
-export: "Projects are not exported: only conversations are, without their project."
+imported one lands outside every project, and the documents of a project stay in the browser.
+**Settings → Data** says it under the export: "Projects are not exported: only conversations are,
+without their project."
 
 The [embedded widget](embed.md#what-the-widget-leaves-out) shows no project at all: no section, no
 project name on the rows or in the header, no **Move to a project** entry, no **Project
-instructions** entry and no note in the Data page.
+instructions** entry and no note in the Data page. It sends neither the instructions nor the
+documents of a project.
 
 ### Search
 
@@ -675,6 +795,32 @@ gives the reason, for example "No model available (config.json)". Details and sh
 - **Compact input** (Settings → Appearance) puts the **+** button, the field and the controls on a
   single line until the message wraps.
 
+### Starter suggestions
+
+A deployment can list a few starter prompts in its `config.json`, under `suggestions`, so that an
+empty conversation does not start from a blank field. They show under the message box as one pill
+per category, only while the conversation is empty and the field has no text: they disappear as soon
+as you type, while an answer is being produced, in a [compare](compare.md#compare-mode) view and in
+the embedded widget. They also show in the empty conversation of a project. Without the key, or
+with no usable category for the language, nothing is shown.
+
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/dark/suggestions.png">
+    <img alt="An empty conversation with the Write category of the starter suggestions open under the message box: four suggestions, each on its own row" src="images/light/suggestions.png" width="826">
+</picture>
+
+A pill opens its suggestions in place of the pills, with the name of the category and a button that
+closes them (Escape does too, and puts the focus back on the pill). Pointing at a suggestion, or
+focusing it with the keyboard, previews its prompt in the field in grey, so you can read what would
+be sent; choosing it sends the prompt, with the files already attached to the field, and does not
+touch what you had typed. The previews are for a mouse and the keyboard: on a touch screen, a tap
+sends.
+
+The categories, their `icon` and their `items` are described in the
+[root keys](models.md#root-keys) of the configuration. The list of the interface language is shown,
+else English, else the first language written, so a French reader of a deployment that wrote both
+sees the French one.
+
 ### Attachments
 
 The **+** button (**Add files or a system message**) opens the attachment menu above the composer.
@@ -834,6 +980,7 @@ intercepted even while the cursor is in the composer.
 | **Chat width**                                                                | **Medium** (default), **Large** or **Extra large**; not available on mobile   |
 | **Compact input**                                                             | Off by default; not available at narrow window widths                         |
 | **Message statistics**                                                        | On by default                                                                 |
+| **Project context in the model menu**                                         | On by default                                                                 |
 | **Expand reasoning**, **Expand search and tool activity**, **Expand sources** | Off by default, under **Expand after the answer**                             |
 
 The theme, skin and language are also in the header, or under **More** on a phone. The language
