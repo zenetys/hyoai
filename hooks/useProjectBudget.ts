@@ -13,6 +13,11 @@ import { settingsStore } from "@/lib/stores/settings";
 import { DEFAULT_OVERFLOW_STRATEGY, type OverflowStrategy, type Project } from "@/types/projects";
 import type { ModelConfig } from "@/types/server";
 
+// The fields of a project that change what it sends, as a dialog edits them before saving.
+export type ProjectContextDraft = Partial<
+    Pick<Project, "systemPrompt" | "contextInstructions" | "overflowStrategy">
+>;
+
 /**
  * One document of a project with its estimated size.
  *
@@ -72,14 +77,27 @@ export interface ProjectBudget {
  *
  * @param projectId - Project to measure, null for none
  * @param conversation - Tokens of the conversation to leave room for, 0 for an empty one
+ * @param draft - Edits not saved yet, measured in place of the stored fields
  * @returns The context, and one budget per enabled model
  */
 export function useProjectBudget(
     projectId: string | null | undefined,
     conversation = 0,
+    draft?: ProjectContextDraft,
 ): ProjectBudget {
-    const project = useProject(projectId);
-    const stored = useStore(documentsStore, (state) => state.documents);
+    const stored = useProject(projectId);
+    const edited = draft !== undefined;
+    const { systemPrompt, contextInstructions, overflowStrategy } = draft ?? {};
+
+    // Keyed by the fields, not the draft object, which is a new one on every render
+    const project = useMemo(
+        () =>
+            stored && edited
+                ? { ...stored, systemPrompt, contextInstructions, overflowStrategy }
+                : stored,
+        [stored, edited, systemPrompt, contextInstructions, overflowStrategy],
+    );
+    const documentList = useStore(documentsStore, (state) => state.documents);
     const persistent = useStore(documentsStore, (state) => state.persistent);
     const hydrated = useStore(documentsStore, (state) => state.hydrated);
     const entries = useStore(modelsStore, (state) => state.entries);
@@ -92,7 +110,7 @@ export function useProjectBudget(
     }, [entries]);
 
     return useMemo(() => {
-        const documents = documentsOf(project?.id ?? "", stored).map((document) => ({
+        const documents = documentsOf(project?.id ?? "", documentList).map((document) => ({
             id: document.id,
             name: document.name,
             size: document.size,
@@ -134,5 +152,5 @@ export function useProjectBudget(
             persistent,
             hydrated,
         };
-    }, [project, stored, entries, props, settings, conversation, persistent, hydrated]);
+    }, [project, documentList, entries, props, settings, conversation, persistent, hydrated]);
 }
