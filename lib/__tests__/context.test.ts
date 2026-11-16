@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { availableForShared, fitContext, overallStatus, truncateToTokens } from "@/lib/context";
+import {
+    appendToSystem,
+    availableForShared,
+    type DocumentWording,
+    fitContext,
+    overallStatus,
+    planDocuments,
+    renderDocuments,
+    truncateToTokens,
+    wrapperTokens,
+} from "@/lib/context";
+import type { ApiMessage } from "@/types/api";
 
 const docs = [
     { id: "a", tokens: 100 },
@@ -91,5 +102,150 @@ describe("truncateToTokens", () => {
     it("keeps nothing for a window without room", () => {
         expect(truncateToTokens("abc", 0)).toBe("");
         expect(truncateToTokens("abc", -5)).toBe("");
+    });
+});
+
+const wording: DocumentWording = {
+    intro: "Documents:",
+    label: (name) => `--- ${name} ---`,
+    truncated: "[cut]",
+};
+
+const room = { instructions: 10, conversation: 0, nCtx: 1000, reserve: 100, fraction: 1 };
+
+describe("planDocuments", () => {
+    const documents = [
+        { id: "a", name: "a.md", text: "a".repeat(400) },
+        { id: "b", name: "b.md", text: "b".repeat(4000) },
+    ];
+
+    it("sends everything when the window holds it", () => {
+        const fit = planDocuments(documents, { ...room, nCtx: 10000 }, "truncate", wording);
+
+        expect(fit.statuses).toEqual({ a: "included", b: "included" });
+    });
+
+    it("cuts the document that crosses the limit", () => {
+        const fit = planDocuments(documents, room, "truncate", wording);
+
+        expect(fit.statuses.a).toBe("included");
+        expect(fit.statuses.b).toBe("truncated");
+        expect(fit.used).toBeLessThanOrEqual(1000 - 100);
+    });
+
+    it("sends none when the strategy excludes", () => {
+        const fit = planDocuments(documents, room, "exclude", wording);
+
+        expect(fit.statuses).toEqual({ a: "excluded", b: "excluded" });
+    });
+
+    it("leaves room for the conversation", () => {
+        const fit = planDocuments(documents, { ...room, conversation: 880 }, "truncate", wording);
+
+        expect(fit.statuses).toEqual({ a: "excluded", b: "excluded" });
+    });
+
+    it("keeps the same cut while the conversation grows by less than a step", () => {
+        const sent = (conversation: number) =>
+            planDocuments(documents, { ...room, conversation }, "truncate", wording).sent.b;
+
+        // nCtx 1000 gives a step of 64 tokens: 100 and 120 fall in the same one
+        expect(sent(100)).toBe(sent(120));
+        expect(sent(100)).toBeGreaterThan(sent(300));
+    });
+
+    it("cuts the slack from the documents even when the window leaves them plenty of room", () => {
+        const wide = { ...room, nCtx: 100_000 };
+        const base = planDocuments(documents, wide, "truncate", wording);
+        const slacked = planDocuments(documents, { ...wide, slack: 200 }, "truncate", wording);
+        const total = (sent: Record<string, number>) =>
+            Object.values(sent).reduce((sum, count) => sum + count, 0);
+
+        expect(Object.values(base.statuses)).not.toContain("truncated");
+        expect(total(base.sent) - total(slacked.sent)).toBe(200);
+    });
+
+    it("takes the tokens a refused request counted beyond the estimate off the room", () => {
+        const base = planDocuments(documents, room, "truncate", wording).sent.b;
+        const slacked = planDocuments(documents, { ...room, slack: 200 }, "truncate", wording).sent
+            .b;
+
+        expect(slacked).toBeLessThan(base);
+    });
+
+    it("pays for the wording out of the room", () => {
+        const probe = [{ id: "a", name: "a.md", text: "" }];
+        const wrapper = wrapperTokens(probe, wording);
+        const tight = { ...room, instructions: 0, nCtx: 1024, reserve: 0 };
+
+        // 1024 tokens are free: a text of exactly the free room less the wording still fits
+        const fits = [{ id: "a", name: "a.md", text: "a".repeat((1024 - wrapper) * 4) }];
+        const over = [{ id: "a", name: "a.md", text: "a".repeat((1024 - wrapper + 1) * 4) }];
+
+        expect(wrapper).toBeGreaterThan(0);
+        expect(planDocuments(fits, tight, "exclude", wording).statuses.a).toBe("included");
+        expect(planDocuments(over, tight, "exclude", wording).statuses.a).toBe("excluded");
+    });
+});
+
+describe("renderDocuments", () => {
+    const documents = [
+        { id: "a", name: "a.md", text: "alpha" },
+        { id: "b", name: "b.md", text: "x".repeat(100) },
+        { id: "c", name: "c.md", text: "gamma" },
+    ];
+
+    it("writes the included documents under their titles", () => {
+        const fit = fitContext(0, [{ id: "a", tokens: 2 }], 100, "truncate");
+
+        expect(renderDocuments([documents[0]], fit, wording)).toBe(
+            "Documents:\n\n--- a.md ---\nalpha",
+        );
+    });
+
+    it("ends a cut document on the note and skips the excluded ones", () => {
+        const fit = {
+            statuses: { a: "included", b: "truncated", c: "excluded" } as const,
+            sent: { a: 2, b: 5, c: 0 },
+            used: 7,
+            over: false,
+        };
+        const text = renderDocuments(documents, { ...fit, statuses: { ...fit.statuses } }, wording);
+
+        expect(text).toContain("--- b.md ---\n" + "x".repeat(20) + "\n[cut]");
+        expect(text).not.toContain("c.md");
+    });
+
+    it("is empty when nothing is sent", () => {
+        const fit = fitContext(0, [{ id: "a", tokens: 2 }], 0, "exclude");
+
+        expect(renderDocuments([documents[0]], fit, wording)).toBe("");
+    });
+});
+
+describe("appendToSystem", () => {
+    const user: ApiMessage = { role: "user", content: "hi" };
+
+    it("adds the text to the existing system message", () => {
+        const result = appendToSystem([{ role: "system", content: "rules" }, user], "docs");
+
+        expect(result).toEqual([{ role: "system", content: "rules\n\ndocs" }, user]);
+    });
+
+    it("creates a system message when there is none", () => {
+        expect(appendToSystem([user], "docs")).toEqual([{ role: "system", content: "docs" }, user]);
+    });
+
+    it("leaves the messages as they are without text", () => {
+        const messages = [user];
+
+        expect(appendToSystem(messages, "")).toBe(messages);
+    });
+
+    it("does not modify the messages it was given", () => {
+        const system: ApiMessage = { role: "system", content: "rules" };
+        appendToSystem([system, user], "docs");
+
+        expect(system.content).toBe("rules");
     });
 });

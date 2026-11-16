@@ -108,6 +108,19 @@ export function usableDefaultModel(
 }
 
 /**
+ * The instructions a project sends: its system prompt, unless the project turned them off.
+ *
+ * @param project - Project of the conversation, null when it has none
+ * @returns The instructions, or undefined when there are none to send
+ */
+export function projectInstructions(
+    project: Pick<Project, "systemPrompt" | "contextInstructions"> | null,
+): string | undefined {
+    if (!project || project.contextInstructions === false) return undefined;
+    return project.systemPrompt;
+}
+
+/**
  * Pick the system prompt of a request: the conversation's own, else the one of
  * its project, else the global one. Blank values are skipped.
  *

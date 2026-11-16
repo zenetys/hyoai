@@ -1,4 +1,5 @@
-import { CHARS_PER_TOKEN } from "@/lib/chunking";
+import { CHARS_PER_TOKEN, estimateTokens } from "@/lib/chunking";
+import type { ApiMessage } from "@/types/api";
 import type { OverflowStrategy } from "@/types/projects";
 
 // What a model window does with one document: all of it, its beginning only, or none of it.
@@ -128,4 +129,143 @@ export function truncateToTokens(text: string, tokens: number): string {
 
     // A line end in the last tenth of the cut keeps whole lines without losing much text
     return lineEnd >= limit * 0.9 ? cut.slice(0, lineEnd) : cut;
+}
+
+/**
+ * A project document as the request needs it.
+ *
+ * @param id - Document identifier
+ * @param name - File name, shown to the model as the title of the document
+ * @param text - Plain text of the document
+ */
+export interface SharedDocument {
+    id: string;
+    name: string;
+    text: string;
+}
+
+/**
+ * The sentences that wrap the documents in the request, in the language of the interface.
+ *
+ * @param intro - Opening sentence, said once
+ * @param label - Title line of one document
+ * @param truncated - Note closing a document that was cut
+ */
+export interface DocumentWording {
+    intro: string;
+    label: (name: string) => string;
+    truncated: string;
+}
+
+/**
+ * Tokens the wording itself adds around the documents, which the fit must leave room for.
+ *
+ * @param documents - The documents of the project
+ * @param wording - The sentences wrapping them
+ * @returns Estimated tokens of the intro, the titles and the notes
+ */
+export function wrapperTokens(documents: SharedDocument[], wording: DocumentWording): number {
+    const perDocument = documents.reduce(
+        (sum, document) =>
+            sum + estimateTokens(wording.label(document.name)) + estimateTokens(wording.truncated),
+        0,
+    );
+    return estimateTokens(wording.intro) + perDocument;
+}
+
+/**
+ * Decide what a model window receives of the project documents.
+ *
+ * @param documents - The documents of the project, in the order they are sent
+ * @param room - What the window leaves, see availableForShared
+ * @param room.instructions - Tokens of the system prompt, always sent
+ * @param room.conversation - Tokens of the conversation that will be sent, after compaction
+ * @param room.nCtx - Context window of the model, in tokens
+ * @param room.reserve - Tokens kept for the answer
+ * @param room.fraction - Part of the window a request may fill
+ * @param room.slack - Tokens a refused request carried beyond what the server could take, cut from
+ *   the documents whatever room the window seems to leave: the window the server reports can be
+ *   larger than the one it enforces
+ * @param strategy - What to do when the documents do not all fit
+ * @param wording - The sentences wrapping the documents
+ * @returns What each document gets
+ */
+export function planDocuments(
+    documents: SharedDocument[],
+    room: {
+        instructions: number;
+        conversation: number;
+        nCtx: number;
+        reserve: number;
+        fraction: number;
+        slack?: number;
+    },
+    strategy: OverflowStrategy,
+    wording: DocumentWording,
+): FitResult {
+    // Counted in steps, so a cut stays put while the conversation grows and the cache is kept.
+    const step = Math.max(64, Math.floor(room.nCtx / 32));
+    const exact = availableForShared(room.nCtx, room.conversation, room.reserve, room.fraction);
+    const sizes = documents.map((document) => ({
+        id: document.id,
+        tokens: estimateTokens(document.text),
+    }));
+    const wrapper = wrapperTokens(documents, wording);
+    const everything =
+        room.instructions + wrapper + sizes.reduce((sum, { tokens }) => sum + tokens, 0);
+
+    // The slack comes off what would be sent, so it cuts even when the room is wide
+    const available = Math.min(Math.floor(exact / step) * step, everything) - (room.slack ?? 0);
+
+    // The wording is paid once for the project, so it comes off the room the documents share.
+    return fitContext(
+        room.instructions,
+        sizes,
+        Math.max(room.instructions, available - wrapper),
+        strategy,
+    );
+}
+
+/**
+ * Write the documents a window receives, each under its title, the cut ones ending on a note.
+ *
+ * @param documents - The documents of the project, in the order they are sent
+ * @param fit - What the window does with each of them
+ * @param wording - The sentences wrapping the documents
+ * @returns The text to add to the system prompt, empty when no document is sent
+ */
+export function renderDocuments(
+    documents: SharedDocument[],
+    fit: FitResult,
+    wording: DocumentWording,
+): string {
+    const blocks: string[] = [];
+    for (const document of documents) {
+        const status = fit.statuses[document.id];
+        if (status === undefined || status === "excluded") continue;
+        const text =
+            status === "truncated"
+                ? `${truncateToTokens(document.text, fit.sent[document.id])}\n${wording.truncated}`
+                : document.text;
+        blocks.push(`${wording.label(document.name)}\n${text}`);
+    }
+    return blocks.length === 0 ? "" : [wording.intro, ...blocks].join("\n\n");
+}
+
+/**
+ * Add text after the system prompt of a request, in the same message. A request without a
+ * system message gets one. The messages are not modified.
+ *
+ * @param messages - Messages of the request
+ * @param block - Text to add, nothing is done when it is empty
+ * @returns The messages with the text in their system message
+ */
+export function appendToSystem(messages: ApiMessage[], block: string): ApiMessage[] {
+    if (block === "") return messages;
+    const [first, ...rest] = messages;
+    if (first?.role === "system" && typeof first.content === "string") {
+        const content = first.content.trim() === "" ? block : `${first.content}\n\n${block}`;
+        return [{ role: "system", content }, ...rest];
+    }
+    return [{ role: "system", content: block }, ...messages];
 }

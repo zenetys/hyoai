@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     displayName,
     effectiveSystemPrompt,
+    projectInstructions,
     sanitizeProjects,
     stripProject,
     usableDefaultModel,
@@ -166,5 +167,22 @@ describe("effectiveSystemPrompt", () => {
 
     it("keeps an empty global prompt", () => {
         expect(effectiveSystemPrompt(null, {}, "")).toBe("");
+    });
+});
+
+describe("projectInstructions", () => {
+    it("returns the prompt of the project", () => {
+        expect(projectInstructions({ systemPrompt: "rules" })).toBe("rules");
+    });
+
+    it("returns nothing when the project turned its instructions off", () => {
+        expect(projectInstructions({ systemPrompt: "rules", contextInstructions: false })).toBe(
+            undefined,
+        );
+    });
+
+    it("returns nothing without a project or a prompt", () => {
+        expect(projectInstructions(null)).toBeUndefined();
+        expect(projectInstructions({})).toBeUndefined();
     });
 });

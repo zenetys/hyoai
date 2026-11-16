@@ -14,6 +14,7 @@ import {
     corpusForChunking,
     DEFAULT_OUTPUT_RESERVE,
     estimateMessagesTokens,
+    estimateTokens,
     planForcedChunking,
     planForcedRechunk,
     planInputChunking,
@@ -25,6 +26,12 @@ import {
     summarizeNodes,
 } from "@/lib/compaction";
 import {
+    appendToSystem,
+    type DocumentWording,
+    planDocuments,
+    renderDocuments,
+} from "@/lib/context";
+import {
     buildApiMessages,
     currentTurn,
     defaultTitleFromContent,
@@ -33,7 +40,7 @@ import {
 import { resolveEffortLevel } from "@/lib/effort";
 import { getTranslator, translateKey } from "@/lib/i18n";
 import { providerIdsOutsideScope } from "@/lib/mcp/registry";
-import { effectiveSystemPrompt } from "@/lib/projects";
+import { effectiveSystemPrompt, projectInstructions } from "@/lib/projects";
 import { scheduleConversationWrite, writeConversationNow } from "@/lib/storage/persistence";
 import { createStore, type Store } from "@/lib/store";
 import {
@@ -45,6 +52,7 @@ import {
     type PendingToolCall,
 } from "@/lib/stores/chat";
 import { getMeta, patchMeta, upsertMeta } from "@/lib/stores/conversations";
+import { documentsOf } from "@/lib/stores/documents";
 import { reportRequest, watchConnection } from "@/lib/stores/health";
 import { liveStore, setGenerationDone, setLivePreview, setLiveStatus } from "@/lib/stores/live";
 import { modelsStore } from "@/lib/stores/models";
@@ -87,6 +95,7 @@ import type {
     ToolCall,
     ToolResultMeta,
 } from "@/types/chat";
+import { DEFAULT_OVERFLOW_STRATEGY, type Project } from "@/types/projects";
 import type { ModelConfig } from "@/types/server";
 import type { ChunkingStrategy } from "@/types/settings";
 
@@ -505,21 +514,100 @@ export class ChatInstance {
         return { finishReason: "aborted", toolCalls: [], rerouted: false };
     };
 
+    // Tokens a server refused beyond the estimate: the retry cuts the documents by that, once.
+    private documentSlack = 0;
+
+    /**
+     * Project of the next request, read live. A project id that no longer resolves counts as
+     * no project, and so does any project in an embed, which shows none.
+     *
+     * @param state - Chat state of the request
+     * @returns The project, or null
+     */
+    private projectFor = (state: ChatState): Project | null => {
+        const meta = state.conversationId ? getMeta(state.conversationId) : null;
+
+        // An unindexed draft carries its project in the state, an indexed one in its meta.
+        const projectId = meta ? meta.projectId : state.draftProjectId;
+        return projectId && !uiStore.getState().embed ? getProject(projectId) : null;
+    };
+
     /**
      * System prompt of the next request, read live: the conversation's own, else
-     * its project's, else the global one. A project id that no longer resolves
-     * counts as no project, and so does any project in an embed, which shows none.
+     * its project's, else the global one. A project that turned its instructions off
+     * leaves the choice to the global prompt.
      *
      * @param state - Chat state of the request
      * @returns The system prompt to send
      */
     private systemPromptFor = (state: ChatState): string => {
         const meta = state.conversationId ? getMeta(state.conversationId) : null;
+        const project = this.projectFor(state);
+        return effectiveSystemPrompt(
+            meta,
+            { systemPrompt: projectInstructions(project) },
+            settingsStore.getState().settings.systemPrompt,
+        );
+    };
 
-        // An unindexed draft carries its project in the state, an indexed one in its meta.
-        const projectId = meta ? meta.projectId : state.draftProjectId;
-        const project = projectId && !uiStore.getState().embed ? getProject(projectId) : null;
-        return effectiveSystemPrompt(meta, project, settingsStore.getState().settings.systemPrompt);
+    /**
+     * Add the documents of the project to the system message, in what the model window can
+     * hold once the conversation has taken its share. The conversation is measured after
+     * compaction and compaction never counts the documents, so a large project cannot make
+     * it run again and again: the documents give way first, as the strategy of the project says.
+     *
+     * @param state - Chat state of the request
+     * @param entry - Resolved model entry
+     * @param messages - Messages of the request, with the system prompt and no document
+     * @param tools - Tools the request carries, which take room too
+     * @param slack - Tokens a refused request carried beyond the server window, cut from the documents
+     * @returns The messages with the documents in the system message, and the tokens sent of them
+     */
+    private withProjectDocuments = (
+        state: ChatState,
+        entry: ModelConfig,
+        messages: ApiMessage[],
+        tools?: ApiToolDefinition[],
+        slack = 0,
+    ): { messages: ApiMessage[]; tokens: number } => {
+        const none = { messages, tokens: 0 };
+        const project = this.projectFor(state);
+        if (!project) return none;
+        const documents = documentsOf(project.id).map(({ id, name, text }) => ({ id, name, text }));
+        if (documents.length === 0) return none;
+
+        const t = getTranslator("prompts");
+        const wording: DocumentWording = {
+            intro: t("projectDocumentsIntro"),
+            label: (name) => t("projectDocumentLabel", { name }),
+            truncated: t("projectDocumentTruncated"),
+        };
+        const settings = settingsStore.getState().settings;
+        const system = messages[0]?.role === "system" ? messages[0] : null;
+        const fit = planDocuments(
+            documents,
+            {
+                instructions:
+                    typeof system?.content === "string" ? estimateTokens(system.content) : 0,
+                conversation: estimateMessagesTokens(
+                    messages.filter((message) => message.role !== "system"),
+                    tools,
+                ),
+                nCtx: this.contextWindow(entry),
+                reserve: settings.sampling.maxTokens ?? DEFAULT_OUTPUT_RESERVE,
+                fraction: settings.compaction.enabled
+                    ? settings.compaction.thresholdFraction
+                    : settings.chunking.safetyFraction,
+                slack,
+            },
+            project.overflowStrategy ?? DEFAULT_OVERFLOW_STRATEGY,
+            wording,
+        );
+        const tokens = Object.values(fit.sent).reduce((sum, count) => sum + count, 0);
+        return {
+            messages: appendToSystem(messages, renderDocuments(documents, fit, wording)),
+            tokens,
+        };
     };
 
     /**
@@ -559,6 +647,7 @@ export class ChatInstance {
         const settings = settingsStore.getState().settings;
         const state = this.store.getState();
         let messages: ApiMessage[];
+        let documentTokens = 0;
 
         // The opt-in is read once, so both ways of building the history agree on it.
         const preserveThinking = shouldPreserveThinking(entry, {
@@ -578,11 +667,19 @@ export class ChatInstance {
         } else {
             const path = getPath(state.nodes, nodeId);
             const systemPrompt = this.systemPromptFor(state);
+            const tools = flow?.tools.definitions;
             messages = await this.compactForBudget(nodeId, path, systemPrompt, entry, model, {
                 nativeTools,
                 preserveThinking,
-                tools: flow?.tools.definitions,
+                tools,
             });
+
+            // After compaction, which must not count the documents; chapters read them apart.
+            const slack = this.documentSlack;
+            this.documentSlack = 0;
+            const withDocuments = this.withProjectDocuments(state, entry, messages, tools, slack);
+            messages = withDocuments.messages;
+            documentTokens = withDocuments.tokens;
         }
 
         if (this.cancelled()) return this.abortUnsent(nodeId);
@@ -833,6 +930,12 @@ export class ChatInstance {
         ) {
             const overflow = parseContextOverflow(nodeError);
             if (overflow) {
+                // Retry once with the documents cut by the server's own count, before chunking.
+                const excess = overflow.requested - overflow.available;
+                if (excess > 0 && excess <= documentTokens) {
+                    this.documentSlack = excess + Math.ceil(overflow.available * 0.02);
+                    return this.runGeneration(nodeId, undefined, false, undefined, flow);
+                }
                 const current = settingsStore.getState().settings;
                 if (
                     current.chunking.enabled &&
