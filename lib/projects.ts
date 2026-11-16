@@ -36,6 +36,12 @@ export function sanitizeProject(raw: unknown): Project | null {
     if (systemPrompt !== undefined) project.systemPrompt = systemPrompt;
     const defaultModelId = text(entry.defaultModelId);
     if (defaultModelId !== undefined) project.defaultModelId = defaultModelId;
+    if (typeof entry.contextInstructions === "boolean") {
+        project.contextInstructions = entry.contextInstructions;
+    }
+    if (entry.overflowStrategy === "truncate" || entry.overflowStrategy === "exclude") {
+        project.overflowStrategy = entry.overflowStrategy;
+    }
     return project;
 }
 

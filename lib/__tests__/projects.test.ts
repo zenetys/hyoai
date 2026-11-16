@@ -80,6 +80,24 @@ describe("sanitizeProjects", () => {
         expect(project).not.toHaveProperty("defaultModelId");
     });
 
+    it("keeps the context options it knows", () => {
+        const [project] = sanitizeProjects([
+            { id: "p1", name: "A", contextInstructions: false, overflowStrategy: "exclude" },
+        ]);
+
+        expect(project.contextInstructions).toBe(false);
+        expect(project.overflowStrategy).toBe("exclude");
+    });
+
+    it("drops context options of the wrong type or value", () => {
+        const [project] = sanitizeProjects([
+            { id: "p1", name: "A", contextInstructions: "yes", overflowStrategy: "summarize" },
+        ]);
+
+        expect(project).not.toHaveProperty("contextInstructions");
+        expect(project).not.toHaveProperty("overflowStrategy");
+    });
+
     it("gives an empty list for anything that is not an array", () => {
         expect(sanitizeProjects(null)).toEqual([]);
         expect(sanitizeProjects({ id: "p1" })).toEqual([]);

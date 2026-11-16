@@ -13,6 +13,8 @@ export type OverflowStrategy = "truncate" | "exclude";
  * @param createdAt - Epoch timestamp the project was created at
  * @param systemPrompt - System prompt of the project's conversations, replaces the global one
  * @param defaultModelId - config.json entry a new conversation of the project starts with
+ * @param contextInstructions - Whether the system prompt counts as shared context; absent means yes
+ * @param overflowStrategy - What to do with the documents a model window cannot hold; absent means truncate
  */
 export interface Project {
     id: string;
@@ -20,4 +22,9 @@ export interface Project {
     createdAt: number;
     systemPrompt?: string;
     defaultModelId?: string;
+    contextInstructions?: boolean;
+    overflowStrategy?: OverflowStrategy;
 }
+
+// Strategy applied when a project does not set one.
+export const DEFAULT_OVERFLOW_STRATEGY: OverflowStrategy = "truncate";
