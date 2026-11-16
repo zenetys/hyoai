@@ -11,7 +11,7 @@ import type { ChunkingStrategy } from "@/types/settings";
  * Minimum is used to avoid a too-short chunk when the window is small.
  * Maximum chapters is used to avoid a too-long chunk when the window is large.
  */
-const CHARS_PER_TOKEN = 4;
+export const CHARS_PER_TOKEN = 4;
 const CHAPTER_FRAMING_TOKENS = 256;
 const MIN_CHUNK_TOKENS = 256;
 const MAX_CHAPTERS = 50;

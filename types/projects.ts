@@ -1,4 +1,10 @@
 /**
+ * What a model that cannot take all the documents of a project does with them: cut the end of
+ * the documents off ("truncate"), or send none ("exclude"). The instructions are always sent.
+ */
+export type OverflowStrategy = "truncate" | "exclude";
+
+/**
  * A project: a named group of conversations, with an optional system prompt that
  * replaces the global one and an optional default model for new conversations.
  *
