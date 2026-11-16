@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useActiveProject } from "@/hooks/useChatProject";
 import { useActiveConversationId } from "@/hooks/useConversations";
 import { useStore } from "@/hooks/useStore";
-import { displayName } from "@/lib/projects";
+import { displayName, projectInstructions } from "@/lib/projects";
 import { compareStore } from "@/lib/stores/compare";
 import { conversationsStore, patchMeta } from "@/lib/stores/conversations";
 import { focusComposer } from "@/lib/stores/ui";
@@ -66,7 +66,7 @@ export function HeaderTitle() {
 
     const label = title || t("untitled");
 
-    const instructions = project?.systemPrompt?.trim();
+    const instructions = projectInstructions(project)?.trim();
     const projectClass = "max-w-[40%] shrink-0 truncate text-sm text-muted-foreground";
 
     const prefix = project && (

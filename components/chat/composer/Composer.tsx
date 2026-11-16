@@ -27,6 +27,7 @@ import { useSuggestions } from "@/hooks/useSuggestions";
 import { isEntryInactive } from "@/lib/chat/availability";
 import { useChatInstance } from "@/lib/chat/context";
 import { resolveModalityGate } from "@/lib/chat/modalities";
+import { projectInstructions } from "@/lib/projects";
 import { settingsStore } from "@/lib/stores/settings";
 import { setSystemPromptOpen, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,8 @@ export function Composer({ home = false }: { home?: boolean }) {
     const { entry, upstream, props, resolveFailed } = useResolvedModel();
     const project = useChatProject();
     const [instructionsOpen, setInstructionsOpen] = useState(false);
-    const hasInstructions = !!project?.systemPrompt?.trim();
+    const projectPrompt = projectInstructions(project);
+    const hasInstructions = !!projectPrompt?.trim();
 
     const availability = useModelAvailability();
     const autoDisable = useAutoDisable();
@@ -142,7 +144,7 @@ export function Composer({ home = false }: { home?: boolean }) {
                 <ProjectInstructionsDialog
                     open={instructionsOpen}
                     onOpenChange={setInstructionsOpen}
-                    instructions={project?.systemPrompt ?? ""}
+                    instructions={projectPrompt ?? ""}
                 />
             )}
         </div>
