@@ -1,3 +1,4 @@
+import type { StoredDocument } from "@/lib/storage/idb";
 import { estimateUsage } from "@/lib/storage/persistence";
 import { createStore } from "@/lib/store";
 import type { StorageUsage } from "@/types/storage";
@@ -21,6 +22,18 @@ export const storageStore = createStore<StorageState>({ usage: null, warned: fal
 export function usageRatio(usage: StorageUsage | null): number {
     if (!usage || usage.quotaBytes <= 0) return 0;
     return usage.usedBytes / usage.quotaBytes;
+}
+
+/**
+ * Estimated size of the project documents. They live in IndexedDB, which has a quota of its own,
+ * so they are reported next to the localStorage usage and never counted in its ratio. Text is
+ * counted at two bytes per character, like the localStorage estimate.
+ *
+ * @param documents - Documents held by the projects
+ * @returns Estimated bytes
+ */
+export function documentsBytes(documents: Pick<StoredDocument, "size">[]): number {
+    return documents.reduce((total, document) => total + document.size * 2, 0);
 }
 
 /**
