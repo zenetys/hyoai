@@ -77,7 +77,7 @@ export function ProjectContext({
                     disabled={!instructions}
                 />
             </SettingGroup>
-            <SettingGroup title={t("documents.title")}>
+            <SettingGroup>
                 <SettingLink
                     title={t("documents.title")}
                     subtitle={t("documents.summary", {
@@ -88,7 +88,7 @@ export function ProjectContext({
                     onOpen={onOpenDocuments}
                 />
             </SettingGroup>
-            <SettingGroup title={t("overflow.title")}>
+            <SettingGroup>
                 <SettingSelect
                     id={`${uid}-strategy`}
                     label={t("overflow.title")}
