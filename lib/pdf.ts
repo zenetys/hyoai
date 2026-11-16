@@ -24,14 +24,13 @@ async function loadPdfjs(): Promise<typeof import("pdfjs-dist")> {
 }
 
 /**
- * Extract the text of a PDF into a single pdf attachment, one block per
- * page. Pages without extractable text yield empty blocks (scanned PDFs
- * should use the pdf-as-image mode instead).
+ * Extract the text of a PDF, one block per page. Pages without extractable text yield empty
+ * blocks (scanned PDFs should use the pdf-as-image mode instead).
  *
  * @param file - PDF file picked or dropped by the user
- * @returns Pdf attachment holding the extracted text
+ * @returns The text of the pages, separated by a blank line
  */
-export async function pdfToTextAttachment(file: File): Promise<Attachment> {
+export async function pdfToText(file: File): Promise<string> {
     const pdfjs = await loadPdfjs();
     const task = pdfjs.getDocument({ data: await file.arrayBuffer() });
     const document = await task.promise;
@@ -47,16 +46,26 @@ export async function pdfToTextAttachment(file: File): Promise<Attachment> {
                     .trim(),
             );
         }
-        return {
-            id: newId(),
-            kind: "pdf",
-            mimeType: "application/pdf",
-            name: file.name,
-            content: pages.join("\n\n"),
-        };
+        return pages.join("\n\n");
     } finally {
         await task.destroy();
     }
+}
+
+/**
+ * Extract the text of a PDF into a single pdf attachment.
+ *
+ * @param file - PDF file picked or dropped by the user
+ * @returns Pdf attachment holding the extracted text
+ */
+export async function pdfToTextAttachment(file: File): Promise<Attachment> {
+    return {
+        id: newId(),
+        kind: "pdf",
+        mimeType: "application/pdf",
+        name: file.name,
+        content: await pdfToText(file),
+    };
 }
 
 /**

@@ -37,27 +37,38 @@ function readAsDataUri(file: File): Promise<string> {
 }
 
 /**
- * Read a plain-text file into a text attachment.
- * Binary content (NUL bytes) and oversized files are rejected, since the
- * payload ends up inline in localStorage and in the prompt.
+ * Read the text of a plain-text file.
+ * Binary content (NUL bytes) and oversized files are rejected, since the text ends up inline
+ * in storage and in the prompt.
  *
  * @param file - Text file picked, pasted or dropped by the user
- * @returns Text attachment holding the file content
+ * @param maxBytes - Largest accepted file size
+ * @returns The text of the file
  */
-export async function readTextAttachment(file: File): Promise<Attachment> {
-    if (file.size > MAX_TEXT_BYTES) {
-        throw new Error(`"${file.name}" exceeds ${MAX_TEXT_BYTES / 1024 / 1024} MB`);
+export async function readPlainText(file: File, maxBytes = MAX_TEXT_BYTES): Promise<string> {
+    if (file.size > maxBytes) {
+        throw new Error(`"${file.name}" exceeds ${maxBytes / 1024 / 1024} MB`);
     }
     const content = await file.text();
     if (content.includes("\u0000")) {
         throw new Error(`"${file.name}" is not a text file`);
     }
+    return content;
+}
+
+/**
+ * Read a plain-text file into a text attachment.
+ *
+ * @param file - Text file picked, pasted or dropped by the user
+ * @returns Text attachment holding the file content
+ */
+export async function readTextAttachment(file: File): Promise<Attachment> {
     return {
         id: newId(),
         kind: "text",
         mimeType: file.type || "text/plain",
         name: file.name,
-        content,
+        content: await readPlainText(file),
     };
 }
 
