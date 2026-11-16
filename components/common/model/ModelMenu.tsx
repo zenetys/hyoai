@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { ModelContextGauge } from "@/components/common/model/ModelContextGauge";
 import { ModelEntryList } from "@/components/common/model/ModelEntryList";
 import { ModelMenuProvider, type ModelMenuState } from "@/components/common/model/ModelMenuContext";
 import { ReasoningSection } from "@/components/common/model/ReasoningSection";
@@ -28,7 +29,8 @@ interface ModelMenuProps {
  * the menu opens so the choices stay current. The selection is driven by the
  * caller, so it serves both the global model and a pane's. It renders as a
  * dropdown on desktop and a bottom sheet on mobile, where the reasoning controls
- * are flattened inline instead of in an off-screen submenu.
+ * are flattened inline instead of in an off-screen submenu. A conversation of a project that
+ * shares instructions or documents also sees how each model window takes them.
  *
  * @param children - Trigger element
  * @param align - Dropdown alignment relative to the trigger (desktop)
@@ -86,6 +88,7 @@ export function ModelMenu({
             >
                 <ModelEntryList entries={entries} lists={lists} />
                 <ReasoningSection entry={activeEntry} />
+                <ModelContextGauge />
             </ResponsiveMenu>
         </ModelMenuProvider>
     );
