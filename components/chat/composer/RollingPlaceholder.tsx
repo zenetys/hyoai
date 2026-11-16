@@ -8,15 +8,18 @@ import { cn } from "@/lib/utils";
  * @param text - The placeholder to show
  * @param leaving - The placeholder it replaces while the roll lasts, else null
  * @param turn - Counts the changes, so each one starts its animation afresh
+ * @param fade - Whether the text fades in instead of rolling, restarted by each new text
  */
 export function RollingPlaceholder({
     text,
     leaving,
     turn,
+    fade = false,
 }: {
     text: string;
     leaving: string | null;
     turn: number;
+    fade?: boolean;
 }) {
     const line =
         "block truncate [backface-visibility:hidden] [transform-origin:50%_50%_-0.8rem] motion-reduce:animate-none";
@@ -33,7 +36,14 @@ export function RollingPlaceholder({
                     {leaving}
                 </span>
             )}
-            <span key={`in-${turn}`} className={cn(line, leaving !== null && "animate-barrel-in")}>
+            <span
+                key={fade ? `fade-${text}` : `in-${turn}`}
+                className={cn(
+                    line,
+                    leaving !== null && "animate-barrel-in",
+                    fade && "animate-preview-in",
+                )}
+            >
                 {text}
             </span>
         </div>

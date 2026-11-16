@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
 import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
 import { RollingPlaceholder } from "@/components/chat/composer/RollingPlaceholder";
+import { Suggestions } from "@/components/chat/composer/Suggestions";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -19,6 +20,7 @@ import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "
 import { settingsStore } from "@/lib/stores/settings";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
+import type { SuggestionCategory } from "@/types/server";
 
 interface ComposerShellProps {
     onSubmit: (text: string, attachments: Attachment[]) => void;
@@ -36,6 +38,7 @@ interface ComposerShellProps {
     rightControls?: React.ReactNode;
     placeholder?: string;
     rollingPlaceholder?: { placeholder?: string; leaving: string | null; turn: number };
+    suggestions?: SuggestionCategory[];
     wrapperClassName?: string;
     autoFocus?: boolean;
     focusKey?: string | number;
@@ -77,6 +80,8 @@ interface ComposerShellProps {
  * @param rightControls - Controls rendered left of the send button
  * @param placeholder - Textarea placeholder override
  * @param rollingPlaceholder - A rotating placeholder to roll over the field, when one is set
+ * @param suggestions - Starter suggestions to offer under the field while it is empty; pointing
+ *        at one shows its prompt in the field, and choosing it sends the prompt
  * @param wrapperClassName - Class for the drop-zone wrapper
  * @param autoFocus - Focus the textarea on mount (e.g. landing on the home screen)
  * @param focusKey - When this value changes, refocus the textarea (e.g. after a model change)
@@ -103,6 +108,7 @@ export function ComposerShell({
     rightControls,
     placeholder,
     rollingPlaceholder,
+    suggestions,
     wrapperClassName = "mx-auto max-w-3xl",
     autoFocus,
     focusKey,
@@ -114,6 +120,7 @@ export function ComposerShell({
     const t = useTranslations("composer");
     const [handoff] = useState(() => (carryDraft ? peekDraft() : null));
     const [text, setText] = useState(handoff?.text ?? "");
+    const [preview, setPreview] = useState<string | null>(null);
     const att = useAttachments({ visionBlocked, audioBlocked, initial: handoff?.attachments });
     const draftRef = useRef<ComposerDraft>({ text: "", attachments: [] });
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -216,6 +223,21 @@ export function ComposerShell({
         onSubmit(pendingText, pendingAttachments);
     };
 
+    /**
+     * Send the prompt of a starter suggestion, with the attachments already in the field.
+     *
+     * @param prompt - Prompt of the chosen suggestion
+     */
+    const sendPrompt = (prompt: string) => {
+        if (!ready || busy) return;
+        const pendingAttachments = att.attachments;
+        setText("");
+        setPreview(null);
+        att.setAttachments([]);
+        historyIndex.current = -1;
+        onSubmit(prompt, pendingAttachments);
+    };
+
     const recall = (value: string) => {
         setText(value);
         requestAnimationFrame(() => {
@@ -305,6 +327,9 @@ export function ComposerShell({
     );
 
     const rolling = rollingPlaceholder?.placeholder !== undefined ? rollingPlaceholder : null;
+
+    // The prompt under the pointer takes the place of the rolling placeholder, drawn the same way
+    const overlay = preview !== null ? { placeholder: preview, leaving: null, turn: -1 } : rolling;
     const textarea = (
         <textarea
             ref={textareaRef}
@@ -315,20 +340,18 @@ export function ComposerShell({
             }}
             onKeyDown={handleKeyDown}
             onPaste={att.handlePaste}
-            placeholder={rolling ? " " : (placeholder ?? t("placeholder"))}
+            placeholder={overlay ? " " : (placeholder ?? t("placeholder"))}
             aria-label={t("placeholder")}
             rows={1}
             className={cn(
-                "peer field-sizing-content max-h-48 min-h-8 resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:overflow-hidden placeholder:text-ellipsis placeholder:text-muted-foreground placeholder:whitespace-nowrap",
-                rolling
-                    ? cn("block w-full", compactRow && "max-h-9 pr-0")
-                    : compactRow
-                      ? "max-h-9 flex-1 pr-0"
-                      : "order-first w-full basis-full",
+                "peer field-sizing-content block max-h-48 min-h-8 w-full resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:overflow-hidden placeholder:text-ellipsis placeholder:text-muted-foreground placeholder:whitespace-nowrap",
+                compactRow && "max-h-9 pr-0",
             )}
         />
     );
-    const textareaEl = rolling ? (
+
+    // The field always sits in this box, so the overlay can come and go without remounting it
+    const textareaEl = (
         <div
             className={cn(
                 "relative min-w-0",
@@ -336,14 +359,15 @@ export function ComposerShell({
             )}
         >
             {textarea}
-            <RollingPlaceholder
-                text={rolling.placeholder ?? ""}
-                leaving={rolling.leaving}
-                turn={rolling.turn}
-            />
+            {overlay && (
+                <RollingPlaceholder
+                    text={overlay.placeholder ?? ""}
+                    leaving={overlay.leaving}
+                    turn={overlay.turn}
+                    fade={preview !== null}
+                />
+            )}
         </div>
-    ) : (
-        textarea
     );
 
     return (
@@ -396,6 +420,15 @@ export function ComposerShell({
                 <p className="mt-1.5 hidden text-center text-xs text-foreground/70 md:block">
                     {t.rich("enterHint", { kbd: (chunks) => <Kbd>{chunks}</Kbd> })}
                 </p>
+            )}
+            {suggestions && suggestions.length > 0 && (
+                <Suggestions
+                    categories={suggestions}
+                    disabled={!ready || busy}
+                    hidden={text !== ""}
+                    onPreview={setPreview}
+                    onSend={sendPrompt}
+                />
             )}
         </div>
     );

@@ -1,0 +1,183 @@
+"use client";
+
+import { ArrowUpRight, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+
+import { SuggestionIcon } from "@/components/chat/composer/SuggestionIcon";
+import { Button } from "@/components/ui/button";
+import type { SuggestionCategory } from "@/types/server";
+
+/**
+ * Starter suggestions under the field of an empty conversation: one pill per category, and a
+ * pill opens its suggestions in place of the pills. Pointing at a row (or focusing it) asks
+ * the field to show its prompt in grey, and choosing it sends the prompt. The slot hangs under
+ * the field without taking any room, so the block keeps the place it has without suggestions,
+ * and it has a fixed height that stays while the field has text, only emptied, so neither
+ * opening a panel nor typing moves the field.
+ *
+ * @param categories - The categories to offer, in the order written
+ * @param disabled - Whether a prompt cannot be sent now (no model ready, or one is busy)
+ * @param hidden - Whether to empty the slot, as the field has text
+ * @param onPreview - Receives the prompt to show in the field, or null to put the field back
+ * @param onSend - Sends the prompt of the chosen suggestion
+ */
+export function Suggestions({
+    categories,
+    disabled,
+    hidden,
+    onPreview,
+    onSend,
+}: {
+    categories: SuggestionCategory[];
+    disabled: boolean;
+    hidden: boolean;
+    onPreview: (prompt: string | null) => void;
+    onSend: (prompt: string) => void;
+}) {
+    return (
+        <div className="relative h-0">
+            <div className="absolute inset-x-0 top-0 mt-3 h-60">
+                {!hidden && (
+                    <SuggestionsContent
+                        categories={categories}
+                        disabled={disabled}
+                        onPreview={onPreview}
+                        onSend={onSend}
+                    />
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * The pills, or the open panel of one category. It mounts when the slot is filled, so a panel
+ * left open is closed once the field was typed in and emptied again.
+ *
+ * @param categories - The categories to offer, in the order written
+ * @param disabled - Whether a prompt cannot be sent now
+ * @param onPreview - Receives the prompt to show in the field, or null to put the field back
+ * @param onSend - Sends the prompt of the chosen suggestion
+ */
+function SuggestionsContent({
+    categories,
+    disabled,
+    onPreview,
+    onSend,
+}: {
+    categories: SuggestionCategory[];
+    disabled: boolean;
+    onPreview: (prompt: string | null) => void;
+    onSend: (prompt: string) => void;
+}) {
+    const t = useTranslations("composer");
+    const [openLabel, setOpenLabel] = useState<string | null>(null);
+    const pills = useRef<Map<string, HTMLButtonElement>>(new Map());
+    const closeButton = useRef<HTMLButtonElement>(null);
+    const category = categories.find((item) => item.label === openLabel);
+    const opened = category !== undefined;
+
+    // The pill that was pressed is gone once its panel is open, so the focus moves into the panel
+    useEffect(() => {
+        if (opened) closeButton.current?.focus();
+    }, [opened]);
+
+    const close = () => {
+        const label = openLabel;
+        setOpenLabel(null);
+        onPreview(null);
+
+        // The pills come back with the panel gone, so the focus goes back to the one it opened
+        requestAnimationFrame(() => {
+            if (label) pills.current.get(label)?.focus();
+        });
+    };
+
+    return category ? (
+        <div
+            className="max-h-full overflow-y-auto rounded-xl border bg-card/60 p-2 shadow-surface animate-in fade-in-0 slide-in-from-bottom-2 duration-200 ease-out motion-reduce:animate-none"
+            onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.stopPropagation();
+                close();
+            }}
+        >
+            <div className="flex items-center gap-2">
+                <SuggestionIcon
+                    name={category.icon}
+                    className="ms-2 size-3.5 text-muted-foreground"
+                />
+                <h2 className="flex-1 truncate text-xs text-muted-foreground">{category.label}</h2>
+                <Button
+                    ref={closeButton}
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("suggestionsClose")}
+                    onClick={close}
+                >
+                    <X aria-hidden="true" />
+                </Button>
+            </div>
+            <ul role="list" aria-label={t("suggestionsList", { name: category.label })}>
+                {category.items.map((item, index) => (
+                    <li
+                        key={item.title}
+                        style={{ animationDelay: `${index * 30}ms` }}
+                        className="border-b animate-in fade-in-0 fill-mode-backwards duration-200 last:border-b-0 hover:border-transparent has-[+li:hover]:border-transparent motion-reduce:animate-none"
+                    >
+                        <button
+                            type="button"
+                            disabled={disabled}
+                            onPointerEnter={(event) => {
+                                if (event.pointerType === "mouse") onPreview(item.prompt);
+                            }}
+                            onPointerLeave={() => onPreview(null)}
+                            onFocus={() => onPreview(item.prompt)}
+                            onBlur={() => onPreview(null)}
+                            onClick={() => {
+                                onPreview(null);
+                                onSend(item.prompt);
+                            }}
+                            className="group flex w-full items-center rounded-lg px-2 py-2.5 text-start text-sm outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 active:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                        >
+                            <span className="min-w-0 flex-1">{item.title}</span>
+                            <ArrowUpRight
+                                className="invisible size-4 shrink-0 text-muted-foreground group-hover:visible group-focus-visible:visible"
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    ) : (
+        <ul
+            role="list"
+            aria-label={t("suggestions")}
+            className="flex flex-wrap justify-center gap-2"
+        >
+            {categories.map((item, index) => (
+                <li
+                    key={item.label}
+                    style={{ animationDelay: `${index * 40}ms` }}
+                    className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
+                >
+                    <button
+                        type="button"
+                        ref={(node) => {
+                            if (node) pills.current.set(item.label, node);
+                            else pills.current.delete(item.label);
+                        }}
+                        onClick={() => setOpenLabel(item.label)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm transition-colors outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                        <SuggestionIcon name={item.icon} className="size-4" />
+                        {item.label}
+                    </button>
+                </li>
+            ))}
+        </ul>
+    );
+}

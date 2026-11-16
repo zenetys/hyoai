@@ -23,6 +23,7 @@ import { useChatProject } from "@/hooks/useChatProject";
 import { useResolvedModel } from "@/hooks/useResolvedModel";
 import { useRotatingPlaceholder } from "@/hooks/useRotatingPlaceholder";
 import { useStore } from "@/hooks/useStore";
+import { useSuggestions } from "@/hooks/useSuggestions";
 import { isEntryInactive } from "@/lib/chat/availability";
 import { useChatInstance } from "@/lib/chat/context";
 import { resolveModalityGate } from "@/lib/chat/modalities";
@@ -74,6 +75,7 @@ export function Composer({ home = false }: { home?: boolean }) {
     const empty = useActivePathIds().length === 0;
     const rolling = useRotatingPlaceholder(single && empty && !busy);
     const embed = useStore(uiStore, (state) => state.embed);
+    const suggestions = useSuggestions(single && empty && !busy && !embed);
     const modelLocked = useStore(uiStore, (state) => state.embedModelLock);
 
     const hasModel = upstream !== null;
@@ -100,6 +102,7 @@ export function Composer({ home = false }: { home?: boolean }) {
                 focusSignal={focusNonce}
                 history={history}
                 rollingPlaceholder={rolling}
+                suggestions={suggestions}
                 reply={<ComposerReply quote={pendingReply} />}
                 replyKey={pendingReply}
                 onSubmit={(text, attachments) => void chat.sendMessage(text, attachments)}
