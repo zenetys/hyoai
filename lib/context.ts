@@ -166,6 +166,43 @@ export function windowBudget(
 }
 
 /**
+ * Where the parts of a window gauge sit, as shares of its width. The bar grows past the window
+ * when the request would not fit, so the overflow stays visible.
+ *
+ * @param nCtx - Context window, in tokens
+ * @param parts - Tokens of the shared context, the conversation and the answer reserve
+ * @param threshold - Fraction of the window a request may fill
+ * @returns The width of each part, the position of the threshold and the window end, in
+ *   percent of the bar, with the tokens over the window
+ */
+export function meterLayout(
+    nCtx: number,
+    parts: { shared: number; conversation: number; reserve: number },
+    threshold: number,
+): {
+    shared: number;
+    conversation: number;
+    reserve: number;
+    threshold: number;
+    end: number;
+    used: number;
+    over: number;
+} {
+    const used = parts.shared + parts.conversation + parts.reserve;
+    const scale = Math.max(nCtx, used, 1);
+    const percent = (tokens: number) => (tokens / scale) * 100;
+    return {
+        shared: percent(parts.shared),
+        conversation: percent(parts.conversation),
+        reserve: percent(parts.reserve),
+        threshold: percent(nCtx * threshold),
+        end: percent(nCtx),
+        used,
+        over: Math.max(0, used - nCtx),
+    };
+}
+
+/**
  * The most a window had to cut: excluded, then truncated, else everything fits. A window with no
  * document to send counts as fitting.
  *

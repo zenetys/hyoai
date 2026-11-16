@@ -5,6 +5,7 @@ import {
     availableForShared,
     type DocumentWording,
     fitContext,
+    meterLayout,
     overallStatus,
     planDocuments,
     renderDocuments,
@@ -316,5 +317,34 @@ describe("windowBudget", () => {
 
         expect(budget.shared).toBe(100);
         expect(budget.conversation).toBe(500);
+    });
+});
+
+describe("meterLayout", () => {
+    it("scales the parts to the window", () => {
+        const layout = meterLayout(1_000, { shared: 100, conversation: 200, reserve: 300 }, 0.8);
+
+        expect(layout.shared).toBe(10);
+        expect(layout.conversation).toBe(20);
+        expect(layout.reserve).toBe(30);
+        expect(layout.threshold).toBe(80);
+        expect(layout.end).toBe(100);
+        expect(layout.used).toBe(600);
+        expect(layout.over).toBe(0);
+    });
+
+    it("stretches the bar past the window and reports the overflow", () => {
+        const layout = meterLayout(1_000, { shared: 1_000, conversation: 500, reserve: 500 }, 0.8);
+
+        expect(layout.over).toBe(1_000);
+        expect(layout.end).toBe(50);
+        expect(layout.shared).toBe(50);
+    });
+
+    it("does not divide by zero for an empty window", () => {
+        const layout = meterLayout(0, { shared: 0, conversation: 0, reserve: 0 }, 0.8);
+
+        expect(layout.shared).toBe(0);
+        expect(layout.end).toBe(0);
     });
 });

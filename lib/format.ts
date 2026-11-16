@@ -20,6 +20,19 @@ export function formatBytes(bytes: number, locale: string): string {
 }
 
 /**
+ * Format a token count in short form, such as "850" or "4.5k".
+ *
+ * @param tokens - Token count
+ * @param locale - BCP 47 locale for the decimal separator
+ * @returns A compact string
+ */
+export function formatTokens(tokens: number, locale: string): string {
+    if (tokens < 1000) return Math.round(tokens).toLocaleString(locale);
+    const value = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(tokens / 1000);
+    return `${value}k`;
+}
+
+/**
  * Turn a title into a file-name-safe slug: accents stripped, lowercase ASCII
  * letters and digits separated by single dashes, capped at 60 characters.
  *
