@@ -8,7 +8,9 @@ import {
     overallStatus,
     planDocuments,
     renderDocuments,
+    sharedFraction,
     truncateToTokens,
+    windowBudget,
     wrapperTokens,
 } from "@/lib/context";
 import type { ApiMessage } from "@/types/api";
@@ -247,5 +249,72 @@ describe("appendToSystem", () => {
         appendToSystem([system, user], "docs");
 
         expect(system.content).toBe("rules");
+    });
+});
+
+describe("sharedFraction", () => {
+    const settings = {
+        compaction: { enabled: true, thresholdFraction: 0.7 },
+        chunking: { safetyFraction: 0.8 },
+    } as Parameters<typeof sharedFraction>[0];
+
+    it("follows the compaction threshold when compaction is on", () => {
+        expect(sharedFraction(settings)).toBe(0.7);
+    });
+
+    it("falls back to the safety margin when compaction is off", () => {
+        const off = { ...settings, compaction: { ...settings.compaction, enabled: false } };
+
+        expect(sharedFraction(off)).toBe(0.8);
+    });
+});
+
+describe("windowBudget", () => {
+    const room = { conversation: 0, reserve: 1_000, fraction: 0.8 };
+
+    it("sends everything when the window is wide", () => {
+        const budget = windowBudget(
+            32_000,
+            { instructions: 100, documents: docs },
+            room,
+            "truncate",
+        );
+
+        expect(budget.status).toBe("included");
+        expect(budget.shared).toBe(400);
+        expect(budget.nCtx).toBe(32_000);
+        expect(budget.threshold).toBe(0.8);
+    });
+
+    it("cuts the documents a small window cannot take", () => {
+        // 1500 * 0.8 - 1000 = 200 tokens for the shared context
+        const budget = windowBudget(
+            1_500,
+            { instructions: 100, documents: docs },
+            room,
+            "truncate",
+        );
+
+        expect(budget.status).toBe("truncated");
+        expect(budget.shared).toBe(200);
+    });
+
+    it("drops all the documents with the exclude strategy", () => {
+        const budget = windowBudget(1_500, { instructions: 100, documents: docs }, room, "exclude");
+
+        expect(budget.status).toBe("excluded");
+        expect(budget.shared).toBe(100);
+    });
+
+    it("counts the conversation against the room", () => {
+        const budget = windowBudget(
+            2_000,
+            { instructions: 0, documents: docs },
+            { ...room, conversation: 500 },
+            "truncate",
+        );
+
+        expect(budget.shared).toBe(100);
+        expect(budget.conversation).toBe(500);
     });
 });

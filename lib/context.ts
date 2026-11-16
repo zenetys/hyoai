@@ -1,6 +1,7 @@
 import { CHARS_PER_TOKEN, estimateTokens } from "@/lib/chunking";
 import type { ApiMessage } from "@/types/api";
 import type { OverflowStrategy } from "@/types/projects";
+import type { AppSettings } from "@/types/settings";
 
 // What a model window does with one document: all of it, its beginning only, or none of it.
 export type FitStatus = "included" | "truncated" | "excluded";
@@ -98,6 +99,70 @@ export function fitContext(
 
     const used = instructions + Object.values(sent).reduce((sum, tokens) => sum + tokens, 0);
     return { statuses, sent, used, over: instructions > available };
+}
+
+/**
+ * The part of a model window a request may fill. With compaction on, it is the threshold that
+ * triggers it; without, the safety margin of the chapter pipeline, because the estimates are
+ * coarse and a request filling the window to the brim would overflow.
+ *
+ * @param settings - The compaction and chunking settings
+ * @returns A fraction of the window, between 0 and 1
+ */
+export function sharedFraction(settings: Pick<AppSettings, "compaction" | "chunking">): number {
+    return settings.compaction.enabled
+        ? settings.compaction.thresholdFraction
+        : settings.chunking.safetyFraction;
+}
+
+/**
+ * What one model window does with the shared context of a project.
+ *
+ * @param nCtx - Context window, in tokens
+ * @param fit - What the window does with each document
+ * @param status - The most the window had to cut
+ * @param shared - Tokens of the shared context the window receives
+ * @param conversation - Tokens of the conversation the budget was measured with
+ * @param reserve - Tokens kept for the answer
+ * @param threshold - Fraction of the window a request may fill
+ */
+export interface WindowBudget {
+    nCtx: number;
+    fit: FitResult;
+    status: FitStatus;
+    shared: number;
+    conversation: number;
+    reserve: number;
+    threshold: number;
+}
+
+/**
+ * Measure the shared context against one model window, the way a request would be fitted.
+ *
+ * @param window - The window, in tokens
+ * @param context - The instructions and the documents, in tokens, in the order they are sent
+ * @param room - The conversation and the answer reserve, in tokens, and the part of the window
+ *   a request may fill
+ * @param strategy - What to do when the documents do not all fit
+ * @returns The budget of the window
+ */
+export function windowBudget(
+    window: number,
+    context: { instructions: number; documents: FitDocument[] },
+    room: { conversation: number; reserve: number; fraction: number },
+    strategy: OverflowStrategy,
+): WindowBudget {
+    const available = availableForShared(window, room.conversation, room.reserve, room.fraction);
+    const fit = fitContext(context.instructions, context.documents, available, strategy);
+    return {
+        nCtx: window,
+        fit,
+        status: overallStatus(fit),
+        shared: fit.used,
+        conversation: room.conversation,
+        reserve: room.reserve,
+        threshold: room.fraction,
+    };
 }
 
 /**

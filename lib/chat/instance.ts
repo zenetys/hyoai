@@ -30,6 +30,7 @@ import {
     type DocumentWording,
     planDocuments,
     renderDocuments,
+    sharedFraction,
 } from "@/lib/context";
 import {
     buildApiMessages,
@@ -595,9 +596,7 @@ export class ChatInstance {
                 ),
                 nCtx: this.contextWindow(entry),
                 reserve: settings.sampling.maxTokens ?? DEFAULT_OUTPUT_RESERVE,
-                fraction: settings.compaction.enabled
-                    ? settings.compaction.thresholdFraction
-                    : settings.chunking.safetyFraction,
+                fraction: sharedFraction(settings),
                 slack,
             },
             project.overflowStrategy ?? DEFAULT_OVERFLOW_STRATEGY,
