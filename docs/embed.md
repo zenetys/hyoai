@@ -106,8 +106,11 @@ an embed, except where noted.
 - **Projects**: the widget shows no project. The sidebar variant lists its conversations in one
   flat list, with no project section and no project name on the rows, its conversation menu has no
   **Move to a project** entry, and neither the header nor the composer shows a project or its
-  instructions. The Data page has no note about projects. The instructions of a project are not
-  sent either, even for a conversation that belongs to one. See [Projects](features.md#projects).
+  instructions. The Data page has no note about projects. The instructions and the documents of a
+  project are not sent either, even for a conversation that belongs to one. See
+  [Projects](features.md#projects).
+- **Starter suggestions**: the `suggestions` of the config are never offered under the message box of
+  a widget. See [Starter suggestions](features.md#starter-suggestions).
 - **The command palette**: there is no palette and no search button; the sidebar variant keeps its
   own search field, a plain field on touch devices too.
 - **Global shortcuts**: Ctrl/Cmd+K, Ctrl/Cmd+B and Ctrl/Cmd+Shift+O are
