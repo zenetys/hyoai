@@ -28,6 +28,7 @@ import { buildExport, parseImport } from "@/lib/storage/io";
 import { parseLlamaCppExport } from "@/lib/storage/llamacpp";
 import { localStorageAdapter } from "@/lib/storage/local";
 import { conversationsStore } from "@/lib/stores/conversations";
+import { clearAllDocuments } from "@/lib/stores/documents";
 import { refreshStorage, STORAGE_WARN_RATIO, storageStore, usageRatio } from "@/lib/stores/storage";
 import { uiStore } from "@/lib/stores/ui";
 import { applyImport } from "@/lib/transfer";
@@ -99,6 +100,15 @@ export function DataTab() {
         const keys = await localStorageAdapter.keys("lc:");
         for (const key of keys) {
             await localStorageAdapter.remove(key);
+        }
+
+        // The documents of the projects are in IndexedDB: the embed has none to clear.
+        if (!embed) {
+            try {
+                await clearAllDocuments();
+            } catch {
+                // The reload below must happen even when the database refuses
+            }
         }
         window.location.reload();
     };
