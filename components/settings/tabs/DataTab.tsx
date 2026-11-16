@@ -28,8 +28,14 @@ import { buildExport, parseImport } from "@/lib/storage/io";
 import { parseLlamaCppExport } from "@/lib/storage/llamacpp";
 import { localStorageAdapter } from "@/lib/storage/local";
 import { conversationsStore } from "@/lib/stores/conversations";
-import { clearAllDocuments } from "@/lib/stores/documents";
-import { refreshStorage, STORAGE_WARN_RATIO, storageStore, usageRatio } from "@/lib/stores/storage";
+import { clearAllDocuments, documentsStore } from "@/lib/stores/documents";
+import {
+    documentsBytes,
+    refreshStorage,
+    STORAGE_WARN_RATIO,
+    storageStore,
+    usageRatio,
+} from "@/lib/stores/storage";
 import { uiStore } from "@/lib/stores/ui";
 import { applyImport } from "@/lib/transfer";
 import { cn } from "@/lib/utils";
@@ -73,6 +79,7 @@ export function DataTab() {
     const [importing, setImporting] = useState(false);
     const phone = useIsMobile();
     const usage = useStore(storageStore, (state) => state.usage);
+    const documents = useStore(documentsStore, (state) => state.documents);
     const embed = useStore(uiStore, (state) => state.embed);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -182,6 +189,13 @@ export function DataTab() {
                                 quota: formatBytes(usage.quotaBytes, locale),
                             })}
                             {nearFull && ` — ${t("data.storageNearFull")}`}
+                        </p>
+                    )}
+                    {!embed && documents.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                            {t("data.storageDocuments", {
+                                size: formatBytes(documentsBytes(documents), locale),
+                            })}
                         </p>
                     )}
                     {usage && usage.conversations.length > 0 && (
