@@ -88,6 +88,54 @@
         "en": ["Translate a text...", "Explain a concept...", "Write a function..."],
         "fr": ["Traduis un texte...", "Explique un concept...", "Écris une fonction..."]
     },
+    "suggestions": {
+        "en": [
+            {
+                "label": "Write",
+                "icon": "pen-line",
+                "items": [
+                    {
+                        "title": "Draft a follow-up email",
+                        "prompt": "Write a short, polite follow-up email for a customer who has not answered in a week. If you need more information, ask me one or two key questions right away."
+                    },
+                    { "title": "Summarize a document" }
+                ]
+            },
+            {
+                "label": "Code",
+                "icon": "code",
+                "items": [
+                    {
+                        "title": "Explain an error message",
+                        "prompt": "Explain the error message I am about to paste and suggest a fix. Ask me for the code involved if needed."
+                    }
+                ]
+            }
+        ],
+        "fr": [
+            {
+                "label": "Écrire",
+                "icon": "pen-line",
+                "items": [
+                    {
+                        "title": "Rédiger un e-mail de relance",
+                        "prompt": "Rédige un e-mail de relance poli et court pour un client qui n'a pas répondu depuis une semaine. Si tu as besoin de précisions, pose-moi une ou deux questions clés tout de suite."
+                    },
+                    { "title": "Résumer un document" }
+                ]
+            },
+            {
+                "label": "Coder",
+                "icon": "code",
+                "items": [
+                    {
+                        "title": "Expliquer un message d'erreur",
+                        "prompt": "Explique-moi le message d'erreur que je vais te coller et propose une correction. Demande-moi le code concerné si besoin."
+                    }
+                ]
+            }
+        ]
+    },
     "integrations": [
         {
             "id": "feedback",
