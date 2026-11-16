@@ -582,9 +582,10 @@
             "storageWarning": "Le stockage local est plein à {percent} % — exporte ou supprime des conversations pour libérer de l'espace.",
             "storageManage": "Ouvrir les réglages de stockage",
             "storageHint": "Les conversations sont compressées dans le localStorage du navigateur.",
+            "storageDocuments": "Documents des projets : {size}, conservés dans IndexedDB et non comptés ci-dessus.",
             "clearAll": "Tout effacer",
             "clearAllTitle": "Effacer toutes les données",
-            "clearAllDescription": "Conversations et paramètres seront définitivement supprimés de ce navigateur."
+            "clearAllDescription": "Conversations, projets, documents et paramètres seront définitivement supprimés de ce navigateur."
         },
         "config": {
             "description": "Modifie ici la configuration sans toucher au fichier config.json déployé. Les changements sont enregistrés dans ce navigateur et appliqués immédiatement ; l'aperçu en bas peut être copié pour le reporter dans le vrai config.json.",

@@ -582,9 +582,10 @@
             "storageWarning": "Local storage is {percent}% full — export or delete conversations to free space.",
             "storageManage": "Open storage settings",
             "storageHint": "Conversations are compressed in the browser localStorage.",
+            "storageDocuments": "Project documents: {size}, kept in IndexedDB and not counted above.",
             "clearAll": "Clear everything",
             "clearAllTitle": "Clear all data",
-            "clearAllDescription": "Conversations and settings will be permanently removed from this browser."
+            "clearAllDescription": "Conversations, projects, documents and settings will be permanently removed from this browser."
         },
         "config": {
             "description": "Edit the configuration here without touching the deployed config.json file. Changes are saved in this browser and applied immediately; the preview below can be copied to paste into the real config.json.",
