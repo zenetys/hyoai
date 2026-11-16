@@ -280,6 +280,86 @@
         "strategyRollingHint": "Un résumé cumulatif est enrichi chapitre après chapitre.",
         "relaunch": "Relancer l'analyse"
     },
+    "projectContext": {
+        "title": "Contexte du projet",
+        "description": "Ce qui part avec chaque message des conversations du projet : ses instructions et ses documents.",
+        "back": "Réglages du projet",
+        "entry": {
+            "title": "Contexte",
+            "summary": "{count, plural, =0 {Aucun document} one {# document} other {# documents}} · ≈ {tokens} tokens"
+        },
+        "instructions": {
+            "title": "Instructions du projet",
+            "toggle": "Envoyer les instructions",
+            "hint": "≈ {tokens} tokens, envoyées en premier. Coupées, c'est le message système global qui s'applique.",
+            "empty": "Le projet n'a pas encore d'instructions. Tu les écris dans les réglages du projet."
+        },
+        "documents": {
+            "title": "Documents",
+            "open": "Gérer les documents",
+            "summary": "{count, plural, =0 {Aucun document} one {# document} other {# documents}} · ≈ {tokens} tokens",
+            "description": "Des fichiers que le modèle doit connaître dans toutes les conversations du projet.",
+            "empty": "Aucun document pour l'instant.",
+            "add": "Ajouter des documents",
+            "drop": "Dépose des fichiers ici ou choisis-les",
+            "formats": "Texte, Markdown, CSV ou PDF · {size} par fichier · {total} par projet",
+            "size": "≈ {tokens} tokens",
+            "remove": "Retirer {name}",
+            "added": "{name} ajouté.",
+            "removed": "{name} retiré.",
+            "reading": "Lecture de {name}…",
+            "loading": "Chargement des documents…",
+            "capacity": "{used} sur {total} utilisés",
+            "memoryOnly": "Ce navigateur refuse IndexedDB : les documents restent en mémoire et disparaissent à la fermeture de l'onglet.",
+            "local": "Les documents restent dans ce navigateur et ne sont pas exportés."
+        },
+        "errors": {
+            "type": "« {name} » n'est pas d'un type accepté. Choisis un fichier texte, Markdown, CSV ou PDF.",
+            "tooLarge": "« {name} » dépasse {size}. Réduis-le ou découpe-le.",
+            "binary": "« {name} » ne ressemble pas à un fichier texte.",
+            "empty": "« {name} » ne contient aucun texte à lire.",
+            "projectFull": "Le projet ne peut pas contenir plus de {total} de texte. Retire un document avant d'en ajouter.",
+            "storage": "Le navigateur n'a plus de place. Libère de l'espace ou retire un document.",
+            "unknown": "« {name} » n'a pas pu être ajouté."
+        },
+        "overflow": {
+            "title": "Si le contexte déborde",
+            "description": "Ce que fait une fenêtre trop petite pour tout le contexte.",
+            "truncate": "Tronquer",
+            "truncateHint": "Les documents sont coupés là où la fenêtre s'arrête, dans l'ordre de la liste.",
+            "exclude": "Exclure",
+            "excludeHint": "Aucun document n'est envoyé quand tous ne tiennent pas dans la fenêtre."
+        },
+        "budget": {
+            "title": "Budget par fenêtre",
+            "description": "Ce que chaque modèle reçoit du contexte avant le premier message.",
+            "empty": "Aucun modèle n'est configuré.",
+            "instructionsOver": "Les instructions seules dépassent la fenêtre."
+        },
+        "status": {
+            "included": "Inclus",
+            "truncated": "Tronqué",
+            "excluded": "Exclu",
+            "fits": "Tout tient",
+            "cut": "Tronqué dans cette fenêtre",
+            "none": "Aucun document envoyé"
+        },
+        "gauge": {
+            "title": "Contexte du projet",
+            "open": "Ouvrir le contexte du projet",
+            "unknown": "Non calculé"
+        },
+        "meter": {
+            "used": "≈ {used} / {total}",
+            "over": "dépasse de {count}",
+            "aria": "Contexte du projet {shared}, conversation {conversation}, réserve de réponse {reserve}",
+            "threshold": "Seuil de compaction",
+            "shared": "Contexte",
+            "conversation": "Conversation",
+            "reserve": "Réponse",
+            "caption": "Estimation à 4 caractères par token."
+        }
+    },
     "compaction": {
         "compact": "Compacter la conversation",
         "freeStorage": "Libérer le stockage",

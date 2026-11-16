@@ -280,6 +280,86 @@
         "strategyRollingHint": "A running summary is enriched chapter after chapter.",
         "relaunch": "Relaunch analysis"
     },
+    "projectContext": {
+        "title": "Project context",
+        "description": "What goes with every message of the project's conversations: its instructions and its documents.",
+        "back": "Project settings",
+        "entry": {
+            "title": "Context",
+            "summary": "{count, plural, =0 {No documents} one {# document} other {# documents}} · ≈ {tokens} tokens"
+        },
+        "instructions": {
+            "title": "Project instructions",
+            "toggle": "Send the instructions",
+            "hint": "≈ {tokens} tokens, sent first. When off, the global system message applies.",
+            "empty": "The project has no instructions yet. You write them in the project settings."
+        },
+        "documents": {
+            "title": "Documents",
+            "open": "Manage the documents",
+            "summary": "{count, plural, =0 {No documents} one {# document} other {# documents}} · ≈ {tokens} tokens",
+            "description": "Files the model should know in every conversation of the project.",
+            "empty": "No documents yet.",
+            "add": "Add documents",
+            "drop": "Drop files here or pick them",
+            "formats": "Text, Markdown, CSV or PDF · {size} per file · {total} per project",
+            "size": "≈ {tokens} tokens",
+            "remove": "Remove {name}",
+            "added": "{name} added.",
+            "removed": "{name} removed.",
+            "reading": "Reading {name}…",
+            "loading": "Loading the documents…",
+            "capacity": "{used} of {total} used",
+            "memoryOnly": "This browser refuses IndexedDB: documents stay in memory and are lost when the tab closes.",
+            "local": "Documents stay in this browser and are not exported."
+        },
+        "errors": {
+            "type": "“{name}” is not an accepted type. Pick a text, Markdown, CSV or PDF file.",
+            "tooLarge": "“{name}” is larger than {size}. Shrink it or split it.",
+            "binary": "“{name}” does not look like a text file.",
+            "empty": "“{name}” has no text to read.",
+            "projectFull": "The project cannot hold more than {total} of text. Remove a document before adding another.",
+            "storage": "The browser has no room left. Free some space or remove a document.",
+            "unknown": "“{name}” could not be added."
+        },
+        "overflow": {
+            "title": "When the context overflows",
+            "description": "What a window too small for the whole context does.",
+            "truncate": "Truncate",
+            "truncateHint": "Documents are cut where the window ends, in the order of the list.",
+            "exclude": "Exclude",
+            "excludeHint": "No document is sent when they do not all fit in the window."
+        },
+        "budget": {
+            "title": "Budget per window",
+            "description": "What each model receives of the context before the first message.",
+            "empty": "No model is configured.",
+            "instructionsOver": "The instructions alone exceed the window."
+        },
+        "status": {
+            "included": "Included",
+            "truncated": "Truncated",
+            "excluded": "Excluded",
+            "fits": "Everything fits",
+            "cut": "Truncated in this window",
+            "none": "No document sent"
+        },
+        "gauge": {
+            "title": "Project context",
+            "open": "Open the project context",
+            "unknown": "Not computed"
+        },
+        "meter": {
+            "used": "≈ {used} / {total}",
+            "over": "over by {count}",
+            "aria": "Project context {shared}, conversation {conversation}, answer reserve {reserve}",
+            "threshold": "Compaction threshold",
+            "shared": "Context",
+            "conversation": "Conversation",
+            "reserve": "Answer",
+            "caption": "Estimated at 4 characters per token."
+        }
+    },
     "compaction": {
         "compact": "Compact conversation",
         "freeStorage": "Free storage",
