@@ -16,6 +16,7 @@ import type {
     NoticeConfig,
     PropsState,
     ServerProps,
+    SuggestionCategory,
 } from "@/types/server";
 import { type PersistedModelSelection, STORAGE_KEYS } from "@/types/storage";
 
@@ -35,6 +36,7 @@ interface ModelsState {
     appName?: string;
     notice?: NoticeConfig;
     placeholders?: Record<string, string[]>;
+    suggestions?: Record<string, SuggestionCategory[]>;
     configStatus: ConfigStatus;
     configError?: string;
     configDraftError?: string;
@@ -118,8 +120,16 @@ export async function initModels(): Promise<void> {
         return;
     }
 
-    const { models, defaultModel, integrations, mcpServers, appName, notice, placeholders } =
-        result.config;
+    const {
+        models,
+        defaultModel,
+        integrations,
+        mcpServers,
+        appName,
+        notice,
+        placeholders,
+        suggestions,
+    } = result.config;
     const selectable = (id: string) => models.some((entry) => entry.id === id && !entry.disabled);
     const stored = persisted?.activeEntryId;
     const activeEntryId =
@@ -148,6 +158,7 @@ export async function initModels(): Promise<void> {
         appName,
         notice,
         placeholders,
+        suggestions,
         configStatus: "ready",
         hasOverride,
     });

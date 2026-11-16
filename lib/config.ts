@@ -4,6 +4,7 @@ import { normalizeMcpServers } from "@/lib/mcp/config";
 import { mergeConfig } from "@/lib/merge";
 import { getServerType } from "@/lib/plugins/registry";
 import { loadJson } from "@/lib/storage/persistence";
+import { normalizeSuggestions } from "@/lib/suggestions";
 import type {
     AppConfig,
     IntegrationConfig,
@@ -92,11 +93,15 @@ const noticeSchema = z.object({
 // Rotating placeholders by language: a bad shape drops the key, never the config.
 const placeholdersSchema = z.record(z.string(), z.unknown());
 
+// Starter suggestions by language: a bad shape drops the key, never the config.
+const suggestionsSchema = z.record(z.string(), z.unknown());
+
 const configSchema = z.object({
     models: z.array(modelSchema).default([]),
     appName: z.string().min(1).optional(),
     notice: noticeSchema.optional().catch(undefined),
     placeholders: placeholdersSchema.optional().catch(undefined),
+    suggestions: suggestionsSchema.optional().catch(undefined),
     defaultModel: z.string().optional(),
     embedOrigins: z.array(z.string().min(1)).default([]),
     integrations: z.array(z.unknown()).optional(),
@@ -252,6 +257,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         appName: parsed.data.appName,
         notice: Object.keys(parsed.data.notice?.text ?? {}).length ? parsed.data.notice : undefined,
         placeholders: normalizePlaceholders(parsed.data.placeholders),
+        suggestions: normalizeSuggestions(parsed.data.suggestions),
         defaultModel: parsed.data.defaultModel,
         embedOrigins: normalizeEmbedOrigins(parsed.data.embedOrigins),
         integrations,

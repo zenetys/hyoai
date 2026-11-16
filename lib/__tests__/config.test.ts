@@ -154,6 +154,33 @@ describe("placeholders", () => {
     });
 });
 
+describe("suggestions", () => {
+    const written = {
+        en: [
+            {
+                label: "Write",
+                icon: "pen-line",
+                items: [{ title: "Draft an email", prompt: "Write a short email." }],
+            },
+        ],
+    };
+
+    it("are absent by default", () => {
+        expect(ready({ models: [model] }).suggestions).toBeUndefined();
+    });
+
+    it("are kept through the config", () => {
+        const config = ready({ models: [model], suggestions: written });
+        expect(config.suggestions?.en[0].items[0].prompt).toBe("Write a short email.");
+    });
+
+    it("do not fail the config over a key of the wrong shape", () => {
+        expect(ready({ models: [model], suggestions: "hi" }).suggestions).toBeUndefined();
+        expect(ready({ models: [model], suggestions: ["hi"] }).suggestions).toBeUndefined();
+        expect(ready({ models: [model], suggestions: { en: "x" } }).models).toHaveLength(1);
+    });
+});
+
 describe("model scope on MCP servers", () => {
     it("is read the same way by the app and by the config form", () => {
         for (const scope of [undefined, [], ["docs"], "docs", null, [1], ["docs", 5], {}]) {

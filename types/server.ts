@@ -154,6 +154,27 @@ export interface NoticeConfig {
     until?: string;
 }
 
+// Icon names a suggestion category may use, the short list of lib/suggestions.ts.
+export type SuggestionIconName = "pen-line" | "chart-column" | "code";
+
+/**
+ * One starter suggestion: the title shown in the list and the prompt sent when it is
+ * chosen, which is the title when the config gives none.
+ */
+export interface Suggestion {
+    title: string;
+    prompt: string;
+}
+
+/**
+ * A group of starter suggestions, shown as a pill with an optional icon.
+ */
+export interface SuggestionCategory {
+    label: string;
+    icon?: SuggestionIconName;
+    items: Suggestion[];
+}
+
 /**
  * Shape of the public/config.json file fetched at boot. The "mcpServers" field is
  * the MCP server catalog, disabled servers included, and "mcpIssues" says why
@@ -164,6 +185,7 @@ export interface AppConfig {
     appName?: string;
     notice?: NoticeConfig;
     placeholders?: Record<string, string[]>;
+    suggestions?: Record<string, SuggestionCategory[]>;
     defaultModel?: string;
     embedOrigins: string[];
     integrations?: IntegrationConfig[];
