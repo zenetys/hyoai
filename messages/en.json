@@ -324,7 +324,6 @@
         },
         "overflow": {
             "title": "When the context overflows",
-            "description": "What a window too small for the whole context does.",
             "truncate": "Truncate",
             "truncateHint": "Documents are cut where the window ends, in the order of the list.",
             "exclude": "Exclude",
@@ -337,16 +336,12 @@
             "instructionsOver": "The instructions alone exceed the window."
         },
         "status": {
-            "included": "Included",
-            "truncated": "Truncated",
-            "excluded": "Excluded",
             "fits": "Everything fits",
             "cut": "Truncated in this window",
             "none": "No document sent"
         },
         "gauge": {
             "title": "Project context",
-            "open": "Open the project context",
             "unknown": "Not computed"
         },
         "meter": {

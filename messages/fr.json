@@ -324,7 +324,6 @@
         },
         "overflow": {
             "title": "Si le contexte déborde",
-            "description": "Ce que fait une fenêtre trop petite pour tout le contexte.",
             "truncate": "Tronquer",
             "truncateHint": "Les documents sont coupés là où la fenêtre s'arrête, dans l'ordre de la liste.",
             "exclude": "Exclure",
@@ -337,16 +336,12 @@
             "instructionsOver": "Les instructions seules dépassent la fenêtre."
         },
         "status": {
-            "included": "Inclus",
-            "truncated": "Tronqué",
-            "excluded": "Exclu",
             "fits": "Tout tient",
             "cut": "Tronqué dans cette fenêtre",
             "none": "Aucun document envoyé"
         },
         "gauge": {
             "title": "Contexte du projet",
-            "open": "Ouvrir le contexte du projet",
             "unknown": "Non calculé"
         },
         "meter": {
