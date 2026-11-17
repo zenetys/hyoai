@@ -124,7 +124,8 @@ export type ToolPolicy = "ask" | "allow" | "deny";
 /**
  * Tool calling preferences.
  *
- * @param enabledByDefault - New conversations start with tools on
+ * @param enabledByDefault - New conversations start with tools on; left unset, the deployment's
+ *        choice in config.json applies, and tools are off when it makes none
  * @param maxSteps - Model requests per answer before asking to continue
  * @param defaultPolicy - Policy of the tools without an entry of their own
  * @param maxResultChars - Characters of one result sent to the model
@@ -133,7 +134,7 @@ export type ToolPolicy = "ask" | "allow" | "deny";
  * @param disabledProviders - Providers whose tools are never offered
  */
 export interface ToolSettings {
-    enabledByDefault: boolean;
+    enabledByDefault?: boolean;
     maxSteps: number;
     defaultPolicy: "ask" | "allow";
     maxResultChars: number;
@@ -213,7 +214,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
         connectCheckSeconds: 20,
     },
     tools: {
-        enabledByDefault: false,
         maxSteps: 10,
         defaultPolicy: "ask",
         maxResultChars: 20000,
