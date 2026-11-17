@@ -261,6 +261,29 @@ export interface BuildMessagesOptions {
 }
 
 /**
+ * Add a message to the request. Two user messages in a row, which an answer that never came
+ * leaves (a failed or stopped reply writes nothing), are sent as one: the chat templates of some
+ * models, Mistral's among them, refuse a history whose roles do not alternate.
+ *
+ * @param messages - The request so far, changed in place
+ * @param message - The message to add
+ */
+function pushMessage(messages: ApiMessage[], message: ApiMessage): void {
+    const last = messages[messages.length - 1];
+    if (message.role !== "user" || last?.role !== "user") {
+        messages.push(message);
+        return;
+    }
+    if (typeof last.content === "string" && typeof message.content === "string") {
+        last.content = `${last.content}\n\n${message.content}`;
+        return;
+    }
+    const parts = (content: string | ApiContentPart[]): ApiContentPart[] =>
+        typeof content === "string" ? [{ type: "text", text: content }] : content;
+    last.content = [...parts(last.content), ...parts(message.content)];
+}
+
+/**
  * Convert a root-first branch path into the message list sent to the API.
  * Nodes with attachments use the OpenAI multimodal content-part format
  * (file texts first, then the message text, then images and audio); nodes
@@ -394,7 +417,7 @@ export function buildApiMessages(
             (part.type === "text" ? fileParts : mediaParts).push(part);
         }
         if (fileParts.length === 0 && mediaParts.length === 0) {
-            messages.push({ role: node.role, content: text, ...reasoning });
+            pushMessage(messages, { role: node.role, content: text, ...reasoning });
             continue;
         }
         const parts: ApiContentPart[] = [...fileParts];
@@ -402,7 +425,7 @@ export function buildApiMessages(
             parts.push({ type: "text", text });
         }
         parts.push(...mediaParts);
-        messages.push({ role: node.role, content: parts, ...reasoning });
+        pushMessage(messages, { role: node.role, content: parts, ...reasoning });
     }
     flushFlattened();
     closeOpenCalls();

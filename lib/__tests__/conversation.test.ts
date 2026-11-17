@@ -186,3 +186,50 @@ describe("buildApiMessages with the saved reasoning of a tool flow", () => {
         expect(messages[1]).toMatchObject({ reasoning_content: "I need the clock." });
     });
 });
+
+describe("buildApiMessages after an answer that never came", () => {
+    it("sends two user messages in a row as one, so the roles keep alternating", () => {
+        const path = [
+            node({ role: "user", content: "Premier" }),
+            node({ role: "assistant", content: "", error: "boom" }),
+            node({ role: "user", content: "Second" }),
+        ];
+        const messages = buildApiMessages(path, "");
+        expect(messages).toEqual([{ role: "user", content: "Premier\n\nSecond" }]);
+    });
+
+    it("keeps the system prompt first and the answered turns as they are", () => {
+        const path = [
+            node({ role: "user", content: "A" }),
+            node({ role: "assistant", content: "B" }),
+            node({ role: "user", content: "C" }),
+            node({ role: "assistant", content: "" }),
+            node({ role: "user", content: "D" }),
+        ];
+        const roles = buildApiMessages(path, "Sois bref.").map((message) => message.role);
+        expect(roles).toEqual(["system", "user", "assistant", "user"]);
+    });
+
+    it("joins a message with attachments to the one before as parts", () => {
+        const path = [
+            node({ role: "user", content: "Premier" }),
+            node({
+                role: "user",
+                content: "Voici",
+                attachments: [
+                    {
+                        id: "a1",
+                        kind: "text",
+                        mimeType: "text/plain",
+                        name: "a.txt",
+                        content: "texte",
+                    },
+                ],
+            }),
+        ];
+        const [message] = buildApiMessages(path, "");
+        expect(Array.isArray(message.content)).toBe(true);
+        expect(JSON.stringify(message.content)).toContain("Premier");
+        expect(JSON.stringify(message.content)).toContain("Voici");
+    });
+});
