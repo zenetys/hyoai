@@ -62,7 +62,7 @@ export function McpToolList({
                     {tools && (
                         <ChevronDown
                             className={cn(
-                                "size-4 shrink-0 transition-transform",
+                                "size-4 shrink-0 transition-transform duration-200",
                                 open && "rotate-180",
                             )}
                             aria-hidden="true"

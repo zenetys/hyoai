@@ -15,8 +15,9 @@ function CollapsibleTrigger({
 }
 
 /**
- * The content of a collapsible. With a rail, the content of a section is set apart from the rows
- * around it: a thin line under the chevron of its trigger, and the content shifted to the right.
+ * The content of a collapsible. It opens and closes by sliding its height, unless motion is
+ * reduced. With a rail, the content of a section is set apart from the rows around it: a thin line
+ * under the chevron of its trigger, and the content shifted to the right.
  *
  * @param rail - Draw the line and shift the content
  * @param className - Extra classes of the content
@@ -29,7 +30,11 @@ function CollapsibleContent({
     return (
         <CollapsiblePrimitive.CollapsibleContent
             data-slot="collapsible-content"
-            className={cn(rail && "ml-2 border-l pl-4", className)}
+            className={cn(
+                "overflow-hidden motion-safe:data-[state=closed]:animate-collapsible-up motion-safe:data-[state=open]:animate-collapsible-down",
+                rail && "ml-2 border-l pl-4",
+                className,
+            )}
             {...props}
         />
     );

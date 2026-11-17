@@ -64,7 +64,7 @@ function CitationStage({ label, citations }: { label: string; citations: Citatio
         <Collapsible open={open} onOpenChange={setOpen}>
             <CollapsibleTrigger className="flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
                 <ChevronDown
-                    className={cn("size-3 transition-transform", open && "rotate-180")}
+                    className={cn("size-3 transition-transform duration-200", open && "rotate-180")}
                     aria-hidden="true"
                 />
                 <span>{label}</span>
@@ -148,7 +148,10 @@ export function ActivityTrace({
                 />
                 <span className={cn(isStreaming && "animate-pulse")}>{title}</span>
                 <ChevronDown
-                    className={cn("size-3.5 transition-transform", open && "rotate-180")}
+                    className={cn(
+                        "size-3.5 transition-transform duration-200",
+                        open && "rotate-180",
+                    )}
                     aria-hidden="true"
                 />
             </CollapsibleTrigger>

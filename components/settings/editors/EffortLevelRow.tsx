@@ -284,7 +284,7 @@ export function EffortLevelRow({
                 <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-md text-left text-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:py-3">
                     <ChevronRight
                         aria-hidden="true"
-                        className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+                        className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90"
                     />
                     <span className="shrink-0 font-medium">{t("body")}</span>
                     <span

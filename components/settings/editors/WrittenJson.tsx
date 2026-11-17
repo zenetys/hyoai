@@ -39,7 +39,7 @@ export function WrittenJson({
                     {t("viewAsJson.label")}
                     <ChevronDown
                         aria-hidden="true"
-                        className="transition-transform group-data-[state=open]:rotate-180"
+                        className="transition-transform duration-200 group-data-[state=open]:rotate-180"
                     />
                 </Button>
             </CollapsibleTrigger>

@@ -38,7 +38,10 @@ export function SummaryMessage({ node }: { node: MessageNode }) {
                 <span className="shrink-0">{t("summaryLabel")}</span>
                 <span className="h-px flex-1 bg-border" aria-hidden="true" />
                 <ChevronDown
-                    className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-180")}
+                    className={cn(
+                        "size-3.5 shrink-0 transition-transform duration-200",
+                        open && "rotate-180",
+                    )}
                     aria-hidden="true"
                 />
             </CollapsibleTrigger>

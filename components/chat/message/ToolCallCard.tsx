@@ -56,7 +56,7 @@ function TextBlock({ label, text, note }: { label: string; text: string; note?: 
         <Collapsible open={open} onOpenChange={setOpen}>
             <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                 <ChevronDown
-                    className={cn("size-3 transition-transform", open && "rotate-180")}
+                    className={cn("size-3 transition-transform duration-200", open && "rotate-180")}
                     aria-hidden="true"
                 />
                 {label}

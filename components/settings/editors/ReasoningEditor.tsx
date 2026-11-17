@@ -302,7 +302,7 @@ export function ReasoningEditor({
                             <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-md py-3.5 text-left text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 max-md:py-4">
                                 <ChevronDown
                                     aria-hidden="true"
-                                    className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90"
+                                    className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=closed]:-rotate-90"
                                 />
                                 <span className="min-w-0 flex-1">
                                     <span className="block">{t("body.title")}</span>

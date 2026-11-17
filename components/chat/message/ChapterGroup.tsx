@@ -57,7 +57,10 @@ export function ChapterGroup({
                         {t("chapterGroup", { start, end })}
                     </span>
                     <ChevronDown
-                        className={cn("size-3.5 transition-transform", open && "rotate-180")}
+                        className={cn(
+                            "size-3.5 transition-transform duration-200",
+                            open && "rotate-180",
+                        )}
                         aria-hidden="true"
                     />
                 </CollapsibleTrigger>
