@@ -20,7 +20,7 @@ import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "
 import { settingsStore } from "@/lib/stores/settings";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
-import type { SuggestionCategory } from "@/types/server";
+import type { Suggestion, SuggestionCategory } from "@/types/server";
 
 interface ComposerShellProps {
     onSubmit: (text: string, attachments: Attachment[]) => void;
@@ -81,7 +81,8 @@ interface ComposerShellProps {
  * @param placeholder - Textarea placeholder override
  * @param rollingPlaceholder - A rotating placeholder to roll over the field, when one is set
  * @param suggestions - Starter suggestions to offer under the field while it is empty; pointing
- *        at one shows its prompt in the field, and choosing it sends the prompt
+ *        at one shows its prompt in the field, and choosing it sends the prompt, or writes it
+ *        in the field when the suggestion says so
  * @param wrapperClassName - Class for the drop-zone wrapper
  * @param autoFocus - Focus the textarea on mount (e.g. landing on the home screen)
  * @param focusKey - When this value changes, refocus the textarea (e.g. after a model change)
@@ -236,6 +237,28 @@ export function ComposerShell({
         att.setAttachments([]);
         historyIndex.current = -1;
         onSubmit(prompt, pendingAttachments);
+    };
+
+    /**
+     * Write the prompt of a starter suggestion in the field and put the caret after it, for the
+     * person to complete. The keyboard is welcome even on a touch device, as they chose to write.
+     *
+     * @param prompt - Prompt of the chosen suggestion
+     */
+    const fillPrompt = (prompt: string) => {
+        setPreview(null);
+        setText(prompt);
+        requestAnimationFrame(() => {
+            const el = textareaRef.current;
+            if (!el) return;
+            el.focus();
+            el.setSelectionRange(el.value.length, el.value.length);
+        });
+    };
+
+    const chooseSuggestion = (suggestion: Suggestion) => {
+        if (suggestion.send === false) fillPrompt(suggestion.prompt);
+        else sendPrompt(suggestion.prompt);
     };
 
     const recall = (value: string) => {
@@ -427,7 +450,7 @@ export function ComposerShell({
                     disabled={!ready || busy}
                     hidden={text !== ""}
                     onPreview={setPreview}
-                    onSend={sendPrompt}
+                    onChoose={chooseSuggestion}
                 />
             )}
         </div>

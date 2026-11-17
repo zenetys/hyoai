@@ -1,17 +1,18 @@
 "use client";
 
-import { ArrowUpRight, X } from "lucide-react";
+import { ArrowUpRight, TextCursorInput, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { SuggestionIcon } from "@/components/chat/composer/SuggestionIcon";
 import { Button } from "@/components/ui/button";
-import type { SuggestionCategory } from "@/types/server";
+import type { Suggestion, SuggestionCategory } from "@/types/server";
 
 /**
  * Starter suggestions under the field of an empty conversation: one pill per category, and a
  * pill opens its suggestions in place of the pills. Pointing at a row (or focusing it) asks
- * the field to show its prompt in grey, and choosing it sends the prompt. The slot hangs under
+ * the field to show its prompt in grey, and choosing it sends the prompt, or only writes it in
+ * the field when the suggestion asks for it. The slot hangs under
  * the field without taking any room, so the block keeps the place it has without suggestions,
  * and it has a fixed height that stays while the field has text, only emptied, so neither
  * opening a panel nor typing moves the field.
@@ -20,20 +21,20 @@ import type { SuggestionCategory } from "@/types/server";
  * @param disabled - Whether a prompt cannot be sent now (no model ready, or one is busy)
  * @param hidden - Whether to empty the slot, as the field has text
  * @param onPreview - Receives the prompt to show in the field, or null to put the field back
- * @param onSend - Sends the prompt of the chosen suggestion
+ * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
  */
 export function Suggestions({
     categories,
     disabled,
     hidden,
     onPreview,
-    onSend,
+    onChoose,
 }: {
     categories: SuggestionCategory[];
     disabled: boolean;
     hidden: boolean;
     onPreview: (prompt: string | null) => void;
-    onSend: (prompt: string) => void;
+    onChoose: (suggestion: Suggestion) => void;
 }) {
     return (
         <div className="relative h-0">
@@ -43,7 +44,7 @@ export function Suggestions({
                         categories={categories}
                         disabled={disabled}
                         onPreview={onPreview}
-                        onSend={onSend}
+                        onChoose={onChoose}
                     />
                 )}
             </div>
@@ -58,18 +59,18 @@ export function Suggestions({
  * @param categories - The categories to offer, in the order written
  * @param disabled - Whether a prompt cannot be sent now
  * @param onPreview - Receives the prompt to show in the field, or null to put the field back
- * @param onSend - Sends the prompt of the chosen suggestion
+ * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
  */
 function SuggestionsContent({
     categories,
     disabled,
     onPreview,
-    onSend,
+    onChoose,
 }: {
     categories: SuggestionCategory[];
     disabled: boolean;
     onPreview: (prompt: string | null) => void;
-    onSend: (prompt: string) => void;
+    onChoose: (suggestion: Suggestion) => void;
 }) {
     const t = useTranslations("composer");
     const [openLabel, setOpenLabel] = useState<string | null>(null);
@@ -138,15 +139,22 @@ function SuggestionsContent({
                             onBlur={() => onPreview(null)}
                             onClick={() => {
                                 onPreview(null);
-                                onSend(item.prompt);
+                                onChoose(item);
                             }}
                             className="group flex w-full items-center rounded-lg px-2 py-2.5 text-start text-sm outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 active:bg-muted disabled:pointer-events-none disabled:opacity-50"
                         >
                             <span className="min-w-0 flex-1">{item.title}</span>
-                            <ArrowUpRight
-                                className="invisible size-4 shrink-0 text-muted-foreground group-hover:visible group-focus-visible:visible"
-                                aria-hidden="true"
-                            />
+                            {item.send === false ? (
+                                <TextCursorInput
+                                    className="invisible size-4 shrink-0 text-muted-foreground group-hover:visible group-focus-visible:visible"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <ArrowUpRight
+                                    className="invisible size-4 shrink-0 text-muted-foreground group-hover:visible group-focus-visible:visible"
+                                    aria-hidden="true"
+                                />
+                            )}
                         </button>
                     </li>
                 ))}
