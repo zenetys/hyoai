@@ -472,6 +472,8 @@
             "compactInputDescription": "Place le bouton +, le champ de saisie et les contrôles sur une seule ligne, jusqu'à ce que le message passe à la ligne.",
             "showStats": "Statistiques des messages",
             "showStatsDescription": "Tokens, vitesse et durée sous chaque réponse.",
+            "showProjectContext": "Contexte du projet dans le menu des modèles",
+            "showProjectContextDescription": "Une jauge par modèle, dans les conversations d'un projet qui partage des instructions ou des documents.",
             "expandGroup": "Déplier après la réponse",
             "expandReasoning": "Déplier la réflexion",
             "expandReasoningDescription": "Garde le bloc de réflexion ouvert une fois la réponse terminée.",

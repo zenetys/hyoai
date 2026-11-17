@@ -472,6 +472,8 @@
             "compactInputDescription": "Puts the + button, the text field and the controls on a single line, until the message wraps.",
             "showStats": "Message statistics",
             "showStatsDescription": "Tokens, speed and duration under each answer.",
+            "showProjectContext": "Project context in the model menu",
+            "showProjectContextDescription": "A gauge for each model, in conversations of a project that shares instructions or documents.",
             "expandGroup": "Expand after the answer",
             "expandReasoning": "Expand reasoning",
             "expandReasoningDescription": "Keep the thinking block open once the answer is done.",
