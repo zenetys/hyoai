@@ -362,6 +362,11 @@ export function MessageList({
     const stickRef = useRef(true);
     const flashRef = useRef<Animation | null>(null);
     const [showJump, setShowJump] = useState(false);
+
+    // The pill stays mounted while it fades out; its animation end unmounts it.
+    const [jumpMounted, setJumpMounted] = useState(false);
+    if (showJump && !jumpMounted) setJumpMounted(true);
+
     const revealTarget = useStore(store, (state) => state.revealTarget);
     const streamTick = useStore(
         store,
@@ -516,10 +521,18 @@ export function MessageList({
                     })()}
                 </div>
             </div>
-            {showJump && (
+            {jumpMounted && (
                 <div
-                    className="absolute inset-x-0 flex justify-center duration-200 animate-in fade-in-0 slide-in-from-bottom-2"
+                    data-state={showJump ? "open" : "closed"}
+                    aria-hidden={showJump ? undefined : true}
+                    inert={!showJump}
+                    className="absolute inset-x-0 flex justify-center duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 data-[state=closed]:pointer-events-none motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:slide-out-to-bottom-2 motion-safe:data-[state=closed]:fill-mode-forwards motion-reduce:data-[state=closed]:invisible"
                     style={{ bottom: pillInset + 12 }}
+                    onAnimationEnd={(event) => {
+                        if (event.target === event.currentTarget && !showJump) {
+                            setJumpMounted(false);
+                        }
+                    }}
                 >
                     <Button
                         type="button"
