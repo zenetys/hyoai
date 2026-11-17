@@ -123,13 +123,17 @@ export function ProjectHeader({
             </button>
             {collapsed && activity && (
                 <span
-                    className={cn(
-                        "mr-1 size-2 shrink-0 rounded-full",
-                        activity === "approval" ? "bg-amber-500" : "animate-pulse bg-primary",
-                    )}
+                    className="mr-1 size-2 shrink-0 animate-in duration-200 fade-in-0 motion-reduce:animate-none"
                     role="img"
                     aria-label={activity === "approval" ? t("awaitingApproval") : t("generating")}
-                />
+                >
+                    <span
+                        className={cn(
+                            "block size-full rounded-full",
+                            activity === "approval" ? "bg-amber-500" : "animate-pulse bg-primary",
+                        )}
+                    />
+                </span>
             )}
             <Tooltip>
                 <TooltipTrigger asChild>

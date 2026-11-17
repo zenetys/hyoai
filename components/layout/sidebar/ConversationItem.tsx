@@ -246,7 +246,7 @@ export function ConversationItem({ meta, project }: { meta: ConversationMeta; pr
                             type="button"
                             variant="ghost"
                             size="icon-xs"
-                            className="ml-1 text-destructive/70 hover:text-destructive"
+                            className="ml-1 animate-in text-destructive/70 duration-200 fade-in-0 hover:text-destructive motion-reduce:animate-none"
                             aria-label={t("stopGeneration")}
                             onClick={() => stopConversation(meta.id)}
                         >
@@ -258,7 +258,7 @@ export function ConversationItem({ meta, project }: { meta: ConversationMeta; pr
             )}
             {liveState === "approval" && (
                 <span
-                    className="flex size-6 shrink-0 items-center justify-center text-amber-500"
+                    className="flex size-6 shrink-0 animate-in items-center justify-center text-amber-500 duration-200 fade-in-0 motion-reduce:animate-none"
                     role="img"
                     aria-label={t("awaitingApproval")}
                 >
