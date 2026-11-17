@@ -258,7 +258,7 @@ export function ConversationItem({ meta, project }: { meta: ConversationMeta; pr
             )}
             {liveState === "approval" && (
                 <span
-                    className="ml-1 flex size-6 shrink-0 items-center justify-center text-amber-500"
+                    className="flex size-6 shrink-0 items-center justify-center text-amber-500"
                     role="img"
                     aria-label={t("awaitingApproval")}
                 >
