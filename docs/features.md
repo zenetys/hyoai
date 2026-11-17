@@ -816,6 +816,10 @@ be sent; choosing it sends the prompt, with the files already attached to the fi
 touch what you had typed. The previews are for a mouse and the keyboard: on a touch screen, a tap
 sends.
 
+A suggestion the deployment marks with `"send": false` is a prompt to complete, such as "Translate
+this text:". Choosing it writes the prompt in the field, with the caret after it, and sends
+nothing, on a touch screen too; a small text cursor in place of the arrow tells these apart.
+
 The categories, their `icon` and their `items` are described in the
 [root keys](models.md#root-keys) of the configuration. The list of the interface language is shown,
 else English, else the first language written, so a French reader of a deployment that wrote both

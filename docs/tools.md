@@ -124,7 +124,8 @@ The panel has two levels, and the difference matters:
 
 - **The switch at the top, "Tools"**, is for the open conversation only. It reads "Enabled for this
   conversation" or "Disabled for this conversation". A conversation whose switch was never touched
-  follows Settings → Tools, "Enable tools in new conversations"; once you flip the switch, the
+  follows Settings → Tools, "Enable tools in new conversations" (or, until you choose, the
+  `tools` key of `config.json`); once you flip the switch, the
   conversation remembers its own choice.
 - **The providers below, tagged "Global setting"**, are not per conversation. Each row shows the
   provider, how many tools it lists ("1 tool", "4 tools", followed by "· 1 hidden" when some are set to
@@ -294,12 +295,12 @@ conversations, the limits, the providers and the approval of each tool.
 In this picture, tools are enabled for new conversations and "Current time" is set to "Always
 allow": neither is the default, as the table below shows.
 
-| Setting                           | Default       | Effect                                                                                                                                                                                                        |
-| --------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Enable tools in new conversations | off           | Conversations without a choice of their own have tools on. "The toggle in the composer still applies per conversation."                                                                                       |
-| Maximum steps per answer          | 10            | Model requests in one answer before asking to continue, from 1 to 50                                                                                                                                          |
-| Default approval                  | Ask each time | What a tool without a decision of its own does: "Ask each time" or "Always allow". The second shows a warning ("Tools will run without asking. A tool result can contain instructions that steer the model.") |
-| Result size limit                 | 20000         | Characters of one result sent to the model, from 1000 to 200000; the rest is cut. A value outside the range is brought back into it                                                                           |
+| Setting                           | Default       | Effect                                                                                                                                                                                                            |
+| --------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enable tools in new conversations | off           | Conversations without a choice of their own have tools on. `config.json` may start them on, under `tools.enabledByDefault`; a choice made here wins. "The toggle in the composer still applies per conversation." |
+| Maximum steps per answer          | 10            | Model requests in one answer before asking to continue, from 1 to 50                                                                                                                                              |
+| Default approval                  | Ask each time | What a tool without a decision of its own does: "Ask each time" or "Always allow". The second shows a warning ("Tools will run without asking. A tool result can contain instructions that steer the model.")     |
+| Result size limit                 | 20000         | Characters of one result sent to the model, from 1000 to 200000; the rest is cut. A value outside the range is brought back into it                                                                               |
 
 Under "Tool providers", each provider has its switch ("Offer the tools of {provider} to models", the
 same global setting as in the panel of the wrench) and, for each of its tools, an approval:
