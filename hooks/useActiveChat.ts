@@ -3,7 +3,9 @@
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
 import { type AgentProgress, type StreamingState } from "@/lib/stores/chat";
+import { modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
+import { resolveToolsDefault } from "@/lib/tools/default";
 import { flowHeadOf, flowRootOf } from "@/lib/tools/flow";
 import { getPath, getSiblingInfo } from "@/lib/tree";
 import type { MessageNode, MessageQuote } from "@/types/chat";
@@ -143,12 +145,10 @@ export function useAgentProgress(): AgentProgress | null {
  */
 export function useToolsEnabled(): boolean {
     const { store } = useChatInstance();
-    const enabledByDefault = useStore(
-        settingsStore,
-        (state) => state.settings.tools.enabledByDefault,
-    );
+    const setting = useStore(settingsStore, (state) => state.settings.tools.enabledByDefault);
+    const deployment = useStore(modelsStore, (state) => state.toolsEnabledByDefault);
     const own = useStore(store, (state) => state.toolsEnabled);
-    return own ?? enabledByDefault;
+    return own ?? resolveToolsDefault(setting, deployment);
 }
 
 /**
