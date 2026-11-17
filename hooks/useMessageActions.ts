@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useChatBusy, useFlowHead, useIsInFlow, useSiblingInfo } from "@/hooks/useActiveChat";
 import { useChatInstance } from "@/lib/chat/context";
+import { renderedMessageText } from "@/lib/quote";
 import { getMeta } from "@/lib/stores/conversations";
 import type { MessageNode } from "@/types/chat";
 
@@ -76,14 +77,15 @@ export function useMessageActions(node: MessageNode, { onEdit }: Options = {}): 
         toast.success(t("forkSuccess"));
     };
 
-    // Reply to this message, quoting the selected text if any.
+    // Reply to this message, quoting the selected text if any, else the whole message as shown.
     const handleReply = () => {
         const selection = window.getSelection();
         const picked = selection?.toString().trim() ?? "";
         const within = selection?.anchorNode?.parentElement?.closest("[data-message-id]");
         const useSelection =
             picked.length > 0 && (within as HTMLElement | null)?.dataset.messageId === node.id;
-        chat.setPendingReply({ text: useSelection ? picked : node.content, sourceId: node.id });
+        const whole = renderedMessageText(node.id) ?? node.content;
+        chat.setPendingReply({ text: useSelection ? picked : whole, sourceId: node.id });
         if (useSelection) selection?.removeAllRanges();
     };
 
