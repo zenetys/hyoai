@@ -301,6 +301,9 @@ export function ComposerShell({
         focusInput();
     };
 
+    // Same button for both, so each icon mounts again and fades in as the other leaves.
+    const swapIcon = "animate-in fade-in-0 zoom-in-75 duration-150 motion-reduce:animate-none";
+
     const sendButton = busy ? (
         <Button
             type="button"
@@ -309,7 +312,7 @@ export function ComposerShell({
             aria-label={t("stop")}
             onClick={onStop}
         >
-            <Square aria-hidden="true" />
+            <Square key="stop" className={swapIcon} aria-hidden="true" />
         </Button>
     ) : (
         <Button
@@ -319,7 +322,7 @@ export function ComposerShell({
             disabled={!canSend}
             onClick={submit}
         >
-            <ArrowUp aria-hidden="true" />
+            <ArrowUp key="send" className={swapIcon} aria-hidden="true" />
         </Button>
     );
 
