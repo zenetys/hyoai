@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { SettingBreadcrumb } from "@/components/settings/fields/SettingBreadcrumb";
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
+import { SettingPage } from "@/components/settings/fields/SettingPage";
 import { McpServerDetail } from "@/components/settings/mcp/McpServerDetail";
 import { McpServerForm } from "@/components/settings/mcp/McpServerForm";
 import { McpServerRow } from "@/components/settings/mcp/McpServerRow";
@@ -44,36 +45,40 @@ export function ServersTab() {
 
     if (open) {
         return (
-            <McpServerDetail
-                view={open}
-                otherIds={ids.filter((id) => id !== open.config.id)}
-                rootLabel={tNav("servers")}
-                onClose={() => setView(LIST)}
-            />
+            <SettingPage key={`server:${open.config.id}`}>
+                <McpServerDetail
+                    view={open}
+                    otherIds={ids.filter((id) => id !== open.config.id)}
+                    rootLabel={tNav("servers")}
+                    onClose={() => setView(LIST)}
+                />
+            </SettingPage>
         );
     }
 
     if (view.kind === "new") {
         return (
-            <div className="space-y-3">
-                <SettingBreadcrumb
-                    root={tNav("servers")}
-                    current={t("newServer")}
-                    onRoot={() => setView(LIST)}
-                />
-                <McpServerForm
-                    initial={newDraftMcpServer()}
-                    isNew
-                    otherIds={ids}
-                    onSaved={() => setView(LIST)}
-                    onCancel={() => setView(LIST)}
-                />
-            </div>
+            <SettingPage key="new">
+                <div className="space-y-3">
+                    <SettingBreadcrumb
+                        root={tNav("servers")}
+                        current={t("newServer")}
+                        onRoot={() => setView(LIST)}
+                    />
+                    <McpServerForm
+                        initial={newDraftMcpServer()}
+                        isNew
+                        otherIds={ids}
+                        onSaved={() => setView(LIST)}
+                        onCancel={() => setView(LIST)}
+                    />
+                </div>
+            </SettingPage>
         );
     }
 
     return (
-        <>
+        <SettingPage key="list">
             <div className="space-y-3">
                 <SettingGroup description={t("description")}>
                     {servers.length === 0 && (
@@ -121,6 +126,6 @@ export function ServersTab() {
                     ))}
                 </SettingGroup>
             )}
-        </>
+        </SettingPage>
     );
 }

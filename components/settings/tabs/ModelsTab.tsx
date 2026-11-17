@@ -9,6 +9,7 @@ import { ModelEditor } from "@/components/settings/editors/ModelEditor";
 import { SettingBreadcrumb } from "@/components/settings/fields/SettingBreadcrumb";
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { SettingLink } from "@/components/settings/fields/SettingLink";
+import { SettingPage } from "@/components/settings/fields/SettingPage";
 import { AvailabilityTab } from "@/components/settings/tabs/AvailabilityTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,46 +88,48 @@ export function ModelsTab() {
         const title = current.name || current.id || t("config.modelUntitled");
 
         return (
-            <div className="space-y-2">
-                <SettingBreadcrumb
-                    root={t("nav.models")}
-                    current={title}
-                    onRoot={() => setOpen(null)}
-                />
-                <ModelEditor
-                    index={open}
-                    model={current}
-                    onChange={(changes) => patchModel(open, changes)}
-                    onRemove={() => {
-                        removeModel(open);
-                        setOpen(null);
-                    }}
-                    onMoveUp={() => {
-                        moveModel(open, -1);
-                        setOpen(open - 1);
-                    }}
-                    onMoveDown={() => {
-                        moveModel(open, 1);
-                        setOpen(open + 1);
-                    }}
-                    canMoveUp={open > 0}
-                    canMoveDown={open < models.length - 1}
-                    mcpServers={draft.mcpServers
-                        .filter((server) => server.id.trim())
-                        .map((server) => ({ id: server.id, label: server.label }))}
-                    globalThinkingOn={draft.thinkingOn}
-                    globalThinkingOff={draft.thinkingOff}
-                    globalEffortLevels={draft.effortLevels}
-                    globalEffortDefault={draft.effortDefault}
-                />
-                {invalid}
-                {reset}
-            </div>
+            <SettingPage key="detail">
+                <div className="space-y-2">
+                    <SettingBreadcrumb
+                        root={t("nav.models")}
+                        current={title}
+                        onRoot={() => setOpen(null)}
+                    />
+                    <ModelEditor
+                        index={open}
+                        model={current}
+                        onChange={(changes) => patchModel(open, changes)}
+                        onRemove={() => {
+                            removeModel(open);
+                            setOpen(null);
+                        }}
+                        onMoveUp={() => {
+                            moveModel(open, -1);
+                            setOpen(open - 1);
+                        }}
+                        onMoveDown={() => {
+                            moveModel(open, 1);
+                            setOpen(open + 1);
+                        }}
+                        canMoveUp={open > 0}
+                        canMoveDown={open < models.length - 1}
+                        mcpServers={draft.mcpServers
+                            .filter((server) => server.id.trim())
+                            .map((server) => ({ id: server.id, label: server.label }))}
+                        globalThinkingOn={draft.thinkingOn}
+                        globalThinkingOff={draft.thinkingOff}
+                        globalEffortLevels={draft.effortLevels}
+                        globalEffortDefault={draft.effortDefault}
+                    />
+                    {invalid}
+                    {reset}
+                </div>
+            </SettingPage>
         );
     }
 
     return (
-        <>
+        <SettingPage key="list">
             <AvailabilityTab />
 
             <div className="space-y-4">
@@ -186,6 +189,6 @@ export function ModelsTab() {
                 {invalid}
             </div>
             {reset}
-        </>
+        </SettingPage>
     );
 }
