@@ -58,7 +58,7 @@ export function ProjectContext({
     const strategy: OverflowStrategy = budget.strategy;
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-preview-in motion-reduce:animate-none">
             <SettingBreadcrumb root={t("back")} current={t("title")} onRoot={onBack} />
             <p className="text-xs text-muted-foreground">{t("description")}</p>
             <SettingGroup title={t("instructions.title")}>

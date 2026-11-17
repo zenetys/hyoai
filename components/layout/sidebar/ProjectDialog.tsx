@@ -203,7 +203,7 @@ function ProjectForm({
                     <DialogTitle>{t("title")}</DialogTitle>
                     <DialogDescription>{t("description")}</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-5">
+                <div className="space-y-5 animate-preview-in motion-reduce:animate-none">
                     <div className="space-y-1.5">
                         <Label htmlFor={`${uid}-name`}>{t("name")}</Label>
                         <Input

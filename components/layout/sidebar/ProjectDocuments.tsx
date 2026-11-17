@@ -81,7 +81,7 @@ export function ProjectDocuments({ projectId, onBack }: { projectId: string; onB
     };
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-preview-in motion-reduce:animate-none">
             <SettingBreadcrumb root={t("title")} current={t("documents.title")} onRoot={onBack} />
             <p className="text-xs text-muted-foreground">{t("documents.description")}</p>
             <div
