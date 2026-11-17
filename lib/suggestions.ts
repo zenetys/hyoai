@@ -5,18 +5,22 @@ export const SUGGESTION_ICONS: readonly SuggestionIconName[] = ["pen-line", "cha
 
 /**
  * Keep the usable suggestions of one item: a non-empty title, and a prompt that
- * defaults to the title when it is missing or blank.
+ * defaults to the title when it is missing or blank. A prompt that is only written
+ * in the field (`send` false) keeps its trailing spaces and line breaks, so the
+ * reader's text starts where the prompt stops.
  *
  * @param raw - The item as parsed
  * @returns The suggestion, or null when the item has no usable title
  */
 function normalizeSuggestion(raw: unknown): Suggestion | null {
     if (!raw || typeof raw !== "object") return null;
-    const { title, prompt } = raw as Record<string, unknown>;
+    const { title, prompt, send } = raw as Record<string, unknown>;
     if (typeof title !== "string" || !title.trim()) return null;
     const text = title.trim();
-    const sent = typeof prompt === "string" ? prompt.trim() : "";
-    return { title: text, prompt: sent || text };
+    const typed = typeof prompt === "string" ? prompt : "";
+    if (send === false)
+        return { title: text, prompt: typed.trim() ? typed.trimStart() : text, send };
+    return { title: text, prompt: typed.trim() || text };
 }
 
 /**

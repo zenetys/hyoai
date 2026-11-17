@@ -32,6 +32,32 @@ describe("normalizeSuggestions", () => {
         expect(result?.en[0].items.map((item) => item.prompt)).toEqual(["A", "B", "C"]);
     });
 
+    it("keeps send false and the end of the prompt, so the reader writes after it", () => {
+        const items = [
+            { title: "Translate", prompt: "  Translate this:\n\n", send: false },
+            { title: "Blank", prompt: "  ", send: false },
+        ];
+        const result = normalizeSuggestions({ en: [category({ items })] });
+
+        expect(result?.en[0].items).toEqual([
+            { title: "Translate", prompt: "Translate this:\n\n", send: false },
+            { title: "Blank", prompt: "Blank", send: false },
+        ]);
+    });
+
+    it("sends by default, whatever else send holds", () => {
+        const items = [
+            { title: "A", prompt: "a ", send: true },
+            { title: "B", prompt: "b ", send: "no" },
+        ];
+        const result = normalizeSuggestions({ en: [category({ items })] });
+
+        expect(result?.en[0].items).toEqual([
+            { title: "A", prompt: "a" },
+            { title: "B", prompt: "b" },
+        ]);
+    });
+
     it("trims the label, the titles and the prompts", () => {
         const items = [{ title: "  Plan ", prompt: "  Make a plan.  " }];
         const result = normalizeSuggestions({ en: [category({ label: "  Work ", items })] });

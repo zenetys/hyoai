@@ -159,11 +159,13 @@ export type SuggestionIconName = "pen-line" | "chart-column" | "code";
 
 /**
  * One starter suggestion: the title shown in the list and the prompt sent when it is
- * chosen, which is the title when the config gives none.
+ * chosen, which is the title when the config gives none. With `send` false, choosing it
+ * writes the prompt in the field for the reader to complete instead of sending it.
  */
 export interface Suggestion {
     title: string;
     prompt: string;
+    send?: false;
 }
 
 /**
