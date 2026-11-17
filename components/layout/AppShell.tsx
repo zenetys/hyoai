@@ -77,8 +77,9 @@ export function AppShell() {
             <NoticeBar />
             <div className="flex min-h-0 flex-1">
                 <aside
+                    inert={!sidebarOpen}
                     className={cn(
-                        "hidden shrink-0 overflow-hidden border-r border-sidebar-border transition-[width] duration-200 md:block",
+                        "hidden shrink-0 overflow-hidden border-r border-sidebar-border transition-[width] duration-200 ease-out motion-reduce:transition-none md:block",
                         sidebarOpen ? "w-62 lg:w-72" : "w-0 border-r-0",
                     )}
                 >
