@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import changelog from "@/data/changelog.json";
 import { type ChangelogEntry, splitNotes } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
@@ -48,21 +49,26 @@ function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
             </header>
             {intro && <MarkdownRenderer content={intro} />}
             {details && (
-                <>
-                    <button
-                        type="button"
-                        aria-expanded={open}
-                        onClick={() => setOpen(!open)}
-                        className="flex items-center gap-1 rounded text-sm font-medium text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                    >
-                        {open ? t("hideDetails") : t("showDetails")}
-                        <ChevronDown
-                            className={cn("size-4 transition-transform", open && "rotate-180")}
-                            aria-hidden="true"
-                        />
-                    </button>
-                    {open && <MarkdownRenderer content={details} />}
-                </>
+                <Collapsible open={open} onOpenChange={setOpen} className="space-y-2">
+                    <CollapsibleTrigger asChild>
+                        <button
+                            type="button"
+                            className="flex items-center gap-1 rounded text-sm font-medium text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        >
+                            {open ? t("hideDetails") : t("showDetails")}
+                            <ChevronDown
+                                className={cn(
+                                    "size-4 transition-transform duration-200",
+                                    open && "rotate-180",
+                                )}
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <MarkdownRenderer content={details} />
+                    </CollapsibleContent>
+                </Collapsible>
             )}
         </article>
     );
