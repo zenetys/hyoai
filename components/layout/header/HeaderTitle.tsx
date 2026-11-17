@@ -1,11 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { ProjectInstructionsText } from "@/components/common/ProjectInstructionsText";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useActiveProject } from "@/hooks/useChatProject";
 import { useActiveConversationId } from "@/hooks/useConversations";
 import { useStore } from "@/hooks/useStore";
@@ -33,6 +34,14 @@ export function HeaderTitle() {
     const activeId = useActiveConversationId();
     const project = useActiveProject();
     const [renaming, setRenaming] = useState(false);
+
+    // The tooltip opens only for a title the width of the header cuts, which is measured as it opens
+    const titleRef = useRef<HTMLElement>(null);
+    const [tipOpen, setTipOpen] = useState(false);
+    const changeTip = (open: boolean) => {
+        const el = titleRef.current;
+        setTipOpen(open && el !== null && el.scrollWidth > el.clientWidth);
+    };
     const meta = useMemo(
         () => index.find((entry) => entry.id === activeId) ?? null,
         [index, activeId],
@@ -111,7 +120,14 @@ export function HeaderTitle() {
         return (
             <div className="ml-1 flex min-w-0 flex-1 items-center md:ml-0">
                 {prefix}
-                <span className="min-w-0 truncate text-sm font-medium">{label}</span>
+                <Tooltip open={tipOpen} onOpenChange={changeTip}>
+                    <TooltipTrigger asChild>
+                        <span ref={titleRef} className="min-w-0 truncate text-sm font-medium">
+                            {label}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{label}</TooltipContent>
+                </Tooltip>
             </div>
         );
     }
@@ -119,13 +135,19 @@ export function HeaderTitle() {
     return (
         <div className="ml-1 flex min-w-0 flex-1 items-center md:ml-0">
             {prefix}
-            <button
-                type="button"
-                className="-mx-2 inline-block min-w-0 max-w-full truncate rounded px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-muted"
-                onClick={() => setRenaming(true)}
-            >
-                {label}
-            </button>
+            <Tooltip open={tipOpen} onOpenChange={changeTip}>
+                <TooltipTrigger asChild>
+                    <button
+                        ref={titleRef as React.Ref<HTMLButtonElement>}
+                        type="button"
+                        className="-mx-2 inline-block min-w-0 max-w-full truncate rounded px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-muted"
+                        onClick={() => setRenaming(true)}
+                    >
+                        {label}
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+            </Tooltip>
         </div>
     );
 }
