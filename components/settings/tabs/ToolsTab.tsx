@@ -21,6 +21,7 @@ import {
 import { useLocalizedText } from "@/hooks/useLocalizedText";
 import { useStore } from "@/hooks/useStore";
 import { mcpStore } from "@/lib/mcp/registry";
+import { modelsStore } from "@/lib/stores/models";
 import {
     resetToolPolicies,
     settingsStore,
@@ -34,6 +35,7 @@ import {
     policyFor,
     toolPolicyKey,
 } from "@/lib/tools/catalog";
+import { resolveToolsDefault } from "@/lib/tools/default";
 import type { ToolSettings } from "@/types/settings";
 import type { ToolDefinition } from "@/types/tools";
 
@@ -54,6 +56,7 @@ export function ToolsTab() {
     const t = useTranslations("settings.tools");
     const localize = useLocalizedText();
     const tools = useStore(settingsStore, (state) => state.settings.tools);
+    const deployment = useStore(modelsStore, (state) => state.toolsEnabledByDefault);
     const mcpProviders = useStore(mcpStore, (state) =>
         state.servers.map((server) => server.providerId).join(","),
     );
@@ -100,7 +103,7 @@ export function ToolsTab() {
                     id="tools-enabled-default"
                     label={t("enabledByDefault")}
                     description={t("enabledByDefaultDescription")}
-                    checked={tools.enabledByDefault}
+                    checked={resolveToolsDefault(tools.enabledByDefault, deployment)}
                     onCheckedChange={(enabledByDefault) => patch({ enabledByDefault })}
                 />
                 <SettingRow
