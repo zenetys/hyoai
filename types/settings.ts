@@ -63,6 +63,7 @@ export interface PenaltySettings {
  * Purely visual preferences.
  *
  * @param showStats - Show the generation stats footer on messages
+ * @param showProjectContext - Show the project context gauges in the model menu
  * @param expandReasoningByDefault - Expand the reasoning section on new messages
  * @param expandSearchByDefault - Expand the search/sub-queries section on new messages
  * @param expandSourcesByDefault - Expand the sources section on new messages
@@ -71,6 +72,7 @@ export interface PenaltySettings {
  */
 export interface DisplaySettings {
     showStats: boolean;
+    showProjectContext: boolean;
     expandReasoningByDefault: boolean;
     expandSearchByDefault: boolean;
     expandSourcesByDefault: boolean;
@@ -188,6 +190,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     penalties: {},
     display: {
         showStats: true,
+        showProjectContext: true,
         expandReasoningByDefault: false,
         expandSearchByDefault: false,
         expandSourcesByDefault: false,

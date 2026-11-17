@@ -161,6 +161,7 @@ const penaltySettingsSchema = z.object({
 
 const displaySettingsSchema = z.object({
     showStats: z.boolean().catch(DEFAULT_SETTINGS.display.showStats),
+    showProjectContext: z.boolean().catch(DEFAULT_SETTINGS.display.showProjectContext),
     expandReasoningByDefault: z.boolean().catch(DEFAULT_SETTINGS.display.expandReasoningByDefault),
     expandSearchByDefault: z.boolean().catch(DEFAULT_SETTINGS.display.expandSearchByDefault),
     expandSourcesByDefault: z.boolean().catch(DEFAULT_SETTINGS.display.expandSourcesByDefault),
