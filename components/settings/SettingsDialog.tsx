@@ -174,7 +174,7 @@ export function SettingsDialog() {
                             key={searching ? "search" : current?.id}
                             className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 md:px-6 [&_[data-slot=select-trigger]]:border-transparent [&_[data-slot=select-trigger]]:bg-transparent [&_[data-slot=select-trigger]]:shadow-none [&_[data-slot=select-trigger]]:hover:bg-muted dark:[&_[data-slot=select-trigger]]:bg-transparent dark:[&_[data-slot=select-trigger]]:hover:bg-foreground/10 max-md:[&_[data-slot=select-trigger]]:h-10! max-md:[&_[data-slot=button][data-size=default]]:h-10! max-md:[&_[data-slot=button][data-size=sm]]:h-10! max-md:[&_[data-slot=button][data-size=icon-sm]]:size-10! max-md:[&_input]:h-10 max-md:[&_[data-slot=input-group]]:h-10 max-md:[&_[data-slot=input-group-addon]_button]:size-10 max-md:[&_[data-slot=switch]]:after:-inset-y-3"
                         >
-                            <div className="mx-auto max-w-2xl space-y-1">
+                            <div className="mx-auto max-w-2xl animate-preview-in space-y-1 motion-reduce:animate-none">
                                 {searching ? (
                                     <SettingsSearchResults
                                         query={query}
