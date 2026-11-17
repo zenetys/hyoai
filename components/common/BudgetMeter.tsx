@@ -47,6 +47,10 @@ export function BudgetMeter({
     const over = layout.over > 0;
     const share = (value: number) => `${value}%`;
 
+    // The bar follows the counts when they change (a document added, a message sent)
+    const slide = "transition-[width] duration-300 ease-out motion-reduce:transition-none";
+    const move = "transition-[left] duration-300 ease-out motion-reduce:transition-none";
+
     return (
         <div className={cn("space-y-1", className)}>
             <div className="flex items-baseline justify-between gap-2 text-xs">
@@ -71,17 +75,23 @@ export function BudgetMeter({
                     reserve: formatTokens(reserve, locale),
                 })}
             >
-                <div className="bg-sky-500" style={{ width: share(layout.shared) }} />
-                <div className="bg-primary" style={{ width: share(layout.conversation) }} />
-                <div className="bg-muted-foreground/40" style={{ width: share(layout.reserve) }} />
+                <div className={cn("bg-sky-500", slide)} style={{ width: share(layout.shared) }} />
                 <div
-                    className="absolute inset-y-0 w-px bg-foreground/70"
+                    className={cn("bg-primary", slide)}
+                    style={{ width: share(layout.conversation) }}
+                />
+                <div
+                    className={cn("bg-muted-foreground/40", slide)}
+                    style={{ width: share(layout.reserve) }}
+                />
+                <div
+                    className={cn("absolute inset-y-0 w-px bg-foreground/70", move)}
                     style={{ left: share(layout.threshold) }}
                     aria-hidden="true"
                 />
                 {over && (
                     <div
-                        className="absolute inset-y-0 w-0.5 bg-destructive"
+                        className={cn("absolute inset-y-0 w-0.5 bg-destructive", move)}
                         style={{ left: share(layout.end) }}
                         aria-hidden="true"
                     />
