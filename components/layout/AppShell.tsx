@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { ModelInfoDialog } from "@/components/chat/dialogs/ModelInfoDialog";
 import { SystemMessageDialog } from "@/components/chat/dialogs/SystemMessageDialog";
@@ -23,6 +23,7 @@ import { startNewChat } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
 import { watchHealth } from "@/lib/stores/health";
 import { modelsStore, selectActiveEntry } from "@/lib/stores/models";
+import { noticeStore } from "@/lib/stores/notice";
 import { setCommandOpen, setMobileSidebarOpen, toggleSidebar, uiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,19 @@ export function AppShell() {
     const compareEnabled = useStore(compareStore, (state) => state.enabled);
     const foregroundEpoch = useStore(activeChatStore, (state) => state.epoch);
     const isMobile = useIsMobile();
+
+    // The frame stays transparent until the config and its notice are known, so it never shifts
+    const configStatus = useStore(modelsStore, (state) => state.configStatus);
+    const noticeReady = useStore(noticeStore, (state) => state.ready);
+
+    // A config that never answers shows the frame after two seconds anyway
+    const [late, setLate] = useState(false);
+    const revealed = late || (configStatus !== "loading" && noticeReady);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setLate(true), 2000);
+        return () => clearTimeout(timer);
+    }, []);
 
     useOnBreakpointCross(isMobile, () => {
         if (mobileOpen) setMobileSidebarOpen(false);
@@ -73,7 +87,12 @@ export function AppShell() {
     }, []);
 
     return (
-        <div className="flex h-dvh flex-col">
+        <div
+            className={cn(
+                "flex h-dvh flex-col transition-opacity duration-200 motion-reduce:transition-none",
+                !revealed && "pointer-events-none opacity-0",
+            )}
+        >
             <NoticeBar />
             <div className="flex min-h-0 flex-1">
                 <aside
