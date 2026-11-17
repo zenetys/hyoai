@@ -117,6 +117,49 @@ function planSegments(ids: string[], nodes: Record<string, MessageNode>): ListSe
 }
 
 /**
+ * The rows added to the end of the conversation on screen, which fade in: a message sent, the
+ * answer that starts. The rows a conversation opens with, and a branch or an edit that replaces
+ * the end of the path, appear as they are. The list mounts with the first message of a new
+ * conversation, so a turn already running at mount makes its last two rows fresh, and a new
+ * conversation keeps its first rows as fresh when it gets its id.
+ *
+ * @param conversationId - Id of the active conversation, or null while it is not saved yet
+ * @param ids - Node ids of the active path
+ * @param running - Whether a turn is in progress
+ */
+function useFreshRows(
+    conversationId: string | null,
+    ids: string[],
+    running: boolean,
+): ReadonlySet<string> {
+    const [tracked, setTracked] = useState({
+        conversationId,
+        ids,
+        fresh: new Set<string>(running ? ids.slice(-2) : []),
+    });
+
+    if (tracked.conversationId !== conversationId) {
+        const continued = tracked.conversationId === null && tracked.ids.length === 0;
+        setTracked({
+            conversationId,
+            ids,
+            fresh: continued ? new Set(ids) : new Set(),
+        });
+    } else if (
+        tracked.ids.length !== ids.length ||
+        tracked.ids.some((id, index) => id !== ids[index])
+    ) {
+        const grown =
+            ids.length > tracked.ids.length && tracked.ids.every((id, i) => id === ids[i]);
+        const fresh = new Set(tracked.fresh);
+        if (grown) for (const id of ids.slice(tracked.ids.length)) fresh.add(id);
+        setTracked({ conversationId, ids, fresh });
+    }
+
+    return tracked.fresh;
+}
+
+/**
  * One spaced row of the active branch. Consecutive collapsed chapter rows pack
  * tightly together; the first chapter of a run keeps a little air below the
  * preceding bubble, and every other row keeps the usual gap. The first row of
@@ -124,15 +167,23 @@ function planSegments(ids: string[], nodes: Record<string, MessageNode>): ListSe
  *
  * @param id - Node id on the active path
  * @param prevId - Previous row's node id ("" for the first row)
+ * @param fresh - Whether the row was added to the conversation on screen, so it fades in
  */
-function MessageRowItem({ id, prevId }: { id: string; prevId: string }) {
+function MessageRowItem({ id, prevId, fresh }: { id: string; prevId: string; fresh: boolean }) {
     const node = useMessageNode(id);
     const prev = useMessageNode(prevId);
     const isChunk = node?.chunk?.kind === "chunk";
     const prevIsChunk = prev?.chunk?.kind === "chunk";
     const margin = !prevId ? "" : isChunk ? (prevIsChunk ? "mt-1" : "mt-4") : "mt-6";
     return (
-        <div data-row-id={id} className={cn("cv-auto", margin)}>
+        <div
+            data-row-id={id}
+            className={cn(
+                "cv-auto",
+                margin,
+                fresh && "animate-preview-in motion-reduce:animate-none",
+            )}
+        >
             <MessageRow id={id} />
         </div>
     );
@@ -304,6 +355,9 @@ export function MessageList({
     const chat = useChatInstance();
     const { store } = chat;
     const ids = useActivePathIds();
+    const conversationId = useStore(store, (state) => state.conversationId);
+    const running = useStore(store, (state) => state.running);
+    const fresh = useFreshRows(conversationId, ids, running);
     const containerRef = useRef<HTMLDivElement>(null);
     const stickRef = useRef(true);
     const flashRef = useRef<Animation | null>(null);
@@ -438,6 +492,7 @@ export function MessageList({
                                     key={seg.id}
                                     id={seg.id}
                                     prevId={prevOf.get(seg.id) ?? ""}
+                                    fresh={fresh.has(seg.id)}
                                 />
                             ) : seg.kind === "flow" ? (
                                 <div key={`flow-${seg.ids[0]}`} className={cn(i > 0 && "mt-6")}>
