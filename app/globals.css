@@ -213,6 +213,20 @@ html[data-embed] body:has([data-embed-root]) {
     }
 }
 
+/* A previewed prompt only fades in: a transform would shift the text by a pixel when it ends */
+@theme {
+    --animate-preview-in: preview-in 200ms ease-out both;
+
+    @keyframes preview-in {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+}
+
 /* Cheap rendering win on long message lists without virtualization */
 @utility cv-auto {
     content-visibility: auto;
