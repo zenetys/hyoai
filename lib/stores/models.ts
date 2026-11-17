@@ -37,6 +37,7 @@ interface ModelsState {
     notice?: NoticeConfig;
     placeholders?: Record<string, string[]>;
     suggestions?: Record<string, SuggestionCategory[]>;
+    toolsEnabledByDefault?: boolean;
     configStatus: ConfigStatus;
     configError?: string;
     configDraftError?: string;
@@ -129,6 +130,7 @@ export async function initModels(): Promise<void> {
         notice,
         placeholders,
         suggestions,
+        toolsEnabledByDefault,
     } = result.config;
     const selectable = (id: string) => models.some((entry) => entry.id === id && !entry.disabled);
     const stored = persisted?.activeEntryId;
@@ -159,6 +161,7 @@ export async function initModels(): Promise<void> {
         notice,
         placeholders,
         suggestions,
+        toolsEnabledByDefault,
         configStatus: "ready",
         hasOverride,
     });

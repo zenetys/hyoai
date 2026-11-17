@@ -96,12 +96,16 @@ const placeholdersSchema = z.record(z.string(), z.unknown());
 // Starter suggestions by language: a bad shape drops the key, never the config.
 const suggestionsSchema = z.record(z.string(), z.unknown());
 
+// Tool calling choices of the deployment: a bad shape drops the key, never the config.
+const toolsSchema = z.object({ enabledByDefault: z.boolean().optional().catch(undefined) });
+
 const configSchema = z.object({
     models: z.array(modelSchema).default([]),
     appName: z.string().min(1).optional(),
     notice: noticeSchema.optional().catch(undefined),
     placeholders: placeholdersSchema.optional().catch(undefined),
     suggestions: suggestionsSchema.optional().catch(undefined),
+    tools: toolsSchema.optional().catch(undefined),
     defaultModel: z.string().optional(),
     embedOrigins: z.array(z.string().min(1)).default([]),
     integrations: z.array(z.unknown()).optional(),
@@ -258,6 +262,7 @@ export function normalizeConfig(raw: unknown): AppConfigResult {
         notice: Object.keys(parsed.data.notice?.text ?? {}).length ? parsed.data.notice : undefined,
         placeholders: normalizePlaceholders(parsed.data.placeholders),
         suggestions: normalizeSuggestions(parsed.data.suggestions),
+        toolsEnabledByDefault: parsed.data.tools?.enabledByDefault,
         defaultModel: parsed.data.defaultModel,
         embedOrigins: normalizeEmbedOrigins(parsed.data.embedOrigins),
         integrations,

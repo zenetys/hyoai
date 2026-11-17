@@ -62,6 +62,7 @@ import { settingsStore, setToolPolicy } from "@/lib/stores/settings";
 import { refreshStorage } from "@/lib/stores/storage";
 import { uiStore } from "@/lib/stores/ui";
 import { collectToolSet, listToolProviders, policyFor, type ToolSet } from "@/lib/tools/catalog";
+import { toolsEnabledByDefault } from "@/lib/tools/default";
 import { flowHeadOf, flowRootOf, flowStages, unansweredCalls } from "@/lib/tools/flow";
 import { MAX_CALLS_PER_STEP, parseToolArguments, runToolCall } from "@/lib/tools/runner";
 import { resolveToolSupport } from "@/lib/tools/support";
@@ -1455,7 +1456,7 @@ export class ChatInstance {
     ): Promise<ToolSet | null> => {
         if (uiStore.getState().embed) return null;
         const settings = settingsStore.getState().settings.tools;
-        if (!(this.store.getState().toolsEnabled ?? settings.enabledByDefault)) return null;
+        if (!(this.store.getState().toolsEnabled ?? toolsEnabledByDefault())) return null;
         const props = modelsStore.getState().props[entry.id]?.props ?? null;
         if (!resolveToolSupport(entry, props)) return null;
 

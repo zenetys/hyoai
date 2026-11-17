@@ -188,6 +188,7 @@ export interface AppConfig {
     notice?: NoticeConfig;
     placeholders?: Record<string, string[]>;
     suggestions?: Record<string, SuggestionCategory[]>;
+    toolsEnabledByDefault?: boolean;
     defaultModel?: string;
     embedOrigins: string[];
     integrations?: IntegrationConfig[];

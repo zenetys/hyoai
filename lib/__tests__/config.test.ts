@@ -181,6 +181,26 @@ describe("suggestions", () => {
     });
 });
 
+describe("tools on by default", () => {
+    it("is absent by default", () => {
+        expect(ready({ models: [model] }).toolsEnabledByDefault).toBeUndefined();
+    });
+
+    it("is read from the tools key", () => {
+        const on = ready({ models: [model], tools: { enabledByDefault: true } });
+        const off = ready({ models: [model], tools: { enabledByDefault: false } });
+        expect(on.toolsEnabledByDefault).toBe(true);
+        expect(off.toolsEnabledByDefault).toBe(false);
+    });
+
+    it("does not fail the config over a key of the wrong shape", () => {
+        expect(ready({ models: [model], tools: "yes" }).toolsEnabledByDefault).toBeUndefined();
+        const odd = ready({ models: [model], tools: { enabledByDefault: "yes" } });
+        expect(odd.toolsEnabledByDefault).toBeUndefined();
+        expect(odd.models).toHaveLength(1);
+    });
+});
+
 describe("model scope on MCP servers", () => {
     it("is read the same way by the app and by the config form", () => {
         for (const scope of [undefined, [], ["docs"], "docs", null, [1], ["docs", 5], {}]) {
