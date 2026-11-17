@@ -5,6 +5,9 @@ import type { MessageNode } from "@/types/chat";
 // Wording of a server refusing tools (llama.cpp without --jinja, vLLM without auto tool choice).
 const TOOLS_REJECTED = /jinja|tool[_ ]?(call|choice|s)\b|auto tool choice/i;
 
+// A template refusing the order of the roles says nothing about tools, whatever else it names.
+const ROLES_REFUSED = /roles must alternate/i;
+
 /**
  * Pick the translated error text for a failed generation, keyed by its error
  * kind. Shared by the normal assistant row and the chapter row so both render a
@@ -37,7 +40,7 @@ export function errorText(
         case "reasoningOnly":
             return t("errorReasoningOnly");
         case "http":
-            return TOOLS_REJECTED.test(node.error ?? "")
+            return TOOLS_REJECTED.test(node.error ?? "") && !ROLES_REFUSED.test(node.error ?? "")
                 ? t("errorToolsRejected", { message: node.error ?? "" })
                 : t("errorHttp", { message: node.error ?? "" });
         default:
