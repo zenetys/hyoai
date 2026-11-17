@@ -8,14 +8,16 @@ import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useChatProject } from "@/hooks/useChatProject";
 import { useConversationTokens } from "@/hooks/useConversationTokens";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
+import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
+import { settingsStore } from "@/lib/stores/settings";
 import { cn } from "@/lib/utils";
 
 /**
  * The menu's view of what the project shares with the conversation: one gauge per enabled model
  * window, measured with the conversation as it stands, and a word where a window has to cut the
- * documents. Renders nothing for a conversation outside a project, or a project that shares
- * nothing, so the menu of a plain chat stays as it was.
+ * documents. Renders nothing when the setting is off, for a conversation outside a project, or
+ * for a project that shares nothing, so the menu of a plain chat stays as it was.
  */
 export function ModelContextGauge() {
     const t = useTranslations("projectContext");
@@ -23,9 +25,11 @@ export function ModelContextGauge() {
     const instance = useChatInstance();
     const project = useChatProject();
     const conversation = useConversationTokens(instance);
-    const budget = useProjectBudget(project?.id ?? null, conversation);
+    const enabled = useStore(settingsStore, (state) => state.settings.display.showProjectContext);
+    const budget = useProjectBudget(enabled ? (project?.id ?? null) : null, conversation);
 
-    if (!project || (budget.instructions === 0 && budget.documents.length === 0)) return null;
+    if (!enabled || !project) return null;
+    if (budget.instructions === 0 && budget.documents.length === 0) return null;
 
     return (
         <>
