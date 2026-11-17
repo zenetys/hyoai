@@ -141,6 +141,13 @@ export function AppearanceTab() {
                     checked={settings.display.showStats}
                     onCheckedChange={(checked) => setDisplay({ showStats: checked })}
                 />
+                <SettingToggle
+                    id="appearance-show-project-context"
+                    label={t("showProjectContext")}
+                    description={t("showProjectContextDescription")}
+                    checked={settings.display.showProjectContext}
+                    onCheckedChange={(checked) => setDisplay({ showProjectContext: checked })}
+                />
             </SettingGroup>
             <SettingGroup title={t("expandGroup")}>
                 <SettingToggle
