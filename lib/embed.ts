@@ -21,6 +21,8 @@ type EmbedTheme = "light" | "dark" | "system";
  *   replace the stored setting for it; thinking false switches the thinking
  *   fragment off. A value of the wrong type is ignored. silent is accepted and has
  *   no effect, since a run is always silent.
+ * - abort: cancel the in-flight run with that id; an aborted run emits no
+ *   terminal message, and an id that is not in flight is ignored.
  */
 export type EmbedInbound =
     | {
@@ -41,20 +43,41 @@ export type EmbedInbound =
           temperature?: number;
           maxTokens?: number;
           thinking?: boolean;
-      };
+      }
+    | { channel: typeof EMBED_CHANNEL; type: "abort"; id: string };
 
 /**
  * Frozen contract for messages the embedded widget posts up to the host page.
  * Every variant is tagged by `type` on EMBED_CHANNEL:
  *
- * - ready: the handshake completed and the widget can receive actions.
+ * - ready: the handshake completed and the widget can receive actions. It carries
+ *   the build version and the capabilities for feature detection; a widget older
+ *   than that sends neither, so a host treats both as optional.
  * - state: generation started or settled, so a host control can gate on it.
  * - chunk/done/error: headless run output -- streamed deltas, the final text
  *   and a failure, each correlated to a run by id.
  */
 export type EmbedOutbound =
-    | { channel: typeof EMBED_CHANNEL; type: "ready" }
+    | {
+          channel: typeof EMBED_CHANNEL;
+          type: "ready";
+          version?: string;
+          capabilities?: string[];
+      }
     | { channel: typeof EMBED_CHANNEL; type: "state"; generating: boolean }
     | { channel: typeof EMBED_CHANNEL; type: "chunk"; id: string; delta: string }
     | { channel: typeof EMBED_CHANNEL; type: "done"; id: string; text: string }
     | { channel: typeof EMBED_CHANNEL; type: "error"; id: string; message: string };
+
+/**
+ * Inbound message types and options this widget handles, announced in the ready
+ * handshake. An entry is an inbound type, or a type followed by a dot and one of its
+ * options. The embed test fails to compile when an inbound type is left out.
+ */
+export const EMBED_CAPABILITIES = [
+    "config",
+    "send",
+    "run",
+    "run.options",
+    "abort",
+] as const satisfies readonly (EmbedInbound["type"] | `${EmbedInbound["type"]}.${string}`)[];
