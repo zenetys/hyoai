@@ -102,6 +102,30 @@ function enableCrossTabRefresh(): void {
     });
 }
 
+/**
+ * Settings patch carried by the embed URL, kept apart from the stored settings: the
+ * sampling overrides and the display fields it names are merged over the current
+ * ones, and every other field is left alone.
+ *
+ * @param config - Configuration parsed from the embed URL
+ * @param settings - Current settings the patch is merged over
+ * @returns The partial settings to apply in memory
+ */
+export function embedSettingsPatch(
+    config: EmbedConfig,
+    settings: AppSettings,
+): Partial<AppSettings> {
+    const patch: Partial<AppSettings> = { sendOnEnterHint: config.sendOnEnterHint ?? false };
+    if (config.sampling) patch.sampling = { ...settings.sampling, ...config.sampling };
+    if (config.compactInput !== undefined || config.chatWidth !== undefined) {
+        const display = { ...settings.display };
+        if (config.compactInput !== undefined) display.compactInput = config.compactInput;
+        if (config.chatWidth !== undefined) display.chatWidth = config.chatWidth;
+        patch.display = display;
+    }
+    return patch;
+}
+
 // Embed boot must run once too; StrictMode mounts effects twice.
 let embedBooted = false;
 
@@ -132,17 +156,7 @@ export async function bootEmbed(config: EmbedConfig): Promise<void> {
     if (config.locale) setLocale(config.locale);
     if (config.skin) setSkin(config.skin);
 
-    const patch: Partial<AppSettings> = { sendOnEnterHint: config.sendOnEnterHint ?? false };
-    if (config.sampling) {
-        patch.sampling = { ...settingsStore.getState().settings.sampling, ...config.sampling };
-    }
-    if (config.compactInput !== undefined) {
-        patch.display = {
-            ...settingsStore.getState().settings.display,
-            compactInput: config.compactInput,
-        };
-    }
-    if (Object.keys(patch).length > 0) updateSettings(patch);
+    updateSettings(embedSettingsPatch(config, settingsStore.getState().settings));
 
     await initModels();
 

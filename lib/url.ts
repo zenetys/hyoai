@@ -1,4 +1,4 @@
-import type { Locale, SamplingSettings, SkinId } from "@/types/settings";
+import type { ChatWidth, Locale, SamplingSettings, SkinId } from "@/types/settings";
 
 // Query parameter carrying the open conversation id, e.g. ?chat=<uuid>.
 const CHAT_PARAM = "chat";
@@ -204,6 +204,9 @@ export type EmbedInputPosition = "center" | "bottom";
 // Composer positions accepted from the embed URL.
 const INPUT_POSITIONS: EmbedInputPosition[] = ["center", "bottom"];
 
+// Chat column widths accepted from the embed URL.
+const CHAT_WIDTHS: ChatWidth[] = ["medium", "large", "xlarge"];
+
 /**
  * Host-supplied configuration carried by the embed URL. Every field is
  * optional; an absent one falls back to the application default.
@@ -218,6 +221,7 @@ const INPUT_POSITIONS: EmbedInputPosition[] = ["center", "bottom"];
  * @param sampling - Sampling overrides (temperature, maxTokens)
  * @param compactInput - Single-line composer; undefined leaves the app default untouched
  * @param inputPosition - Composer placement on an empty conversation; undefined keeps the center default
+ * @param chatWidth - Width of the chat column and composer; undefined keeps the medium default
  * @param sendOnEnterHint - Show the send-on-Enter hint under the composer; hidden by default in embed
  * @param intro - Show the welcome heading above the composer on an empty conversation
  * @param sidebar - Show the conversation sidebar and persist history; off keeps the ephemeral widget
@@ -233,6 +237,7 @@ export interface EmbedConfig {
     sampling?: SamplingSettings;
     compactInput?: boolean;
     inputPosition?: EmbedInputPosition;
+    chatWidth?: ChatWidth;
     sendOnEnterHint?: boolean;
     intro?: boolean;
     sidebar?: boolean;
@@ -280,6 +285,7 @@ export function getEmbedConfig(): EmbedConfig | null {
     const skin = params.get("skin");
     const lang = params.get("lang");
     const input = params.get("input");
+    const width = params.get("width");
 
     const sampling: SamplingSettings = {};
     const temperature = numberParam(params.get("temperature"));
@@ -300,6 +306,7 @@ export function getEmbedConfig(): EmbedConfig | null {
         inputPosition: INPUT_POSITIONS.includes(input as EmbedInputPosition)
             ? (input as EmbedInputPosition)
             : undefined,
+        chatWidth: CHAT_WIDTHS.includes(width as ChatWidth) ? (width as ChatWidth) : undefined,
         sendOnEnterHint: boolParam(params.get("hint")),
         intro: boolParam(params.get("intro")),
         sidebar: boolParam(params.get("sidebar")),
@@ -319,6 +326,7 @@ const EMBED_PARAMS = [
     "maxtokens",
     "compact",
     "input",
+    "width",
     "hint",
     "intro",
     "sidebar",
