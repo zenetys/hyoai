@@ -129,8 +129,6 @@ export async function bootEmbed(config: EmbedConfig): Promise<void> {
             : () => false,
     );
 
-    await initModels();
-
     if (config.locale) setLocale(config.locale);
     if (config.skin) setSkin(config.skin);
 
@@ -145,6 +143,8 @@ export async function bootEmbed(config: EmbedConfig): Promise<void> {
         };
     }
     if (Object.keys(patch).length > 0) updateSettings(patch);
+
+    await initModels();
 
     if (
         config.modelEntryId &&

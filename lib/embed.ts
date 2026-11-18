@@ -16,7 +16,11 @@ type EmbedTheme = "light" | "dark" | "system";
  * - config: hot updates to the widget (system prompt, locale, theme).
  * - send: inject a user turn into the active conversation.
  * - run: headless mode -- run a command silently (the host bakes any count into
- *   the command text), streamed back and correlated by id.
+ *   the command text), streamed back and correlated by id. The optional
+ *   systemPrompt, temperature, maxTokens and thinking apply to that run alone and
+ *   replace the stored setting for it; thinking false switches the thinking
+ *   fragment off. A value of the wrong type is ignored. silent is accepted and has
+ *   no effect, since a run is always silent.
  */
 export type EmbedInbound =
     | {
@@ -33,6 +37,10 @@ export type EmbedInbound =
           id: string;
           command: string;
           silent?: boolean;
+          systemPrompt?: string;
+          temperature?: number;
+          maxTokens?: number;
+          thinking?: boolean;
       };
 
 /**

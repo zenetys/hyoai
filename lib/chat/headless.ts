@@ -24,6 +24,42 @@ export interface HeadlessCallbacks {
 }
 
 /**
+ * Per-run overrides of a headless run. Each one replaces the stored setting for
+ * that run only; an absent one keeps the setting.
+ *
+ * @param systemPrompt - System prompt for this run; an empty string sends none
+ * @param temperature - Sampling temperature for this run
+ * @param maxTokens - Completion token limit for this run
+ * @param thinking - false switches the thinking fragment off for this run
+ */
+export interface HeadlessOptions {
+    systemPrompt?: string;
+    temperature?: number;
+    maxTokens?: number;
+    thinking?: boolean;
+}
+
+/**
+ * Pick the run options out of an untrusted bridge message. A value of the wrong
+ * type is ignored, the way the URL parser ignores a non-numeric temperature.
+ *
+ * @param data - Fields of the run message
+ * @returns The valid options, with no key for an absent or ignored one
+ */
+export function parseRunOptions(data: Record<string, unknown>): HeadlessOptions {
+    const options: HeadlessOptions = {};
+    if (typeof data.systemPrompt === "string") options.systemPrompt = data.systemPrompt;
+    if (typeof data.temperature === "number" && Number.isFinite(data.temperature)) {
+        options.temperature = data.temperature;
+    }
+    if (typeof data.maxTokens === "number" && Number.isFinite(data.maxTokens)) {
+        options.maxTokens = data.maxTokens;
+    }
+    if (typeof data.thinking === "boolean") options.thinking = data.thinking;
+    return options;
+}
+
+/**
  * Resolve the active entry and its upstream model, waiting up to MODEL_WAIT_MS
  * for model discovery to finish. A host may fire "run" the instant the widget is
  * ready, before the forced model's list has loaded; without the wait such a run
@@ -70,22 +106,26 @@ function waitForActiveModel(
 
 /**
  * Run a one-shot completion off the active (URL-forced) model without touching
- * any conversation: the system prompt comes from settings (set by the host's
- * config message), the command is the sole user turn, and content deltas stream
- * back through the callbacks. Reasoning and other events are dropped so the host
- * receives just the answer. Backs the embed's headless "run" bridge action, so a
- * host can compute a result (e.g. a summary) in a hidden iframe without showing
- * the chat.
+ * any conversation: the system prompt and sampling come from the settings as they
+ * stand when the run starts (the system prompt is set by the host's config
+ * message) unless the run carries its own, the command is the sole user turn, and
+ * content deltas stream back through the callbacks. Reasoning and other events are
+ * dropped so the host receives just the answer. Backs the embed's headless "run"
+ * bridge action, so a host can compute a result (e.g. a summary) in a hidden iframe
+ * without showing the chat.
  *
  * @param command - User instruction to run; the host bakes in any context or count
  * @param cb - Streaming result sinks
  * @param signal - Aborts the request and the stream
+ * @param options - Overrides of this run alone; the stored settings are never modified
  */
 export async function runHeadless(
     command: string,
     cb: HeadlessCallbacks,
     signal: AbortSignal,
+    options: HeadlessOptions = {},
 ): Promise<void> {
+    const settings = settingsStore.getState().settings;
     const resolved = await waitForActiveModel(signal);
     if (signal.aborted) return;
     if (!resolved) {
@@ -94,16 +134,21 @@ export async function runHeadless(
     }
     const { entry, model } = resolved;
 
-    const settings = settingsStore.getState().settings;
+    const systemPrompt = options.systemPrompt ?? settings.systemPrompt;
     const messages: ApiMessage[] = [];
-    if (settings.systemPrompt) messages.push({ role: "system", content: settings.systemPrompt });
+    if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
     messages.push({ role: "user", content: command });
+
+    const sampling = { ...settings.sampling };
+    if (options.temperature !== undefined) sampling.temperature = options.temperature;
+    if (options.maxTokens !== undefined) sampling.maxTokens = options.maxTokens;
 
     const params: ChatRequestParams = {
         model,
         messages,
-        sampling: settings.sampling,
+        sampling,
         penalties: settings.penalties,
+        thinking: options.thinking,
     };
 
     let text = "";
