@@ -155,13 +155,13 @@ export async function runHeadless(
     let settled = false;
 
     const done = () => {
-        if (settled) return;
+        if (settled || signal.aborted) return;
         settled = true;
         cb.onDone(text);
     };
 
     const fail = (message: string) => {
-        if (settled) return;
+        if (settled || signal.aborted) return;
         settled = true;
         cb.onError(message);
     };

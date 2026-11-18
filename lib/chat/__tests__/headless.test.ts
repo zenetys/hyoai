@@ -5,6 +5,7 @@ import type { ChatRequestParams, StreamEvent } from "@/types/api";
 
 const mocks = vi.hoisted(() => ({
     calls: [] as ChatRequestParams[],
+    events: null as StreamEvent[] | null,
     ready: false,
     listeners: new Set<() => void>(),
     settings: {
@@ -17,11 +18,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/api/chat", () => ({
     streamChatCompletion: async function* (_entry: unknown, params: ChatRequestParams) {
         mocks.calls.push(params);
-        const events: StreamEvent[] = [
+        yield* mocks.events ?? [
             { type: "content", text: "ok" },
             { type: "finish", reason: "stop" },
         ];
-        yield* events;
     },
 }));
 
@@ -69,6 +69,7 @@ function resolveModel() {
 describe("runHeadless", () => {
     beforeEach(() => {
         mocks.calls.length = 0;
+        mocks.events = null;
         mocks.ready = false;
         mocks.listeners.clear();
         mocks.settings = {
@@ -132,6 +133,22 @@ describe("runHeadless", () => {
         await start({ thinking: false }).run;
 
         expect(mocks.calls[0].thinking).toBe(false);
+    });
+
+    it("emits no terminal message for a run aborted while it streams", async () => {
+        mocks.ready = true;
+        mocks.events = [{ type: "content", text: "partial" }];
+        const abort = new AbortController();
+        const done = vi.fn();
+        const error = vi.fn();
+        await runHeadless(
+            "go",
+            { onChunk: () => abort.abort(), onDone: done, onError: error },
+            abort.signal,
+        );
+
+        expect(done).not.toHaveBeenCalled();
+        expect(error).not.toHaveBeenCalled();
     });
 
     it("reports no model when none resolves", async () => {
