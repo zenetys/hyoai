@@ -35,8 +35,8 @@ import { getEmbedConfig } from "@/lib/url";
 import { CHAT_WIDTH_CLASS } from "@/types/settings";
 
 /**
- * Host postMessage channel for the widget. Accepts config and send actions on
- * the "hyoai-embed" channel only from allowed origins (same-origin plus the
+ * Host postMessage channel for the widget. Accepts config, send, run and abort
+ * actions on the "hyoai-embed" channel only from allowed origins (same-origin plus the
  * configured embedOrigins, which may be bare host/IP tokens), announces
  * readiness by pinging each concrete origin (never a "*" target) and acks any
  * first-time valid sender so a host reachable only by a bare IP -- whose exact
@@ -129,6 +129,13 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                         controller.signal,
                         parseRunOptions(data),
                     );
+                    break;
+                }
+                case "abort": {
+                    const id = data.id;
+                    if (typeof id !== "string") break;
+                    runs.get(id)?.abort();
+                    runs.delete(id);
                     break;
                 }
                 default:
