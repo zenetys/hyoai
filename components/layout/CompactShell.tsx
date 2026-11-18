@@ -18,7 +18,7 @@ import { useStore } from "@/hooks/useStore";
 import { sendMessage, startNewConversation } from "@/lib/actions";
 import { ChatInstanceProvider, ForegroundChatProvider } from "@/lib/chat/context";
 import { activeChatStore } from "@/lib/chat/foreground";
-import { runHeadless } from "@/lib/chat/headless";
+import { parseRunOptions, runHeadless } from "@/lib/chat/headless";
 import { ChatInstance } from "@/lib/chat/instance";
 import { getEmbedOrigins, isEmbedOriginAllowed } from "@/lib/config";
 import { EMBED_CHANNEL, type EmbedOutbound } from "@/lib/embed";
@@ -127,6 +127,7 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                             },
                         },
                         controller.signal,
+                        parseRunOptions(data),
                     );
                     break;
                 }
