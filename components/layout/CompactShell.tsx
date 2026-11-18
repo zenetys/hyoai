@@ -21,7 +21,7 @@ import { activeChatStore } from "@/lib/chat/foreground";
 import { parseRunOptions, runHeadless } from "@/lib/chat/headless";
 import { ChatInstance } from "@/lib/chat/instance";
 import { getEmbedOrigins, isEmbedOriginAllowed } from "@/lib/config";
-import { EMBED_CHANNEL, type EmbedOutbound } from "@/lib/embed";
+import { EMBED_CAPABILITIES, EMBED_CHANNEL, type EmbedOutbound } from "@/lib/embed";
 import { setLocale } from "@/lib/stores/locale";
 import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, updateSettings } from "@/lib/stores/settings";
@@ -32,16 +32,17 @@ import {
     uiStore,
 } from "@/lib/stores/ui";
 import { getEmbedConfig } from "@/lib/url";
+import { APP_VERSION } from "@/lib/version";
 import { CHAT_WIDTH_CLASS } from "@/types/settings";
 
 /**
  * Host postMessage channel for the widget. Accepts config, send, run and abort
  * actions on the "hyoai-embed" channel only from allowed origins (same-origin plus the
  * configured embedOrigins, which may be bare host/IP tokens), announces
- * readiness by pinging each concrete origin (never a "*" target) and acks any
- * first-time valid sender so a host reachable only by a bare IP -- whose exact
- * port it cannot guess to ping first -- still completes the handshake once it
- * speaks.
+ * readiness by pinging each concrete origin (never a "*" target) and acks the
+ * first message of a known type from a new sender, so a host reachable only by a
+ * bare IP -- whose exact port it cannot guess to ping first -- still completes the
+ * handshake once it speaks. A message of an unknown type gets no reply at all.
  *
  * @param onSend - Sink for host-sent text, injected into the active conversation
  * @returns The set of acknowledged host origins, shared with the state bridge
@@ -60,7 +61,12 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
             if (hostOrigins.has(origin)) return;
             hostOrigins.add(origin);
             try {
-                const ready: EmbedOutbound = { channel: EMBED_CHANNEL, type: "ready" };
+                const ready: EmbedOutbound = {
+                    channel: EMBED_CHANNEL,
+                    type: "ready",
+                    version: APP_VERSION,
+                    capabilities: [...EMBED_CAPABILITIES],
+                };
                 window.parent.postMessage(ready, origin);
             } catch {
                 // A blocked target origin must not stop the others.
@@ -139,7 +145,7 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                     break;
                 }
                 default:
-                    break;
+                    return;
             }
             ackReady(event.origin);
         };
