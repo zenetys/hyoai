@@ -470,6 +470,8 @@
             "chatWidthXlarge": "Très large",
             "compactInput": "Saisie compacte",
             "compactInputDescription": "Place le bouton +, le champ de saisie et les contrôles sur une seule ligne, jusqu'à ce que le message passe à la ligne.",
+            "animations": "Animations",
+            "animationsDescription": "Fondus, glissements et survols adoucis. Désactivées, l'interface change d'un coup, comme quand votre système demande de réduire les animations.",
             "showStats": "Statistiques des messages",
             "showStatsDescription": "Tokens, vitesse et durée sous chaque réponse.",
             "showProjectContext": "Contexte du projet dans le menu des modèles",
