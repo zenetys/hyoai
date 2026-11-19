@@ -2,22 +2,11 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 
+import { motionReduced } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 // Time the block takes to open and to close, the same as the other eased changes.
 const DURATION_MS = 200;
-
-/**
- * Whether the system asks for less motion.
- *
- * @returns true when reduced motion is on, and false where it cannot be read
- */
-function prefersReducedMotion(): boolean {
-    return (
-        typeof window !== "undefined" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
-}
 
 /**
  * A block that opens and closes by sliding its height, with a fade, instead of appearing and
@@ -58,7 +47,7 @@ export function Presence({
                 cancelAnimationFrame(second);
             };
         }
-        const timer = setTimeout(() => setMounted(false), prefersReducedMotion() ? 0 : DURATION_MS);
+        const timer = setTimeout(() => setMounted(false), motionReduced() ? 0 : DURATION_MS);
         return () => clearTimeout(timer);
     }, [show]);
 
