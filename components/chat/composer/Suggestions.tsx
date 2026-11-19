@@ -134,12 +134,12 @@ function SuggestionsContent({
     onChoose: (suggestion: Suggestion) => void;
 }) {
     const t = useTranslations("composer");
-    const [openLabel, setOpenLabel] = useState<string | null>(null);
-    const pills = useRef<Map<string, HTMLButtonElement>>(new Map());
+    const [openEntry, setOpenEntry] = useState<SuggestionCategory | null>(null);
+    const pills = useRef<Map<number, HTMLButtonElement>>(new Map());
     const closeButton = useRef<HTMLButtonElement>(null);
-    const category = entries.find(
-        (item): item is SuggestionCategory => isCategory(item) && item.label === openLabel,
-    );
+
+    // A list that is replaced while a panel is open closes it, as its category is no longer in it
+    const category = openEntry && entries.includes(openEntry) ? openEntry : undefined;
     const opened = category !== undefined;
 
     // The pills go with the slot, and a pointer that was on one never leaves it, so the preview is put back here
@@ -151,13 +151,13 @@ function SuggestionsContent({
     }, [opened]);
 
     const close = () => {
-        const label = openLabel;
-        setOpenLabel(null);
+        const index = category ? entries.indexOf(category) : -1;
+        setOpenEntry(null);
         onPreview(null);
 
         // The pills come back with the panel gone, so the focus goes back to the one it opened
         requestAnimationFrame(() => {
-            if (label) pills.current.get(label)?.focus();
+            if (index >= 0) pills.current.get(index)?.focus();
         });
     };
 
@@ -249,17 +249,17 @@ function SuggestionsContent({
             {entries.map((item, index) =>
                 isCategory(item) ? (
                     <li
-                        key={`category:${item.label}`}
+                        key={`category:${index}`}
                         style={{ animationDelay: `${index * 40}ms` }}
                         className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
                     >
                         <button
                             type="button"
                             ref={(node) => {
-                                if (node) pills.current.set(item.label, node);
-                                else pills.current.delete(item.label);
+                                if (node) pills.current.set(index, node);
+                                else pills.current.delete(index);
                             }}
-                            onClick={() => setOpenLabel(item.label)}
+                            onClick={() => setOpenEntry(item)}
                             className={PILL}
                         >
                             <SuggestionIcon name={item.icon} className="size-4 shrink-0" />
@@ -268,7 +268,7 @@ function SuggestionsContent({
                     </li>
                 ) : (
                     <DirectPill
-                        key={`direct:${item.title}`}
+                        key={`direct:${index}`}
                         item={item}
                         index={index}
                         disabled={disabled}
