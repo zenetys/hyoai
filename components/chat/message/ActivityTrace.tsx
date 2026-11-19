@@ -7,6 +7,7 @@ import { type ReactNode, useState } from "react";
 import { ToolCallCard } from "@/components/chat/message/ToolCallCard";
 import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useFreshIds } from "@/hooks/useFreshIds";
 import { useLocalizedText } from "@/hooks/useLocalizedText";
 import { useStore } from "@/hooks/useStore";
 import { settingsStore } from "@/lib/stores/settings";
@@ -78,6 +79,9 @@ function CitationStage({ label, citations }: { label: string; citations: Citatio
     );
 }
 
+// Time a step added to the trace counts as new, a little more than its entrance takes.
+const FRESH_MS = 400;
+
 interface ActivityTraceProps {
     steps: ActivityStep[] | undefined;
     isStreaming: boolean;
@@ -120,6 +124,11 @@ export function ActivityTrace({
         setManualOpen(null);
     }
 
+    const fresh = useFreshIds(
+        (steps ?? []).map((step) => step.id),
+        FRESH_MS,
+    );
+
     const waiting = steps?.some((step) => step.status === "pending") ?? false;
     const open = forceOpen || waiting || (manualOpen ?? (isStreaming || expandDefault));
 
@@ -158,7 +167,13 @@ export function ActivityTrace({
             <CollapsibleContent>
                 <div className="mt-2 space-y-2 border-l-2 border-border pl-3 text-sm text-muted-foreground">
                     {steps.map((step) => (
-                        <div key={step.id}>
+                        <div
+                            key={step.id}
+                            className={cn(
+                                fresh.has(step.id) &&
+                                    "animate-preview-in motion-reduce:animate-none",
+                            )}
+                        >
                             {step.kind === "tool" ? (
                                 <div className="space-y-1.5">
                                     {step.text && (
