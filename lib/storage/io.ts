@@ -167,6 +167,7 @@ const displaySettingsSchema = z.object({
     expandSourcesByDefault: z.boolean().catch(DEFAULT_SETTINGS.display.expandSourcesByDefault),
     chatWidth: z.enum(["medium", "large", "xlarge"]).catch(DEFAULT_SETTINGS.display.chatWidth),
     compactInput: z.boolean().catch(DEFAULT_SETTINGS.display.compactInput),
+    animations: z.boolean().catch(DEFAULT_SETTINGS.display.animations),
 });
 
 const appSettingsSchema = z.object({
