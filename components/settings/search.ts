@@ -41,6 +41,7 @@ export const SETTINGS_SEARCH: SettingsSearchEntry[] = [
         ["appearance-language", "language"],
         ["appearance-chat-width", "chatWidth"],
         ["appearance-compact-input", "compactInput", "compactInputDescription"],
+        ["appearance-animations", "animations", "animationsDescription"],
         ["appearance-show-stats", "showStats", "showStatsDescription"],
         ["appearance-show-project-context", "showProjectContext", "showProjectContextDescription"],
         ["appearance-expand-reasoning", "expandReasoning", "expandReasoningDescription"],

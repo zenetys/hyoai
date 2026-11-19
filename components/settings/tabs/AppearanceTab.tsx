@@ -135,6 +135,13 @@ export function AppearanceTab() {
                     onCheckedChange={(checked) => setDisplay({ compactInput: checked })}
                 />
                 <SettingToggle
+                    id="appearance-animations"
+                    label={t("animations")}
+                    description={t("animationsDescription")}
+                    checked={settings.display.animations}
+                    onCheckedChange={(checked) => setDisplay({ animations: checked })}
+                />
+                <SettingToggle
                     id="appearance-show-stats"
                     label={t("showStats")}
                     description={t("showStatsDescription")}
