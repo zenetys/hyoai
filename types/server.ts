@@ -154,8 +154,8 @@ export interface NoticeConfig {
     until?: string;
 }
 
-// Icon names a suggestion category may use, the short list of lib/suggestions.ts.
-export type SuggestionIconName = "pen-line" | "chart-column" | "code";
+// Icon names a suggestion entry may use, the short list of lib/suggestions.ts.
+export type SuggestionIconName = "pen-line" | "chart-column" | "code" | "arrow-up-right" | "reply";
 
 /**
  * One starter suggestion: the title shown in the list and the prompt sent when it is
@@ -178,6 +178,28 @@ export interface SuggestionCategory {
 }
 
 /**
+ * A starter suggestion that sits among the category pills and is chosen straight away, with
+ * an optional icon drawn after its title. An entry of the list is one of this or a category,
+ * told apart by the `items` only a category has.
+ */
+export interface DirectSuggestion extends Suggestion {
+    icon?: SuggestionIconName;
+}
+
+// One top-level entry of a list of starter suggestions: a category to open, or a suggestion to choose.
+export type SuggestionEntry = SuggestionCategory | DirectSuggestion;
+
+/**
+ * The suggestion entries as a host or a config file may write them, before they are checked: the
+ * prompt may be left out, as the title is sent in its place, and what is not usable is dropped.
+ */
+export type SuggestionEntryInput =
+    | (Omit<SuggestionCategory, "items"> & {
+          items: (Omit<Suggestion, "prompt"> & { prompt?: string })[];
+      })
+    | (Omit<DirectSuggestion, "prompt"> & { prompt?: string });
+
+/**
  * Shape of the public/config.json file fetched at boot. The "mcpServers" field is
  * the MCP server catalog, disabled servers included, and "mcpIssues" says why
  * catalog entries were dropped, one English line each.
@@ -187,7 +209,7 @@ export interface AppConfig {
     appName?: string;
     notice?: NoticeConfig;
     placeholders?: Record<string, string[]>;
-    suggestions?: Record<string, SuggestionCategory[]>;
+    suggestions?: Record<string, SuggestionEntry[]>;
     toolsEnabledByDefault?: boolean;
     defaultModel?: string;
     embedOrigins: string[];
