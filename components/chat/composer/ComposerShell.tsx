@@ -16,6 +16,7 @@ import { useCompactFit } from "@/hooks/useCompactFit";
 import { useFlip } from "@/hooks/useFlip";
 import { useIsNarrow } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { useTypeToFocus } from "@/hooks/useTypeToFocus";
 import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "@/lib/chat/handoff";
 import { settingsStore } from "@/lib/stores/settings";
 import type { SuggestionsPlacement } from "@/lib/suggestions";
@@ -44,6 +45,7 @@ interface ComposerShellProps {
     suggestionsWithIntro?: boolean;
     wrapperClassName?: string;
     autoFocus?: boolean;
+    typeToFocus?: boolean;
     focusKey?: string | number;
     focusSignal?: number;
     replyKey?: MessageQuote | null;
@@ -92,6 +94,8 @@ interface ComposerShellProps {
  *        suggestions are dropped sooner
  * @param wrapperClassName - Class for the drop-zone wrapper
  * @param autoFocus - Focus the textarea on mount (e.g. landing on the home screen)
+ * @param typeToFocus - Take the focus when the reader starts to write with nothing focused, so the
+ *        field does not have to be clicked again; follows autoFocus when omitted
  * @param focusKey - When this value changes, refocus the textarea (e.g. after a model change)
  * @param focusSignal - A nonce that refocuses the textarea on each change (e.g. dismissing a
  *        sidebar menu)
@@ -121,6 +125,7 @@ export function ComposerShell({
     suggestionsWithIntro = false,
     wrapperClassName = "mx-auto max-w-3xl",
     autoFocus,
+    typeToFocus = autoFocus,
     focusKey,
     focusSignal,
     replyKey,
@@ -161,6 +166,8 @@ export function ComposerShell({
     useEffect(() => {
         if (autoFocus) focusInput();
     }, [autoFocus, focusInput]);
+
+    useTypeToFocus(Boolean(typeToFocus), focusInput);
 
     useEffect(() => {
         if (handoff) clearDraft();

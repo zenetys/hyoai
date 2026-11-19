@@ -115,6 +115,7 @@ export function Composer({
                     CHAT_WIDTH_CLASS[home && !embed ? "medium" : chatWidth],
                 )}
                 autoFocus={single}
+                typeToFocus={single || embed}
                 focusKey={single ? (upstream ?? undefined) : undefined}
                 focusSignal={focusNonce}
                 history={history}
