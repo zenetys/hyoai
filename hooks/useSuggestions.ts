@@ -6,10 +6,10 @@ import { useStore } from "@/hooks/useStore";
 import { modelsStore } from "@/lib/stores/models";
 import { uiStore } from "@/lib/stores/ui";
 import { suggestionsFor } from "@/lib/suggestions";
-import type { SuggestionCategory } from "@/types/server";
+import type { SuggestionEntry } from "@/types/server";
 
 // One shared empty list, so a composer with nothing to offer never re-renders over a new array.
-const NONE: SuggestionCategory[] = [];
+const NONE: SuggestionEntry[] = [];
 
 /**
  * Starter suggestions the deployment lists in its config, in the language of the
@@ -18,9 +18,9 @@ const NONE: SuggestionCategory[] = [];
  * `enabled` is false, or when there are none.
  *
  * @param enabled - Whether the composer is an empty chat that may offer suggestions
- * @returns The categories to offer, in the order written
+ * @returns The entries to offer, in the order written
  */
-export function useSuggestions(enabled: boolean): SuggestionCategory[] {
+export function useSuggestions(enabled: boolean): SuggestionEntry[] {
     const locale = useLocale();
     const configured = useStore(modelsStore, (state) => state.suggestions);
     const embed = useStore(uiStore, (state) => state.embed);
