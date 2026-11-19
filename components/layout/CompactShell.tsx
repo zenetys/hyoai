@@ -27,6 +27,7 @@ import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, updateSettings } from "@/lib/stores/settings";
 import {
     openSettings,
+    setEmbedSuggestions,
     setEmbedThemeOverride,
     setMobileSidebarOpen,
     uiStore,
@@ -36,7 +37,8 @@ import { APP_VERSION } from "@/lib/version";
 import { CHAT_WIDTH_CLASS } from "@/types/settings";
 
 /**
- * Host postMessage channel for the widget. Accepts config, send, run and abort
+ * Host postMessage channel for the widget. Accepts config (system prompt, locale, theme and starter
+ * suggestions), send, run and abort
  * actions on the "hyoai-embed" channel only from allowed origins (same-origin plus the
  * configured embedOrigins, which may be bare host/IP tokens), announces
  * readiness by pinging each concrete origin (never a "*" target) and acks the
@@ -93,6 +95,7 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                         setEmbedThemeOverride(data.theme);
                     }
                     if (data.lang === "fr" || data.lang === "en") setLocale(data.lang);
+                    setEmbedSuggestions(data.suggestions);
                     break;
                 case "send":
                     if (typeof data.text === "string" && data.text.trim()) {
@@ -317,13 +320,13 @@ function CompactChat({ onNew, onMenu }: { onNew: () => void; onMenu?: () => void
                             {intro && <ChatEmptyState />}
                         </div>
                         <div className="shrink-0">
-                            <Composer home />
+                            <Composer home suggestionsAbove withIntro={intro} />
                         </div>
                     </div>
                 ) : (
                     <div className="flex min-h-0 flex-1 flex-col justify-center gap-4">
                         {intro && <ChatEmptyState />}
-                        <Composer home />
+                        <Composer home withIntro={intro} />
                     </div>
                 )
             ) : (

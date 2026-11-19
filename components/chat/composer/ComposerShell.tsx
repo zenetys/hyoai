@@ -18,6 +18,7 @@ import { useIsNarrow } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
 import { clearDraft, type ComposerDraft, peekDraft, registerDraftSource } from "@/lib/chat/handoff";
 import { settingsStore } from "@/lib/stores/settings";
+import type { SuggestionsPlacement } from "@/lib/suggestions";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
 import type { Suggestion, SuggestionCategory } from "@/types/server";
@@ -39,6 +40,8 @@ interface ComposerShellProps {
     placeholder?: string;
     rollingPlaceholder?: { placeholder?: string; leaving: string | null; turn: number };
     suggestions?: SuggestionCategory[];
+    suggestionsPlacement?: SuggestionsPlacement;
+    suggestionsWithIntro?: boolean;
     wrapperClassName?: string;
     autoFocus?: boolean;
     focusKey?: string | number;
@@ -83,6 +86,10 @@ interface ComposerShellProps {
  * @param suggestions - Starter suggestions to offer under the field while it is empty; pointing
  *        at one shows its prompt in the field, and choosing it sends the prompt, or writes it
  *        in the field when the suggestion says so
+ * @param suggestionsPlacement - Where the suggestions are drawn: hanging under the field without
+ *        taking room, or in a room of their own below it or above it, as in an embed
+ * @param suggestionsWithIntro - Whether the welcome heading of an embed shares the frame, so the
+ *        suggestions are dropped sooner
  * @param wrapperClassName - Class for the drop-zone wrapper
  * @param autoFocus - Focus the textarea on mount (e.g. landing on the home screen)
  * @param focusKey - When this value changes, refocus the textarea (e.g. after a model change)
@@ -110,6 +117,8 @@ export function ComposerShell({
     placeholder,
     rollingPlaceholder,
     suggestions,
+    suggestionsPlacement = "hanging",
+    suggestionsWithIntro = false,
     wrapperClassName = "mx-auto max-w-3xl",
     autoFocus,
     focusKey,
@@ -404,6 +413,17 @@ export function ComposerShell({
         >
             {banner}
             <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
+            {suggestions && suggestions.length > 0 && suggestionsPlacement === "above" && (
+                <Suggestions
+                    categories={suggestions}
+                    placement={suggestionsPlacement}
+                    withIntro={suggestionsWithIntro}
+                    disabled={!ready || busy}
+                    hidden={text !== ""}
+                    onPreview={setPreview}
+                    onChoose={chooseSuggestion}
+                />
+            )}
             <div
                 ref={boxRef}
                 className={cn(
@@ -447,9 +467,11 @@ export function ComposerShell({
                     {t.rich("enterHint", { kbd: (chunks) => <Kbd>{chunks}</Kbd> })}
                 </p>
             )}
-            {suggestions && suggestions.length > 0 && (
+            {suggestions && suggestions.length > 0 && suggestionsPlacement !== "above" && (
                 <Suggestions
                     categories={suggestions}
+                    placement={suggestionsPlacement}
+                    withIntro={suggestionsWithIntro}
                     disabled={!ready || busy}
                     hidden={text !== ""}
                     onPreview={setPreview}

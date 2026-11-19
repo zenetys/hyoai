@@ -6,7 +6,16 @@ import { useEffect, useRef, useState } from "react";
 
 import { SuggestionIcon } from "@/components/chat/composer/SuggestionIcon";
 import { Button } from "@/components/ui/button";
+import { directSuggestions, type SuggestionsPlacement } from "@/lib/suggestions";
+import { cn } from "@/lib/utils";
 import type { Suggestion, SuggestionCategory } from "@/types/server";
+
+// The pills scroll in their slot, with room around them so the focus ring of a pill is not cut at the edge.
+const PILLS = "-m-1 flex max-h-full flex-wrap justify-center gap-2 overflow-y-auto p-1";
+
+// One pill: a category to open, or a suggestion to choose.
+const PILL =
+    "inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm transition-colors outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /**
  * Starter suggestions under the field of an empty conversation: one pill per category, and a
@@ -17,8 +26,15 @@ import type { Suggestion, SuggestionCategory } from "@/types/server";
  * and it has a fixed height that stays while the field has text, only emptied, so neither
  * opening a panel nor typing moves the field.
  *
+ * In an embed the slot takes its own fixed room instead: under the field, or above it when the
+ * field is docked at the bottom edge of the frame, where the room grows upward and the field stays
+ * where it was, with nothing below it. The whole slot is dropped below 400 px of height, before the
+ * field is ever squeezed, and sooner when the welcome heading shares the frame. A list of one category shows its items as pills at once there.
+ *
  * @param categories - The categories to offer, in the order written
  * @param disabled - Whether a prompt cannot be sent now (no model ready, or one is busy)
+ * @param placement - Hanging under the field, or a room of its own below or above it (an embed)
+ * @param withIntro - Whether the embed shows its welcome heading, which needs room too, so the slot is dropped sooner
  * @param hidden - Whether to empty the slot, as the field has text
  * @param onPreview - Receives the prompt to show in the field, or null to put the field back
  * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
@@ -26,28 +42,63 @@ import type { Suggestion, SuggestionCategory } from "@/types/server";
 export function Suggestions({
     categories,
     disabled,
+    placement = "hanging",
+    withIntro = false,
     hidden,
     onPreview,
     onChoose,
 }: {
     categories: SuggestionCategory[];
     disabled: boolean;
+    placement?: SuggestionsPlacement;
+    withIntro?: boolean;
     hidden: boolean;
     onPreview: (prompt: string | null) => void;
     onChoose: (suggestion: Suggestion) => void;
 }) {
+    const content = !hidden && (
+        <SuggestionsContent
+            categories={categories}
+            disabled={disabled}
+            direct={placement !== "hanging"}
+            onPreview={onPreview}
+            onChoose={onChoose}
+        />
+    );
+
+    if (placement === "above") {
+        return (
+            <div
+                className={cn(
+                    "mb-3 flex h-44 flex-col justify-end",
+                    withIntro
+                        ? "[@media(max-height:539px)]:hidden"
+                        : "[@media(max-height:399px)]:hidden",
+                )}
+            >
+                {content}
+            </div>
+        );
+    }
+
+    if (placement === "below") {
+        return (
+            <div
+                className={cn(
+                    "mt-3 flow-root h-44",
+                    withIntro
+                        ? "[@media(max-height:559px)]:hidden"
+                        : "[@media(max-height:399px)]:hidden",
+                )}
+            >
+                {content}
+            </div>
+        );
+    }
+
     return (
         <div className="relative h-0">
-            <div className="absolute inset-x-0 top-0 mt-3 h-60">
-                {!hidden && (
-                    <SuggestionsContent
-                        categories={categories}
-                        disabled={disabled}
-                        onPreview={onPreview}
-                        onChoose={onChoose}
-                    />
-                )}
-            </div>
+            <div className="absolute inset-x-0 top-0 mt-3 h-60">{content}</div>
         </div>
     );
 }
@@ -58,17 +109,20 @@ export function Suggestions({
  *
  * @param categories - The categories to offer, in the order written
  * @param disabled - Whether a prompt cannot be sent now
+ * @param direct - Whether a list of one category shows its items as pills at once
  * @param onPreview - Receives the prompt to show in the field, or null to put the field back
  * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
  */
 function SuggestionsContent({
     categories,
     disabled,
+    direct,
     onPreview,
     onChoose,
 }: {
     categories: SuggestionCategory[];
     disabled: boolean;
+    direct: boolean;
     onPreview: (prompt: string | null) => void;
     onChoose: (suggestion: Suggestion) => void;
 }) {
@@ -94,6 +148,42 @@ function SuggestionsContent({
             if (label) pills.current.get(label)?.focus();
         });
     };
+
+    const items = direct ? directSuggestions(categories) : null;
+    if (items) {
+        return (
+            <ul role="list" aria-label={t("suggestions")} className={PILLS}>
+                {items.map((item, index) => (
+                    <li
+                        key={item.title}
+                        style={{ animationDelay: `${index * 40}ms` }}
+                        className="max-w-full animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
+                    >
+                        <button
+                            type="button"
+                            disabled={disabled}
+                            onPointerEnter={(event) => {
+                                if (event.pointerType === "mouse") onPreview(item.prompt);
+                            }}
+                            onPointerLeave={() => onPreview(null)}
+                            onFocus={() => onPreview(item.prompt)}
+                            onBlur={() => onPreview(null)}
+                            onClick={() => {
+                                onPreview(null);
+                                onChoose(item);
+                            }}
+                            className={cn(
+                                PILL,
+                                "max-w-full text-start disabled:pointer-events-none disabled:opacity-50",
+                            )}
+                        >
+                            {item.title}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        );
+    }
 
     return category ? (
         <div
@@ -161,11 +251,7 @@ function SuggestionsContent({
             </ul>
         </div>
     ) : (
-        <ul
-            role="list"
-            aria-label={t("suggestions")}
-            className="flex flex-wrap justify-center gap-2"
-        >
+        <ul role="list" aria-label={t("suggestions")} className={PILLS}>
             {categories.map((item, index) => (
                 <li
                     key={item.label}
@@ -179,9 +265,9 @@ function SuggestionsContent({
                             else pills.current.delete(item.label);
                         }}
                         onClick={() => setOpenLabel(item.label)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm transition-colors outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className={PILL}
                     >
-                        <SuggestionIcon name={item.icon} className="size-4" />
+                        <SuggestionIcon name={item.icon} className="size-4 shrink-0" />
                         {item.label}
                     </button>
                 </li>

@@ -30,6 +30,7 @@ import { resolveModalityGate } from "@/lib/chat/modalities";
 import { projectInstructions } from "@/lib/projects";
 import { settingsStore } from "@/lib/stores/settings";
 import { setSystemPromptOpen, uiStore } from "@/lib/stores/ui";
+import { suggestionsPlacement } from "@/lib/suggestions";
 import { cn } from "@/lib/utils";
 import { CHAT_WIDTH_CLASS } from "@/types/settings";
 
@@ -46,8 +47,20 @@ import { CHAT_WIDTH_CLASS } from "@/types/settings";
  *        app keeps a narrower centred composer under its welcome heading. A widget
  *        has no such screen -- an embed with no conversation open is just the
  *        widget at rest -- so there it follows the chat width like everything else.
+ * @param suggestionsAbove - Whether the field is docked at the bottom edge of an embed, so the host
+ *        suggestions sit above it and nothing is ever below it
+ * @param withIntro - Whether the welcome heading of the embed shares the frame, so the host
+ *        suggestions are dropped sooner
  */
-export function Composer({ home = false }: { home?: boolean }) {
+export function Composer({
+    home = false,
+    suggestionsAbove = false,
+    withIntro = false,
+}: {
+    home?: boolean;
+    suggestionsAbove?: boolean;
+    withIntro?: boolean;
+}) {
     const t = useTranslations("composer");
     const th = useTranslations("header");
     const tc = useTranslations("common");
@@ -75,9 +88,9 @@ export function Composer({ home = false }: { home?: boolean }) {
 
     const single = chat.controlsGlobalModel;
     const empty = useActivePathIds().length === 0;
-    const rolling = useRotatingPlaceholder(single && empty && !busy);
     const embed = useStore(uiStore, (state) => state.embed);
-    const suggestions = useSuggestions(single && empty && !busy && !embed);
+    const rolling = useRotatingPlaceholder(single && empty && !busy);
+    const suggestions = useSuggestions((single || embed) && empty && !busy);
     const modelLocked = useStore(uiStore, (state) => state.embedModelLock);
 
     const hasModel = upstream !== null;
@@ -105,6 +118,8 @@ export function Composer({ home = false }: { home?: boolean }) {
                 history={history}
                 rollingPlaceholder={rolling}
                 suggestions={suggestions}
+                suggestionsPlacement={suggestionsPlacement(embed, suggestionsAbove)}
+                suggestionsWithIntro={withIntro}
                 reply={<ComposerReply quote={pendingReply} />}
                 replyKey={pendingReply}
                 onSubmit={(text, attachments) => void chat.sendMessage(text, attachments)}
