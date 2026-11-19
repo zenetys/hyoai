@@ -89,7 +89,9 @@ export function Composer({
     const single = chat.controlsGlobalModel;
     const empty = useActivePathIds().length === 0;
     const embed = useStore(uiStore, (state) => state.embed);
-    const rolling = useRotatingPlaceholder(single && empty && !busy);
+    const hostPlaceholder = useStore(uiStore, (state) => state.embedPlaceholder);
+    const hosted = embed && empty && hostPlaceholder !== "";
+    const rolling = useRotatingPlaceholder(single && empty && !busy && !hosted);
     const suggestions = useSuggestions((single || embed) && empty && !busy);
     const modelLocked = useStore(uiStore, (state) => state.embedModelLock);
 
@@ -116,6 +118,7 @@ export function Composer({
                 focusKey={single ? (upstream ?? undefined) : undefined}
                 focusSignal={focusNonce}
                 history={history}
+                placeholder={hosted ? hostPlaceholder : undefined}
                 rollingPlaceholder={rolling}
                 suggestions={suggestions}
                 suggestionsPlacement={suggestionsPlacement(embed, suggestionsAbove)}

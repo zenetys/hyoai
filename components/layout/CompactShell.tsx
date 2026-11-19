@@ -27,6 +27,7 @@ import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, updateSettings } from "@/lib/stores/settings";
 import {
     openSettings,
+    setEmbedPlaceholder,
     setEmbedSuggestions,
     setEmbedThemeOverride,
     setMobileSidebarOpen,
@@ -37,8 +38,8 @@ import { APP_VERSION } from "@/lib/version";
 import { CHAT_WIDTH_CLASS } from "@/types/settings";
 
 /**
- * Host postMessage channel for the widget. Accepts config (system prompt, locale, theme and starter
- * suggestions), send, run and abort
+ * Host postMessage channel for the widget. Accepts config (system prompt, locale, theme, starter
+ * suggestions and placeholder), send, run and abort
  * actions on the "hyoai-embed" channel only from allowed origins (same-origin plus the
  * configured embedOrigins, which may be bare host/IP tokens), announces
  * readiness by pinging each concrete origin (never a "*" target) and acks the
@@ -96,6 +97,7 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                     }
                     if (data.lang === "fr" || data.lang === "en") setLocale(data.lang);
                     setEmbedSuggestions(data.suggestions);
+                    setEmbedPlaceholder(data.placeholder);
                     break;
                 case "send":
                     if (typeof data.text === "string" && data.text.trim()) {
