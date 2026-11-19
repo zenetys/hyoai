@@ -196,7 +196,7 @@ function CommandItem({
         <CommandPrimitive.Item
             data-slot="command-item"
             className={cn(
-                "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground max-md:min-h-12 max-md:gap-3 max-md:px-3 max-md:py-2 max-md:text-base max-md:dark:data-selected:bg-foreground/10 max-md:[&_svg:not([class*='size-'])]:size-5 pointer-coarse:md:min-h-9 pointer-coarse:md:py-2",
+                "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground max-md:min-h-12 max-md:gap-3 max-md:px-3 max-md:py-2 max-md:text-base max-md:dark:data-selected:bg-foreground/10 max-md:[&_svg:not([class*='size-'])]:size-5 pointer-coarse:md:min-h-9 pointer-coarse:md:py-2",
                 className,
             )}
             {...props}
