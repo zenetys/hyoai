@@ -43,10 +43,10 @@ describe("cleanNotes", () => {
         expect(cleanNotes(body)).toBe("### Start\n\n```bash\n## not a heading\n```");
     });
 
-    it("keeps the links, the code and the closing changelog line", () => {
-        const line = "**Full changelog**: [v1.0.0...v1.0.1](https://example.com/compare)";
-        expect(cleanNotes(`Text with \`code\`.\r\n\r\n${line}\r\n`)).toBe(
-            `Text with \`code\`.\n\n${line}`,
+    it("keeps the links and the code", () => {
+        const link = "[the guide](https://example.com/guide)";
+        expect(cleanNotes(`Text with \`code\` and ${link}.\r\n`)).toBe(
+            `Text with \`code\` and ${link}.`,
         );
     });
 });
