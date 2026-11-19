@@ -379,7 +379,7 @@ export function ComposerShell({
             aria-label={t("placeholder")}
             rows={1}
             className={cn(
-                "peer field-sizing-content block max-h-48 min-h-8 w-full resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:overflow-hidden placeholder:text-ellipsis placeholder:text-muted-foreground placeholder:whitespace-nowrap",
+                "peer field-sizing-content block max-h-48 min-h-8 w-full resize-none overflow-x-hidden bg-transparent px-2 py-1.5 text-base outline-none placeholder:overflow-hidden placeholder:text-ellipsis placeholder:text-muted-foreground placeholder:whitespace-nowrap",
                 compactRow && "max-h-9 pr-0",
             )}
         />
