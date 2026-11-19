@@ -71,6 +71,7 @@ interface UiState {
     embedModelLock: boolean;
     embedThemeOverride: EmbedTheme | undefined;
     embedSuggestions: SuggestionCategory[];
+    embedPlaceholder: string;
 }
 
 export const uiStore = createStore<UiState>({
@@ -92,6 +93,7 @@ export const uiStore = createStore<UiState>({
     embedModelLock: false,
     embedThemeOverride: undefined,
     embedSuggestions: [],
+    embedPlaceholder: "",
 });
 
 /**
@@ -322,4 +324,14 @@ export function setEmbedThemeOverride(theme: EmbedTheme): void {
 export function setEmbedSuggestions(raw: unknown): void {
     const suggestions = parseHostSuggestions(raw);
     if (suggestions) uiStore.setState({ embedSuggestions: suggestions });
+}
+
+/**
+ * Replace the placeholder of the field of an empty chat with the one the host page chose.
+ * Kept in memory only, like the suggestions.
+ *
+ * @param raw - The placeholder field of a config message; a value that is not a string leaves it as it is, a blank one restores the placeholders of the config
+ */
+export function setEmbedPlaceholder(raw: unknown): void {
+    if (typeof raw === "string") uiStore.setState({ embedPlaceholder: raw.trim() });
 }

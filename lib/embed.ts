@@ -15,11 +15,14 @@ type EmbedTheme = "light" | "dark" | "system";
  * Frozen contract for messages the host page sends down to the embedded widget.
  * Every variant is tagged by `type` on EMBED_CHANNEL:
  *
- * - config: hot updates to the widget (system prompt, locale, theme, suggestions). The
+ * - config: hot updates to the widget (system prompt, locale, theme, suggestions, placeholder). The
  *   suggestions are one language's list, in the shape of one entry of the config
  *   suggestions map; an array replaces the previous host list, an empty one clears it, a
  *   value that is not an array is ignored, and a malformed category or item is dropped.
- *   They are kept in memory only and offered with the message box of an empty chat.
+ *   They are kept in memory only and offered with the message box of an empty chat. The
+ *   placeholder replaces the one of the field of an empty chat, the rotating ones of the
+ *   config included, while it is set; an empty string restores them, and it is kept in
+ *   memory only too.
  * - send: inject a user turn into the active conversation.
  * - run: headless mode -- run a command silently (the host bakes any count into
  *   the command text), streamed back and correlated by id. The optional
@@ -38,6 +41,7 @@ export type EmbedInbound =
           lang?: Locale;
           theme?: EmbedTheme;
           suggestions?: SuggestionCategory[];
+          placeholder?: string;
       }
     | { channel: typeof EMBED_CHANNEL; type: "send"; text: string }
     | {
@@ -84,6 +88,7 @@ export type EmbedOutbound =
 export const EMBED_CAPABILITIES = [
     "config",
     "config.suggestions",
+    "config.placeholder",
     "send",
     "run",
     "run.options",

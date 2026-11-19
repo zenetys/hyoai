@@ -14,6 +14,10 @@ describe("EMBED_CAPABILITIES", () => {
         expect(EMBED_CAPABILITIES).toContain("config.suggestions");
     });
 
+    it("announces the placeholder of the config message", () => {
+        expect(EMBED_CAPABILITIES).toContain("config.placeholder");
+    });
+
     it("has no duplicate entry", () => {
         expect(new Set(EMBED_CAPABILITIES).size).toBe(EMBED_CAPABILITIES.length);
     });

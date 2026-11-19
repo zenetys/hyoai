@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { setEmbedSuggestions, toggleProjectFold, uiStore } from "@/lib/stores/ui";
+import {
+    setEmbedPlaceholder,
+    setEmbedSuggestions,
+    toggleProjectFold,
+    uiStore,
+} from "@/lib/stores/ui";
 
 describe("toggleProjectFold", () => {
     beforeEach(() => {
@@ -71,5 +76,33 @@ describe("setEmbedSuggestions", () => {
         setEmbedSuggestions([]);
         vi.unstubAllGlobals();
         expect(writes).toEqual([]);
+    });
+});
+
+describe("setEmbedPlaceholder", () => {
+    beforeEach(() => {
+        uiStore.setState({ embedPlaceholder: "" });
+    });
+
+    it("starts without any", () => {
+        expect(uiStore.getState().embedPlaceholder).toBe("");
+    });
+
+    it("sets and replaces the placeholder", () => {
+        setEmbedPlaceholder("Ask about this ticket");
+        setEmbedPlaceholder("  Ask about this order  ");
+        expect(uiStore.getState().embedPlaceholder).toBe("Ask about this order");
+    });
+
+    it("restores the placeholders of the config with an empty or blank string", () => {
+        setEmbedPlaceholder("Ask");
+        setEmbedPlaceholder("   ");
+        expect(uiStore.getState().embedPlaceholder).toBe("");
+    });
+
+    it.each([undefined, null, 3, {}, ["a"]])("ignores %j and keeps the placeholder", (value) => {
+        setEmbedPlaceholder("Ask");
+        setEmbedPlaceholder(value);
+        expect(uiStore.getState().embedPlaceholder).toBe("Ask");
     });
 });
