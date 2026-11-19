@@ -161,20 +161,20 @@ Every message carries `channel: "hyoai-embed"` and a `type`.
 
 | `type`   | Fields                                                                                 | Effect                                                                                                                                                |
 | -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`, `suggestions?`                         | Hot update. The theme sent here overrides the one from the URL; `suggestions` replaces the host list, see [Starter suggestions](#starter-suggestions) |
+| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`, `suggestions?`, `placeholder?`         | Hot update. The theme sent here overrides the one from the URL; `suggestions` replaces the host list, see [Starter suggestions](#starter-suggestions) |
 | `send`   | `text`                                                                                 | Injects a user turn into the active conversation; blank text is ignored                                                                               |
 | `run`    | `id`, `command`, `systemPrompt?`, `temperature?`, `maxTokens?`, `thinking?`, `silent?` | Headless one-shot run, streamed back and correlated by `id`. The options apply to that run only                                                       |
 | `abort`  | `id`                                                                                   | Cancels the in-flight run with that `id`; no terminal message follows, and an unknown `id` is ignored                                                 |
 
 ### Widget to host
 
-| `type`  | Fields                      | Meaning                                                                                                                                                                                          |
-| ------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `send`, `run`, `run.options`, `abort` |
-| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                                                |
-| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                                              |
-| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                                           |
-| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                                                     |
+| `type`  | Fields                      | Meaning                                                                                                                                                                                                                |
+| ------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `config.placeholder`, `send`, `run`, `run.options`, `abort` |
+| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                                                                      |
+| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                                                                    |
+| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                                                                 |
+| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                                                                           |
 
 A host that ignores `state` degrades cleanly.
 
@@ -300,6 +300,16 @@ post({
   frame more room or leave the welcome heading out.
 - `config.suggestions` is announced in the `capabilities` of `ready`; a widget older than that
   ignores the field.
+
+### Placeholder
+
+`placeholder` in a `config` message replaces the placeholder of the field of an empty conversation
+while it is set, including the rotating ones of the configuration, which only the sidebar variant
+(`sidebar=1`) shows: the minimal variant keeps its usual static placeholder. A blank string restores
+the placeholder it had, a
+value that is not a string is ignored, a `config` message without it leaves it as it is, and it is
+kept in memory only. Once a conversation is open the field keeps its usual placeholder.
+`config.placeholder` is announced in the `capabilities` of `ready`.
 
 ## Sizing
 
