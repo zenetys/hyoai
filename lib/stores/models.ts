@@ -16,7 +16,7 @@ import type {
     NoticeConfig,
     PropsState,
     ServerProps,
-    SuggestionCategory,
+    SuggestionEntry,
 } from "@/types/server";
 import { type PersistedModelSelection, STORAGE_KEYS } from "@/types/storage";
 
@@ -36,7 +36,7 @@ interface ModelsState {
     appName?: string;
     notice?: NoticeConfig;
     placeholders?: Record<string, string[]>;
-    suggestions?: Record<string, SuggestionCategory[]>;
+    suggestions?: Record<string, SuggestionEntry[]>;
     toolsEnabledByDefault?: boolean;
     configStatus: ConfigStatus;
     configError?: string;

@@ -1,5 +1,5 @@
-import { normalizeCategories } from "@/lib/suggestions";
-import type { SuggestionCategory } from "@/types/server";
+import { normalizeEntries } from "@/lib/suggestions";
+import type { SuggestionEntry, SuggestionEntryInput } from "@/types/server";
 import type { Locale } from "@/types/settings";
 
 /**
@@ -18,7 +18,8 @@ type EmbedTheme = "light" | "dark" | "system";
  * - config: hot updates to the widget (system prompt, locale, theme, suggestions, placeholder). The
  *   suggestions are one language's list, in the shape of one entry of the config
  *   suggestions map; an array replaces the previous host list, an empty one clears it, a
- *   value that is not an array is ignored, and a malformed category or item is dropped.
+ *   value that is not an array is ignored, and a malformed category, item or direct suggestion is
+ *   dropped. A top-level entry without `items` is a direct suggestion, a pill that is chosen at once.
  *   They are kept in memory only and offered with the message box of an empty chat. The
  *   placeholder replaces the one of the field of an empty chat, the rotating ones of the
  *   config included, while it is set; an empty string restores them, and it is kept in
@@ -40,7 +41,7 @@ export type EmbedInbound =
           systemPrompt?: string;
           lang?: Locale;
           theme?: EmbedTheme;
-          suggestions?: SuggestionCategory[];
+          suggestions?: SuggestionEntryInput[];
           placeholder?: string;
       }
     | { channel: typeof EMBED_CHANNEL; type: "send"; text: string }
@@ -88,6 +89,7 @@ export type EmbedOutbound =
 export const EMBED_CAPABILITIES = [
     "config",
     "config.suggestions",
+    "config.suggestions.actions",
     "config.placeholder",
     "send",
     "run",
@@ -100,8 +102,8 @@ export const EMBED_CAPABILITIES = [
  * suggestions of the config file.
  *
  * @param raw - The suggestions field of the config message
- * @returns The usable categories, empty to clear the list, or null when the value is not an array
+ * @returns The usable entries, empty to clear the list, or null when the value is not an array
  */
-export function parseHostSuggestions(raw: unknown): SuggestionCategory[] | null {
-    return Array.isArray(raw) ? normalizeCategories(raw) : null;
+export function parseHostSuggestions(raw: unknown): SuggestionEntry[] | null {
+    return Array.isArray(raw) ? normalizeEntries(raw) : null;
 }

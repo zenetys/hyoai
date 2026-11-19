@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadAppConfig, normalizeConfig, noticeText, placeholdersFor } from "@/lib/config";
 import { readModelScope } from "@/lib/mcp/config";
-import type { AppConfig } from "@/types/server";
+import type { AppConfig, SuggestionCategory } from "@/types/server";
 
 // The plugin registry needs Next's bundler; the config only needs the server types.
 vi.mock("@/lib/plugins/registry", () => ({
@@ -171,7 +171,9 @@ describe("suggestions", () => {
 
     it("are kept through the config", () => {
         const config = ready({ models: [model], suggestions: written });
-        expect(config.suggestions?.en[0].items[0].prompt).toBe("Write a short email.");
+        expect((config.suggestions?.en[0] as SuggestionCategory).items[0].prompt).toBe(
+            "Write a short email.",
+        );
     });
 
     it("do not fail the config over a key of the wrong shape", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { EMBED_CAPABILITIES, type EmbedInbound, parseHostSuggestions } from "@/lib/embed";
+import type { SuggestionCategory } from "@/types/server";
 
 // Inbound types missing from EMBED_CAPABILITIES; never while the list is complete.
 type MissingCapability = Exclude<EmbedInbound["type"], (typeof EMBED_CAPABILITIES)[number]>;
@@ -14,12 +15,28 @@ describe("EMBED_CAPABILITIES", () => {
         expect(EMBED_CAPABILITIES).toContain("config.suggestions");
     });
 
+    it("announces the direct suggestions of the config message", () => {
+        expect(EMBED_CAPABILITIES).toContain("config.suggestions.actions");
+    });
+
     it("announces the placeholder of the config message", () => {
         expect(EMBED_CAPABILITIES).toContain("config.placeholder");
     });
 
     it("has no duplicate entry", () => {
         expect(new Set(EMBED_CAPABILITIES).size).toBe(EMBED_CAPABILITIES.length);
+    });
+});
+
+describe("the suggestions a host may send", () => {
+    it("lets the prompt be left out, as the title is sent in its place", () => {
+        type Config = Extract<EmbedInbound, { type: "config" }>;
+        const written: NonNullable<Config["suggestions"]> = [
+            { title: "Go" },
+            { title: "Write", send: false, icon: "reply" },
+            { label: "Tickets", items: [{ title: "Draft a reply", send: false }] },
+        ];
+        expect(parseHostSuggestions(written)).toHaveLength(3);
     });
 });
 
@@ -46,9 +63,20 @@ describe("parseHostSuggestions", () => {
                 items: [{ title: "Translate", prompt: "Translate: ", send: false }, { title: "B" }],
             }),
         ]);
-        expect(list?.[0].items).toEqual([
+        expect((list?.[0] as SuggestionCategory).items).toEqual([
             { title: "Translate", prompt: "Translate: ", send: false },
             { title: "B", prompt: "B" },
+        ]);
+    });
+
+    it("keeps a direct suggestion next to a category, in the order written", () => {
+        const list = parseHostSuggestions([
+            { title: "Summarize", prompt: "Summarize this page.", icon: "arrow-up-right" },
+            category(),
+        ]);
+        expect(list).toEqual([
+            { title: "Summarize", prompt: "Summarize this page.", icon: "arrow-up-right" },
+            category(),
         ]);
     });
 

@@ -1,7 +1,7 @@
 import { parseHostSuggestions } from "@/lib/embed";
 import { createStore } from "@/lib/store";
 import { type EmbedTheme, getSettingsFromUrl, setSettingsInUrl } from "@/lib/url";
-import type { SuggestionCategory } from "@/types/server";
+import type { SuggestionEntry } from "@/types/server";
 
 // Settings pages, in navigation order; the changelog is pinned at the foot of the list.
 export type SettingsPage =
@@ -70,7 +70,7 @@ interface UiState {
     embedSidebar: boolean;
     embedModelLock: boolean;
     embedThemeOverride: EmbedTheme | undefined;
-    embedSuggestions: SuggestionCategory[];
+    embedSuggestions: SuggestionEntry[];
     embedPlaceholder: string;
 }
 
