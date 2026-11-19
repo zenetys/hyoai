@@ -1,5 +1,8 @@
 import type { Suggestion, SuggestionCategory, SuggestionIconName } from "@/types/server";
 
+// Where the suggestions are drawn: hanging under the field, or in the room of their own below or above it.
+export type SuggestionsPlacement = "hanging" | "below" | "above";
+
 // The icons a category may name in the config, a short list so not every icon ships.
 export const SUGGESTION_ICONS: readonly SuggestionIconName[] = ["pen-line", "chart-column", "code"];
 
@@ -30,7 +33,7 @@ function normalizeSuggestion(raw: unknown): Suggestion | null {
  * @param raw - The categories of one language as parsed
  * @returns The usable categories, in the order written
  */
-function normalizeCategories(raw: unknown[]): SuggestionCategory[] {
+export function normalizeCategories(raw: unknown[]): SuggestionCategory[] {
     const kept: SuggestionCategory[] = [];
     for (const entry of raw) {
         if (!entry || typeof entry !== "object") continue;
@@ -79,4 +82,30 @@ export function suggestionsFor(
     locale: string,
 ): SuggestionCategory[] {
     return suggestions?.[locale] ?? suggestions?.en ?? Object.values(suggestions ?? {})[0] ?? [];
+}
+
+/**
+ * Where the suggestions of a composer sit. The full app lets them hang under the field
+ * without taking room. An embed gives them their own room: under the field, or above it
+ * when the field is docked at the bottom edge, so nothing is ever below that field and it
+ * does not move when they come, hide or go.
+ *
+ * @param embed - Whether the widget is embedded
+ * @param docked - Whether the field is docked at the bottom edge of the frame
+ * @returns The placement to draw the suggestions with
+ */
+export function suggestionsPlacement(embed: boolean, docked: boolean): SuggestionsPlacement {
+    if (!embed) return "hanging";
+    return docked ? "above" : "below";
+}
+
+/**
+ * The items to show as pills straight away: a list of one category has no pill to open, so
+ * its items take the place of its label.
+ *
+ * @param categories - The categories on offer
+ * @returns The items of the only category, or null when there are none or several
+ */
+export function directSuggestions(categories: SuggestionCategory[]): Suggestion[] | null {
+    return categories.length === 1 ? categories[0].items : null;
 }

@@ -1,5 +1,7 @@
+import { parseHostSuggestions } from "@/lib/embed";
 import { createStore } from "@/lib/store";
 import { type EmbedTheme, getSettingsFromUrl, setSettingsInUrl } from "@/lib/url";
+import type { SuggestionCategory } from "@/types/server";
 
 // Settings pages, in navigation order; the changelog is pinned at the foot of the list.
 export type SettingsPage =
@@ -68,6 +70,7 @@ interface UiState {
     embedSidebar: boolean;
     embedModelLock: boolean;
     embedThemeOverride: EmbedTheme | undefined;
+    embedSuggestions: SuggestionCategory[];
 }
 
 export const uiStore = createStore<UiState>({
@@ -88,6 +91,7 @@ export const uiStore = createStore<UiState>({
     embedSidebar: false,
     embedModelLock: false,
     embedThemeOverride: undefined,
+    embedSuggestions: [],
 });
 
 /**
@@ -306,4 +310,16 @@ export function setEmbed(embed: boolean, sidebar = false, modelLock = false): vo
  */
 export function setEmbedThemeOverride(theme: EmbedTheme): void {
     uiStore.setState({ embedThemeOverride: theme });
+}
+
+/**
+ * Replace the starter suggestions the host page offers under the message box of the
+ * widget. Kept in memory only, so a reload starts without them until the host sends
+ * them again.
+ *
+ * @param raw - The suggestions field of a config message; a value that is not an array leaves the list as it is, an empty array clears it
+ */
+export function setEmbedSuggestions(raw: unknown): void {
+    const suggestions = parseHostSuggestions(raw);
+    if (suggestions) uiStore.setState({ embedSuggestions: suggestions });
 }

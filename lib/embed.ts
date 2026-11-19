@@ -1,3 +1,5 @@
+import { normalizeCategories } from "@/lib/suggestions";
+import type { SuggestionCategory } from "@/types/server";
 import type { Locale } from "@/types/settings";
 
 /**
@@ -13,7 +15,11 @@ type EmbedTheme = "light" | "dark" | "system";
  * Frozen contract for messages the host page sends down to the embedded widget.
  * Every variant is tagged by `type` on EMBED_CHANNEL:
  *
- * - config: hot updates to the widget (system prompt, locale, theme).
+ * - config: hot updates to the widget (system prompt, locale, theme, suggestions). The
+ *   suggestions are one language's list, in the shape of one entry of the config
+ *   suggestions map; an array replaces the previous host list, an empty one clears it, a
+ *   value that is not an array is ignored, and a malformed category or item is dropped.
+ *   They are kept in memory only and offered with the message box of an empty chat.
  * - send: inject a user turn into the active conversation.
  * - run: headless mode -- run a command silently (the host bakes any count into
  *   the command text), streamed back and correlated by id. The optional
@@ -31,6 +37,7 @@ export type EmbedInbound =
           systemPrompt?: string;
           lang?: Locale;
           theme?: EmbedTheme;
+          suggestions?: SuggestionCategory[];
       }
     | { channel: typeof EMBED_CHANNEL; type: "send"; text: string }
     | {
@@ -76,8 +83,20 @@ export type EmbedOutbound =
  */
 export const EMBED_CAPABILITIES = [
     "config",
+    "config.suggestions",
     "send",
     "run",
     "run.options",
     "abort",
 ] as const satisfies readonly (EmbedInbound["type"] | `${EmbedInbound["type"]}.${string}`)[];
+
+/**
+ * Pick the suggestions out of an untrusted config message, with the checks of the
+ * suggestions of the config file.
+ *
+ * @param raw - The suggestions field of the config message
+ * @returns The usable categories, empty to clear the list, or null when the value is not an array
+ */
+export function parseHostSuggestions(raw: unknown): SuggestionCategory[] | null {
+    return Array.isArray(raw) ? normalizeCategories(raw) : null;
+}

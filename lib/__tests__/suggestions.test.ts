@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeSuggestions, SUGGESTION_ICONS, suggestionsFor } from "@/lib/suggestions";
+import {
+    directSuggestions,
+    normalizeSuggestions,
+    SUGGESTION_ICONS,
+    suggestionsFor,
+    suggestionsPlacement,
+} from "@/lib/suggestions";
 
 const category = (extra: Record<string, unknown> = {}) => ({
     label: "Write",
@@ -121,5 +127,42 @@ describe("suggestionsFor", () => {
 
     it("is empty when the config has none", () => {
         expect(suggestionsFor(undefined, "fr")).toEqual([]);
+    });
+});
+
+describe("directSuggestions", () => {
+    const category = (label: string, titles: string[]) => ({
+        label,
+        items: titles.map((title) => ({ title, prompt: title })),
+    });
+
+    it("gives the items of a list of one category", () => {
+        expect(directSuggestions([category("Write", ["A", "B"])])).toEqual([
+            { title: "A", prompt: "A" },
+            { title: "B", prompt: "B" },
+        ]);
+    });
+
+    it("keeps the pills of a list of several categories", () => {
+        expect(directSuggestions([category("Write", ["A"]), category("Code", ["B"])])).toBeNull();
+    });
+
+    it("has nothing for an empty list", () => {
+        expect(directSuggestions([])).toBeNull();
+    });
+});
+
+describe("suggestionsPlacement", () => {
+    it("lets them hang under the field in the full app, docked or not", () => {
+        expect(suggestionsPlacement(false, false)).toBe("hanging");
+        expect(suggestionsPlacement(false, true)).toBe("hanging");
+    });
+
+    it("puts them above a field docked at the bottom of an embed, never below it", () => {
+        expect(suggestionsPlacement(true, true)).toBe("above");
+    });
+
+    it("keeps them under a field that is not docked in an embed", () => {
+        expect(suggestionsPlacement(true, false)).toBe("below");
     });
 });
