@@ -168,13 +168,13 @@ Every message carries `channel: "hyoai-embed"` and a `type`.
 
 ### Widget to host
 
-| `type`  | Fields                      | Meaning                                                                                                                                                                                                                |
-| ------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `config.placeholder`, `send`, `run`, `run.options`, `abort` |
-| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                                                                      |
-| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                                                                    |
-| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                                                                 |
-| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                                                                           |
+| `type`  | Fields                      | Meaning                                                                                                                                                                                                                                              |
+| ------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `config.suggestions.actions`, `config.placeholder`, `send`, `run`, `run.options`, `abort` |
+| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                                                                                                    |
+| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                                                                                                  |
+| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                                                                                               |
+| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                                                                                                         |
 
 A host that ignores `state` degrades cleanly.
 
@@ -254,10 +254,11 @@ post({ type: "run", id, command: `Summarise: ${document.body.innerText.slice(0, 
 A host can offer its own starter prompts with the message box of an empty conversation, in both
 variants, by adding `suggestions` to a `config` message. It is one language's list: the host
 localizes it, so there is no map by language. A category has a `label`, an optional `icon`
-(`pen-line`, `chart-column` or `code`) and its `items`, each with a `title`, an optional `prompt` (the
+(`pen-line`, `chart-column`, `code`, `arrow-up-right` or `reply`; any other value shows no icon) and its `items`, each with a `title`, an optional `prompt` (the
 title is sent when it is missing) and an optional `send`, which with `false` writes the prompt in
-the field, with the caret after it, instead of sending it. They look and behave as the
-[starter suggestions](features.md#starter-suggestions) of the full application.
+the field, with the caret after it, instead of sending it. An entry with a `title` and no `items` key
+is a direct suggestion instead, see [Direct suggestions](#direct-suggestions). They look and
+behave as the [starter suggestions](features.md#starter-suggestions) of the full application.
 
 ```js
 post({
@@ -277,15 +278,15 @@ post({
 
 - An array replaces the previous list, and an empty array clears it. A value that is not an array is
   ignored, and a `config` message without `suggestions` leaves the list as it is.
-- A category with no label or no usable item, and an item with no title, are dropped, as they are in
-  the configuration file.
+- A category with no label or no usable item, an item with no title, and a direct suggestion with
+  no title, are dropped, as they are in the configuration file.
 - The list is kept in memory only: nothing is stored, so a reload starts without it until the host
   sends it again. Send it once the widget has posted `ready`: a `config` posted before the widget
   has loaded is lost.
 - The pills show while the conversation is empty and the field has no text, and are gone while an
   answer is produced. They wrap, and a category opens in place of the pills, scrolling inside its
-  slot when it is long. A list of exactly one category shows its items as pills at once, without
-  the label of the category; with two categories or more nothing changes.
+  slot when it is long. A list of exactly one category, and no direct suggestion, shows its items as
+  pills at once, without the label of the category; with two entries or more nothing changes.
 - With `input=bottom` the pills sit above the field and nothing is ever below it: the field keeps
   its distance from the bottom edge and does not move when the list arrives, hides while the
   reader types, comes back or is cleared. An open category grows upward, inside the slot.
@@ -300,6 +301,38 @@ post({
   frame more room or leave the welcome heading out.
 - `config.suggestions` is announced in the `capabilities` of `ready`; a widget older than that
   ignores the field.
+
+### Direct suggestions
+
+A top-level entry with a `title` and no `items` key is a pill that is chosen at once, next to the
+category pills, instead of a category that opens. It takes the same `prompt` (the title when it is
+missing) and `send` as an item, and an optional `icon`, which is drawn after the title: `arrow-up-right`
+reads as "sends" and `reply` as "writes in the field". The icons of a category stay before its label.
+The entry is never guessed: a category with one item still opens its panel.
+
+```js
+post({
+    type: "config",
+    suggestions: [
+        {
+            title: "Summarise this ticket",
+            prompt: "Summarise the ticket below.",
+            icon: "arrow-up-right",
+        },
+        { label: "Tickets", icon: "pen-line", items: [{ title: "Draft a reply", send: false }] },
+    ],
+});
+```
+
+- The direct pill and the category pills wrap together; opening a category replaces all the pills,
+  the direct one included, and closing it brings them back.
+- A list with a direct suggestion is never flattened: the rule of one category shown as pills applies
+  only to a list of exactly one category.
+- A widget older than 1.6.3 ignores the `suggestions` of a `config` message altogether, so it shows
+  no direct suggestion either. `config.suggestions.actions` is announced in the `capabilities` of
+  `ready` next to `config.suggestions`, so a host can tell that direct suggestions are understood.
+  An `items` key that is not a list makes the entry a category that is dropped, never a direct
+  suggestion.
 
 ### Placeholder
 

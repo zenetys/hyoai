@@ -799,11 +799,11 @@ gives the reason, for example "No model available (config.json)". Details and sh
 
 A deployment can list a few starter prompts in its `config.json`, under `suggestions`, so that an
 empty conversation does not start from a blank field. They show under the message box as one pill
-per category, only while the conversation is empty and the field has no text: they disappear as soon
+per entry, a category or a direct suggestion, only while the conversation is empty and the field has no text: they disappear as soon
 as you type, while an answer is being produced, in a [compare](compare.md#compare-mode) view and in
 the embedded widget, which offers only the ones its host page sends, see
 [Starter suggestions](embed.md#starter-suggestions) of the embed. They also show in the empty conversation of a project. Without the key, or
-with no usable category for the language, nothing is shown.
+with no usable entry for the language, nothing is shown.
 
 <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/dark/suggestions.png">
@@ -821,7 +821,13 @@ A suggestion the deployment marks with `"send": false` is a prompt to complete, 
 this text:". Choosing it writes the prompt in the field, with the caret after it, and sends
 nothing, on a touch screen too; a small text cursor in place of the arrow tells these apart.
 
-The categories, their `icon` and their `items` are described in the
+An entry of the list that has a `title` and no `items` is not a category but a suggestion of its own:
+a pill, among the category pills, that is chosen at once, sending its prompt or writing it in the
+field when it is marked `"send": false`, with the same preview. It may name an `icon`, drawn after
+its title. Opening a category replaces all the pills, the direct ones too. A category with a single
+item still opens its panel.
+
+The categories, direct suggestions, their `icon` and their `items` are described in the
 [root keys](models.md#root-keys) of the configuration. The list of the interface language is shown,
 else English, else the first language written, so a French reader of a deployment that wrote both
 sees the French one.
