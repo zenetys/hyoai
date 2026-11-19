@@ -55,6 +55,7 @@ working widget. Booleans accept `1`/`true` and `0`/`false`.
 | `maxtokens`   | number                                              | —        | Sampling override                                                                                           |
 | `compact`     | boolean                                             | `0`      | Single-line composer                                                                                        |
 | `input`       | `center`, `bottom`                                  | `center` | Composer placement while the conversation is empty                                                          |
+| `width`       | `medium`, `large`, `xlarge`                         | `medium` | Width of the chat column and of the composer                                                                |
 | `hint`        | boolean                                             | `0`      | Shows the send-on-Enter hint under the composer, hidden by default in embed                                 |
 | `intro`       | boolean                                             | `0`      | Shows the welcome heading above the composer while the conversation is empty                                |
 | `sidebar`     | boolean                                             | `0`      | Switches to the sidebar variant                                                                             |
@@ -68,9 +69,8 @@ in the full app: the widget deliberately skips the settings hydration, so a
 preference that has no URL parameter cannot be carried over. The colour theme is
 the one exception, since `next-themes` keeps its own storage key and reads it
 back — without `?theme` the widget follows the theme last used on that origin
-and falls back to `system`. Worth knowing too: the chat column width has no
-parameter, so a widget always starts at the `medium` column however wide its
-iframe is.
+and falls back to `system`. The chat column does not grow with the iframe
+either: it starts at the `medium` width unless `width` says otherwise.
 
 ## Storage isolation
 
@@ -146,28 +146,34 @@ message goes to a concrete origin.
 On mount the widget posts `ready` to its own origin and to each `embedOrigins`
 entry that is a full origin, and re-pings once `config.json` has loaded. A bare
 host token cannot be pinged first — there is no port to aim at — so the widget
-also acknowledges any first-time valid sender with `ready`. A host can
+also acknowledges the first message it handles from a new sender with `ready`. A host can
 therefore either wait for `ready` or just speak first and get acked.
+
+`ready` carries the build `version` and the list of `capabilities` the widget
+handles, so a host can detect a feature instead of sending blind. A widget older
+than 1.6.2 sends neither field, so treat both as optional. The widget never
+answers a message type it does not know.
 
 ### Host to widget
 
 Every message carries `channel: "hyoai-embed"` and a `type`.
 
-| `type`   | Fields                                         | Effect                                                                  |
-| -------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
-| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?` | Hot update. The theme sent here overrides the one from the URL          |
-| `send`   | `text`                                         | Injects a user turn into the active conversation; blank text is ignored |
-| `run`    | `id`, `command`                                | Headless one-shot run, streamed back and correlated by `id`             |
+| `type`   | Fields                                                                                 | Effect                                                                                                |
+| -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`                                         | Hot update. The theme sent here overrides the one from the URL                                        |
+| `send`   | `text`                                                                                 | Injects a user turn into the active conversation; blank text is ignored                               |
+| `run`    | `id`, `command`, `systemPrompt?`, `temperature?`, `maxTokens?`, `thinking?`, `silent?` | Headless one-shot run, streamed back and correlated by `id`. The options apply to that run only       |
+| `abort`  | `id`                                                                                   | Cancels the in-flight run with that `id`; no terminal message follows, and an unknown `id` is ignored |
 
 ### Widget to host
 
-| `type`  | Fields          | Meaning                                                           |
-| ------- | --------------- | ----------------------------------------------------------------- |
-| `ready` | —               | Handshake complete; the widget accepts actions                    |
-| `state` | `generating`    | A generation started or settled, so a host control can gate on it |
-| `chunk` | `id`, `delta`   | One content delta of a headless run                               |
-| `done`  | `id`, `text`    | Final assembled text of a headless run                            |
-| `error` | `id`, `message` | A headless run failed; nothing further follows for that `id`      |
+| `type`  | Fields                      | Meaning                                                                                                                                                                    |
+| ------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `send`, `run`, `run.options`, `abort` |
+| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                          |
+| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                        |
+| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                     |
+| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                               |
 
 A host that ignores `state` degrades cleanly.
 
@@ -206,15 +212,26 @@ example to summarise the page the user is on.
 
 - The run uses the active model — in practice the one forced by `model` and
   `upstream` — and touches no conversation at all.
-- The system prompt is whatever `config` last set, so send it before the run.
+- The system prompt is whatever `config` last set, read when the run starts, so
+  send it before the run. Two runs that need different prompts should not share
+  it: give each its own `systemPrompt`.
+- `systemPrompt`, `temperature`, `maxTokens` and `thinking` apply to that run
+  only and replace the stored setting for it; nothing is stored and the other
+  runs and the settings are untouched. An empty `systemPrompt` sends no system
+  turn. `thinking: false` switches the thinking fragment of the model entry off
+  for the run, while leaving it out keeps the entry's default. A value of the
+  wrong type is ignored, as a non-numeric `temperature` is in the URL.
+- `silent` is accepted but has no effect, since a run is always silent.
 - Reasoning and every non-content event are dropped: the host receives the
   answer and nothing else.
 - Model discovery is awaited for up to 10 seconds, so a host may fire `run` the
   instant it sees `ready`. If nothing resolves in time the run fails with
   `no model available`.
-- Reusing an `id` that is still in flight aborts the earlier run.
+- Reusing an `id` that is still in flight aborts the earlier run, and so does an
+  `abort` message with that `id`.
 - Exactly one terminal message (`done` or `error`) follows zero or more
-  `chunk`s. An aborted run — the iframe going away, for instance — emits none.
+  `chunk`s. An aborted run — by `abort`, by a reused `id` or by the iframe going
+  away — emits none.
 
 ```js
 const id = crypto.randomUUID();
