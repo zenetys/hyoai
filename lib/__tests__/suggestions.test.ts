@@ -106,6 +106,16 @@ describe("normalizeSuggestions", () => {
         }
     });
 
+    it("never lets a language named __proto__ replace the prototype of the map", () => {
+        const result = normalizeSuggestions(JSON.parse('{"__proto__": [{"title":"A"}], "en": []}'));
+        expect(result).toBeUndefined();
+        const kept = normalizeSuggestions(
+            JSON.parse('{"__proto__": [{"title":"A"}], "en": [{"title":"B"}]}'),
+        );
+        expect(Array.isArray(Object.getPrototypeOf(kept))).toBe(false);
+        expect(Object.keys(kept ?? {})).toEqual(["en"]);
+    });
+
     it("skips a language that is not a list or has nothing usable", () => {
         const result = normalizeSuggestions({
             en: [category()],

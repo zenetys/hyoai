@@ -102,7 +102,8 @@ export function normalizeSuggestions(
 ): Record<string, SuggestionEntry[]> | undefined {
     const kept: Record<string, SuggestionEntry[]> = {};
     for (const [lang, list] of Object.entries(raw ?? {})) {
-        if (!Array.isArray(list)) continue;
+        // An own key of that name would give the map an array for its prototype
+        if (lang === "__proto__" || !Array.isArray(list)) continue;
         const entries = normalizeEntries(list);
         if (entries.length) kept[lang] = entries;
     }
