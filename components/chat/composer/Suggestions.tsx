@@ -142,6 +142,9 @@ function SuggestionsContent({
     );
     const opened = category !== undefined;
 
+    // The pills go with the slot, and a pointer that was on one never leaves it, so the preview is put back here
+    useEffect(() => () => onPreview(null), [onPreview]);
+
     // The pill that was pressed is gone once its panel is open, so the focus moves into the panel
     useEffect(() => {
         if (opened) closeButton.current?.focus();
