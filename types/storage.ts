@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
     meta: "lc:meta",
     locale: "lc:locale",
     skin: "lc:skin",
+    motion: "lc:motion",
     settings: "lc:settings",
     models: "lc:models",
     configOverride: "lc:config",

@@ -69,6 +69,8 @@ export interface PenaltySettings {
  * @param expandSourcesByDefault - Expand the sources section on new messages
  * @param chatWidth - Column and composer width on large screens
  * @param compactInput - Use the compact composer layout
+ * @param animations - Ease the changes of the interface; off, nothing fades or slides, as for a
+ *        reader who asks the system for reduced motion
  */
 export interface DisplaySettings {
     showStats: boolean;
@@ -78,6 +80,7 @@ export interface DisplaySettings {
     expandSourcesByDefault: boolean;
     chatWidth: ChatWidth;
     compactInput: boolean;
+    animations: boolean;
 }
 
 // How partial chapter analyses are combined into the final answer.
@@ -197,6 +200,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
         expandSourcesByDefault: false,
         chatWidth: "medium",
         compactInput: false,
+        animations: true,
     },
     chunking: {
         enabled: true,
