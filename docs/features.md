@@ -63,7 +63,7 @@ explanation; choosing a result opens its page and puts the focus on its control.
 navigation and the page are two screens, and a back arrow leads from the page to the navigation. The
 pages hold:
 
-- **Appearance**: theme, skin, language, chat width, compact input, message statistics and the
+- **Appearance**: theme, skin, language, chat width, compact input, animations, message statistics and the
   **Expand after the answer** switches (see [Appearance and display](#appearance-and-display)).
 - **Behavior**: the system prompt, **Send on Enter**, **PDF as images** and **Max image size (px)**.
 - **Models**: the model list, with a detail page per model (see [models.md](models.md)), and, at the
@@ -990,9 +990,15 @@ intercepted even while the cursor is in the composer.
 | **Interface language**                                                        | Français or English; the saved choice, else the browser language, else French |
 | **Chat width**                                                                | **Medium** (default), **Large** or **Extra large**; not available on mobile   |
 | **Compact input**                                                             | Off by default; not available at narrow window widths                         |
+| **Animations**                                                                | On by default                                                                 |
 | **Message statistics**                                                        | On by default                                                                 |
 | **Project context in the model menu**                                         | On by default                                                                 |
 | **Expand reasoning**, **Expand search and tool activity**, **Expand sources** | Off by default, under **Expand after the answer**                             |
+
+**Animations** eases what changes in the interface: blocks that fold, menus and dialogs, hovers, the
+icon of a tool call, and the fade between two themes. Turned off, everything changes at once, as it
+does for a reader whose system asks for reduced motion, which is always honoured whatever this
+switch says; a spinner still turns.
 
 The theme, skin and language are also in the header, or under **More** on a phone. The language
 setting is mirrored on the page's `lang` attribute. The embedded widget takes its theme, skin and
