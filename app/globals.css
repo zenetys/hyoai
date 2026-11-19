@@ -227,6 +227,11 @@ html[data-embed] body:has([data-embed-root]) {
     }
 }
 
+/* The fade between two themes, quicker than the default so the page answers the pointer sooner */
+::view-transition-group(root) {
+    animation-duration: 200ms;
+}
+
 /* Reduced motion: dialogs, menus and sheets keep their fade but lose the zoom and the slide */
 @media (prefers-reduced-motion: reduce) {
     [data-slot$="-content"],
