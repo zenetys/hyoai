@@ -6,12 +6,18 @@ import { useEffect, useRef, useState } from "react";
 
 import { SuggestionIcon } from "@/components/chat/composer/SuggestionIcon";
 import { Button } from "@/components/ui/button";
-import { directSuggestions, type SuggestionsPlacement } from "@/lib/suggestions";
+import { directSuggestions, isCategory, type SuggestionsPlacement } from "@/lib/suggestions";
 import { cn } from "@/lib/utils";
-import type { Suggestion, SuggestionCategory } from "@/types/server";
+import type {
+    DirectSuggestion,
+    Suggestion,
+    SuggestionCategory,
+    SuggestionEntry,
+} from "@/types/server";
 
 // The pills scroll in their slot, with room around them so the focus ring of a pill is not cut at the edge.
-const PILLS = "-m-1 flex max-h-full flex-wrap justify-center gap-2 overflow-y-auto p-1";
+const PILLS =
+    "-m-1 flex max-h-full flex-wrap justify-center gap-2 overflow-x-hidden overflow-y-auto p-1";
 
 // One pill: a category to open, or a suggestion to choose.
 const PILL =
@@ -19,7 +25,8 @@ const PILL =
 
 /**
  * Starter suggestions under the field of an empty conversation: one pill per category, and a
- * pill opens its suggestions in place of the pills. Pointing at a row (or focusing it) asks
+ * pill opens its suggestions in place of the pills. An entry that is a suggestion, not a
+ * category, is a pill of its own that is chosen at once, with its icon after the title. Pointing at a row (or focusing it) asks
  * the field to show its prompt in grey, and choosing it sends the prompt, or only writes it in
  * the field when the suggestion asks for it. The slot hangs under
  * the field without taking any room, so the block keeps the place it has without suggestions,
@@ -29,9 +36,9 @@ const PILL =
  * In an embed the slot takes its own fixed room instead: under the field, or above it when the
  * field is docked at the bottom edge of the frame, where the room grows upward and the field stays
  * where it was, with nothing below it. The whole slot is dropped below 400 px of height, before the
- * field is ever squeezed, and sooner when the welcome heading shares the frame. A list of one category shows its items as pills at once there.
+ * field is ever squeezed, and sooner when the welcome heading shares the frame. A list of exactly one category, and no direct suggestion, shows its items as pills at once there.
  *
- * @param categories - The categories to offer, in the order written
+ * @param entries - The categories and direct suggestions to offer, in the order written
  * @param disabled - Whether a prompt cannot be sent now (no model ready, or one is busy)
  * @param placement - Hanging under the field, or a room of its own below or above it (an embed)
  * @param withIntro - Whether the embed shows its welcome heading, which needs room too, so the slot is dropped sooner
@@ -40,7 +47,7 @@ const PILL =
  * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
  */
 export function Suggestions({
-    categories,
+    entries,
     disabled,
     placement = "hanging",
     withIntro = false,
@@ -48,7 +55,7 @@ export function Suggestions({
     onPreview,
     onChoose,
 }: {
-    categories: SuggestionCategory[];
+    entries: SuggestionEntry[];
     disabled: boolean;
     placement?: SuggestionsPlacement;
     withIntro?: boolean;
@@ -58,7 +65,7 @@ export function Suggestions({
 }) {
     const content = !hidden && (
         <SuggestionsContent
-            categories={categories}
+            entries={entries}
             disabled={disabled}
             direct={placement !== "hanging"}
             onPreview={onPreview}
@@ -107,20 +114,20 @@ export function Suggestions({
  * The pills, or the open panel of one category. It mounts when the slot is filled, so a panel
  * left open is closed once the field was typed in and emptied again.
  *
- * @param categories - The categories to offer, in the order written
+ * @param entries - The categories and direct suggestions to offer, in the order written
  * @param disabled - Whether a prompt cannot be sent now
  * @param direct - Whether a list of one category shows its items as pills at once
  * @param onPreview - Receives the prompt to show in the field, or null to put the field back
  * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
  */
 function SuggestionsContent({
-    categories,
+    entries,
     disabled,
     direct,
     onPreview,
     onChoose,
 }: {
-    categories: SuggestionCategory[];
+    entries: SuggestionEntry[];
     disabled: boolean;
     direct: boolean;
     onPreview: (prompt: string | null) => void;
@@ -130,7 +137,9 @@ function SuggestionsContent({
     const [openLabel, setOpenLabel] = useState<string | null>(null);
     const pills = useRef<Map<string, HTMLButtonElement>>(new Map());
     const closeButton = useRef<HTMLButtonElement>(null);
-    const category = categories.find((item) => item.label === openLabel);
+    const category = entries.find(
+        (item): item is SuggestionCategory => isCategory(item) && item.label === openLabel,
+    );
     const opened = category !== undefined;
 
     // The pill that was pressed is gone once its panel is open, so the focus moves into the panel
@@ -149,37 +158,19 @@ function SuggestionsContent({
         });
     };
 
-    const items = direct ? directSuggestions(categories) : null;
+    const items = direct ? directSuggestions(entries) : null;
     if (items) {
         return (
             <ul role="list" aria-label={t("suggestions")} className={PILLS}>
                 {items.map((item, index) => (
-                    <li
+                    <DirectPill
                         key={item.title}
-                        style={{ animationDelay: `${index * 40}ms` }}
-                        className="max-w-full animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
-                    >
-                        <button
-                            type="button"
-                            disabled={disabled}
-                            onPointerEnter={(event) => {
-                                if (event.pointerType === "mouse") onPreview(item.prompt);
-                            }}
-                            onPointerLeave={() => onPreview(null)}
-                            onFocus={() => onPreview(item.prompt)}
-                            onBlur={() => onPreview(null)}
-                            onClick={() => {
-                                onPreview(null);
-                                onChoose(item);
-                            }}
-                            className={cn(
-                                PILL,
-                                "max-w-full text-start disabled:pointer-events-none disabled:opacity-50",
-                            )}
-                        >
-                            {item.title}
-                        </button>
-                    </li>
+                        item={item}
+                        index={index}
+                        disabled={disabled}
+                        onPreview={onPreview}
+                        onChoose={onChoose}
+                    />
                 ))}
             </ul>
         );
@@ -252,26 +243,90 @@ function SuggestionsContent({
         </div>
     ) : (
         <ul role="list" aria-label={t("suggestions")} className={PILLS}>
-            {categories.map((item, index) => (
-                <li
-                    key={item.label}
-                    style={{ animationDelay: `${index * 40}ms` }}
-                    className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
-                >
-                    <button
-                        type="button"
-                        ref={(node) => {
-                            if (node) pills.current.set(item.label, node);
-                            else pills.current.delete(item.label);
-                        }}
-                        onClick={() => setOpenLabel(item.label)}
-                        className={PILL}
+            {entries.map((item, index) =>
+                isCategory(item) ? (
+                    <li
+                        key={`category:${item.label}`}
+                        style={{ animationDelay: `${index * 40}ms` }}
+                        className="animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
                     >
-                        <SuggestionIcon name={item.icon} className="size-4 shrink-0" />
-                        {item.label}
-                    </button>
-                </li>
-            ))}
+                        <button
+                            type="button"
+                            ref={(node) => {
+                                if (node) pills.current.set(item.label, node);
+                                else pills.current.delete(item.label);
+                            }}
+                            onClick={() => setOpenLabel(item.label)}
+                            className={PILL}
+                        >
+                            <SuggestionIcon name={item.icon} className="size-4 shrink-0" />
+                            {item.label}
+                        </button>
+                    </li>
+                ) : (
+                    <DirectPill
+                        key={`direct:${item.title}`}
+                        item={item}
+                        index={index}
+                        disabled={disabled}
+                        onPreview={onPreview}
+                        onChoose={onChoose}
+                    />
+                ),
+            )}
         </ul>
+    );
+}
+
+/**
+ * A suggestion drawn as a pill that is chosen at once, with its icon, if it has one, after the
+ * title. Pointing at it, or focusing it, asks the field to show its prompt.
+ *
+ * @param item - The suggestion
+ * @param index - Place among the pills, which sets the delay of its entrance
+ * @param disabled - Whether a prompt cannot be sent now
+ * @param onPreview - Receives the prompt to show in the field, or null to put the field back
+ * @param onChoose - Receives the chosen suggestion, to send its prompt or write it in the field
+ */
+function DirectPill({
+    item,
+    index,
+    disabled,
+    onPreview,
+    onChoose,
+}: {
+    item: Suggestion | DirectSuggestion;
+    index: number;
+    disabled: boolean;
+    onPreview: (prompt: string | null) => void;
+    onChoose: (suggestion: Suggestion) => void;
+}) {
+    return (
+        <li
+            style={{ animationDelay: `${index * 40}ms` }}
+            className="max-w-full animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-200 motion-reduce:animate-none"
+        >
+            <button
+                type="button"
+                disabled={disabled}
+                onPointerEnter={(event) => {
+                    if (event.pointerType === "mouse") onPreview(item.prompt);
+                }}
+                onPointerLeave={() => onPreview(null)}
+                onFocus={() => onPreview(item.prompt)}
+                onBlur={() => onPreview(null)}
+                onClick={() => {
+                    onPreview(null);
+                    onChoose(item);
+                }}
+                className={cn(
+                    PILL,
+                    "max-w-full text-start [overflow-wrap:anywhere] disabled:pointer-events-none disabled:opacity-50",
+                )}
+            >
+                {item.title}
+                {"icon" in item && <SuggestionIcon name={item.icon} className="size-4 shrink-0" />}
+            </button>
+        </li>
     );
 }

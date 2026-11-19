@@ -1,12 +1,18 @@
-import { ChartColumn, Code, PenLine } from "lucide-react";
+import { ArrowUpRight, ChartColumn, Code, PenLine, Reply } from "lucide-react";
 
 import type { SuggestionIconName } from "@/types/server";
 
-// The icons a category may name in the config, one component each.
-const ICONS = { "pen-line": PenLine, "chart-column": ChartColumn, code: Code } as const;
+// The icons an entry may name in the config, one component each.
+const ICONS = {
+    "pen-line": PenLine,
+    "chart-column": ChartColumn,
+    code: Code,
+    "arrow-up-right": ArrowUpRight,
+    reply: Reply,
+} as const;
 
 /**
- * The icon of a suggestion category, drawn from the short list of the config. A category
+ * The icon of a suggestion entry, drawn from the short list of the config. An entry
  * without an icon draws nothing.
  *
  * @param name - Icon name from the config, if any

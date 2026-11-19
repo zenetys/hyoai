@@ -21,7 +21,7 @@ import { settingsStore } from "@/lib/stores/settings";
 import type { SuggestionsPlacement } from "@/lib/suggestions";
 import { cn } from "@/lib/utils";
 import type { Attachment, MessageQuote } from "@/types/chat";
-import type { Suggestion, SuggestionCategory } from "@/types/server";
+import type { Suggestion, SuggestionEntry } from "@/types/server";
 
 interface ComposerShellProps {
     onSubmit: (text: string, attachments: Attachment[]) => void;
@@ -39,7 +39,7 @@ interface ComposerShellProps {
     rightControls?: React.ReactNode;
     placeholder?: string;
     rollingPlaceholder?: { placeholder?: string; leaving: string | null; turn: number };
-    suggestions?: SuggestionCategory[];
+    suggestions?: SuggestionEntry[];
     suggestionsPlacement?: SuggestionsPlacement;
     suggestionsWithIntro?: boolean;
     wrapperClassName?: string;
@@ -415,7 +415,7 @@ export function ComposerShell({
             <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
             {suggestions && suggestions.length > 0 && suggestionsPlacement === "above" && (
                 <Suggestions
-                    categories={suggestions}
+                    entries={suggestions}
                     placement={suggestionsPlacement}
                     withIntro={suggestionsWithIntro}
                     disabled={!ready || busy}
@@ -469,7 +469,7 @@ export function ComposerShell({
             )}
             {suggestions && suggestions.length > 0 && suggestionsPlacement !== "above" && (
                 <Suggestions
-                    categories={suggestions}
+                    entries={suggestions}
                     placement={suggestionsPlacement}
                     withIntro={suggestionsWithIntro}
                     disabled={!ready || busy}
