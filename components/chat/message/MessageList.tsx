@@ -200,6 +200,10 @@ const FLASH_MS = 2000;
 const BLINK_MS = 1000;
 const SCROLL_MS = 420;
 
+// The list keeps following the bottom while an approval panel opens or folds, until its height held for this many frames or this many milliseconds passed.
+const FOLLOW_STILL_FRAMES = 8;
+const FOLLOW_MAX_MS = 1000;
+
 /**
  * Ease-in-out curve for the reveal scroll.
  *
@@ -360,6 +364,7 @@ export function MessageList({
     const fresh = useFreshRows(conversationId, ids, running);
     const containerRef = useRef<HTMLDivElement>(null);
     const stickRef = useRef(true);
+    const lastTopRef = useRef(0);
     const flashRef = useRef<Animation | null>(null);
     const [showJump, setShowJump] = useState(false);
 
@@ -390,6 +395,27 @@ export function MessageList({
     useEffect(() => {
         if (stickRef.current && !revealTarget) scrollToBottom("auto");
     }, [ids, streamTick, agentTick, bottomInset, scrollToBottom, revealTarget]);
+
+    useEffect(() => {
+        if (!agentTick) return;
+
+        let frame = 0;
+        let height = -1;
+        let still = 0;
+        const until = performance.now() + FOLLOW_MAX_MS;
+        const follow = () => {
+            const el = containerRef.current;
+            if (!el || !stickRef.current) return;
+            still = el.scrollHeight === height ? still + 1 : 0;
+            height = el.scrollHeight;
+            el.scrollTop = height;
+            if (still < FOLLOW_STILL_FRAMES && performance.now() < until) {
+                frame = requestAnimationFrame(follow);
+            }
+        };
+        frame = requestAnimationFrame(follow);
+        return () => cancelAnimationFrame(frame);
+    }, [agentTick]);
 
     useEffect(() => {
         if (!revealTarget) return;
@@ -460,9 +486,19 @@ export function MessageList({
     const handleScroll = () => {
         const el = containerRef.current;
         if (!el) return;
+
+        const previous = lastTopRef.current;
+        lastTopRef.current = el.scrollTop;
         const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD;
-        stickRef.current = atBottom;
-        setShowJump(!atBottom);
+
+        // Content that grows after a scroll to the bottom is not the reader leaving it: only going up detaches
+        if (atBottom) {
+            stickRef.current = true;
+            setShowJump(false);
+        } else if (el.scrollTop < previous) {
+            stickRef.current = false;
+            setShowJump(true);
+        }
     };
 
     return (

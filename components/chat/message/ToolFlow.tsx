@@ -6,6 +6,7 @@ import { ActivityTrace } from "@/components/chat/message/ActivityTrace";
 import { MessageRow } from "@/components/chat/message/MessageRow";
 import { ToolApproval } from "@/components/chat/message/ToolApproval";
 import { Button } from "@/components/ui/button";
+import { Presence } from "@/components/ui/presence";
 import { useAgentProgress, useChatBusy } from "@/hooks/useActiveChat";
 import { useStore } from "@/hooks/useStore";
 import { useChatInstance } from "@/lib/chat/context";
@@ -61,14 +62,24 @@ export function ToolFlow({ ids }: { ids: string[] }) {
                 steps={steps}
                 isStreaming={active}
                 forceOpen={revealed}
-                renderExtra={(step) =>
-                    step.status === "pending" && agent?.pending?.callId === step.id ? (
-                        <ToolApproval
-                            pending={agent.pending}
-                            onDecision={(decision) => chat.respondToApproval(step.id, decision)}
-                        />
-                    ) : null
-                }
+                renderExtra={(step) => {
+                    const pending =
+                        step.status === "pending" && agent?.pending?.callId === step.id
+                            ? agent.pending
+                            : null;
+                    return (
+                        <Presence show={pending !== null}>
+                            {pending && (
+                                <ToolApproval
+                                    pending={pending}
+                                    onDecision={(decision) =>
+                                        chat.respondToApproval(step.id, decision)
+                                    }
+                                />
+                            )}
+                        </Presence>
+                    );
+                }}
             />
             {interrupted && !busy && (
                 <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
