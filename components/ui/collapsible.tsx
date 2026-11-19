@@ -8,10 +8,23 @@ function Collapsible({ ...props }: React.ComponentProps<typeof CollapsiblePrimit
     return <CollapsiblePrimitive.Root data-slot="collapsible" {...props} />;
 }
 
+/**
+ * The button that opens and closes a collapsible. Its color eases when the pointer enters or
+ * leaves, as the other controls do.
+ *
+ * @param className - Extra classes of the trigger
+ */
 function CollapsibleTrigger({
+    className,
     ...props
 }: React.ComponentProps<typeof CollapsiblePrimitive.CollapsibleTrigger>) {
-    return <CollapsiblePrimitive.CollapsibleTrigger data-slot="collapsible-trigger" {...props} />;
+    return (
+        <CollapsiblePrimitive.CollapsibleTrigger
+            data-slot="collapsible-trigger"
+            className={cn("transition-colors", className)}
+            {...props}
+        />
+    );
 }
 
 /**
