@@ -109,8 +109,9 @@ an embed, except where noted.
   instructions. The Data page has no note about projects. The instructions and the documents of a
   project are not sent either, even for a conversation that belongs to one. See
   [Projects](features.md#projects).
-- **Starter suggestions**: the `suggestions` of the config are never offered under the message box of
-  a widget. See [Starter suggestions](features.md#starter-suggestions).
+- **Starter suggestions of the config**: the `suggestions` of the config are never offered under the
+  message box of a widget. Only the ones the host page sends are, see
+  [Starter suggestions](#starter-suggestions).
 - **The command palette**: there is no palette and no search button; the sidebar variant keeps its
   own search field, a plain field on touch devices too.
 - **Global shortcuts**: Ctrl/Cmd+K, Ctrl/Cmd+B and Ctrl/Cmd+Shift+O are
@@ -158,22 +159,22 @@ answers a message type it does not know.
 
 Every message carries `channel: "hyoai-embed"` and a `type`.
 
-| `type`   | Fields                                                                                 | Effect                                                                                                |
-| -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`                                         | Hot update. The theme sent here overrides the one from the URL                                        |
-| `send`   | `text`                                                                                 | Injects a user turn into the active conversation; blank text is ignored                               |
-| `run`    | `id`, `command`, `systemPrompt?`, `temperature?`, `maxTokens?`, `thinking?`, `silent?` | Headless one-shot run, streamed back and correlated by `id`. The options apply to that run only       |
-| `abort`  | `id`                                                                                   | Cancels the in-flight run with that `id`; no terminal message follows, and an unknown `id` is ignored |
+| `type`   | Fields                                                                                 | Effect                                                                                                                                                |
+| -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`, `suggestions?`                         | Hot update. The theme sent here overrides the one from the URL; `suggestions` replaces the host list, see [Starter suggestions](#starter-suggestions) |
+| `send`   | `text`                                                                                 | Injects a user turn into the active conversation; blank text is ignored                                                                               |
+| `run`    | `id`, `command`, `systemPrompt?`, `temperature?`, `maxTokens?`, `thinking?`, `silent?` | Headless one-shot run, streamed back and correlated by `id`. The options apply to that run only                                                       |
+| `abort`  | `id`                                                                                   | Cancels the in-flight run with that `id`; no terminal message follows, and an unknown `id` is ignored                                                 |
 
 ### Widget to host
 
-| `type`  | Fields                      | Meaning                                                                                                                                                                    |
-| ------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `send`, `run`, `run.options`, `abort` |
-| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                          |
-| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                        |
-| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                     |
-| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                               |
+| `type`  | Fields                      | Meaning                                                                                                                                                                                          |
+| ------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `send`, `run`, `run.options`, `abort` |
+| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                                                |
+| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                                              |
+| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                                           |
+| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                                                     |
 
 A host that ignores `state` degrades cleanly.
 
@@ -248,11 +249,63 @@ window.addEventListener("message", (event) => {
 post({ type: "run", id, command: `Summarise: ${document.body.innerText.slice(0, 4000)}` });
 ```
 
+## Starter suggestions
+
+A host can offer its own starter prompts with the message box of an empty conversation, in both
+variants, by adding `suggestions` to a `config` message. It is one language's list: the host
+localizes it, so there is no map by language. A category has a `label`, an optional `icon`
+(`pen-line`, `chart-column` or `code`) and its `items`, each with a `title`, an optional `prompt` (the
+title is sent when it is missing) and an optional `send`, which with `false` writes the prompt in
+the field, with the caret after it, instead of sending it. They look and behave as the
+[starter suggestions](features.md#starter-suggestions) of the full application.
+
+```js
+post({
+    type: "config",
+    suggestions: [
+        {
+            label: "Tickets",
+            icon: "pen-line",
+            items: [
+                { title: "Summarise this ticket", prompt: "Summarise the ticket below." },
+                { title: "Draft a reply", prompt: "Draft a reply to the customer: ", send: false },
+            ],
+        },
+    ],
+});
+```
+
+- An array replaces the previous list, and an empty array clears it. A value that is not an array is
+  ignored, and a `config` message without `suggestions` leaves the list as it is.
+- A category with no label or no usable item, and an item with no title, are dropped, as they are in
+  the configuration file.
+- The list is kept in memory only: nothing is stored, so a reload starts without it until the host
+  sends it again. Send it once the widget has posted `ready`: a `config` posted before the widget
+  has loaded is lost.
+- The pills show while the conversation is empty and the field has no text, and are gone while an
+  answer is produced. They wrap, and a category opens in place of the pills, scrolling inside its
+  slot when it is long. A list of exactly one category shows its items as pills at once, without
+  the label of the category; with two categories or more nothing changes.
+- With `input=bottom` the pills sit above the field and nothing is ever below it: the field keeps
+  its distance from the bottom edge and does not move when the list arrives, hides while the
+  reader types, comes back or is cleared. An open category grows upward, inside the slot.
+- With `input=center` the pills sit under the field. The field is centered, so it moves up once,
+  by about half the slot, when a list arrives after the first paint, and stays still afterwards.
+  Send the list as soon as `ready` is posted to keep that move out of sight.
+- The slot is a fixed 11 rem, so the field does not move when the pills hide or come back. It is
+  dropped below 400 px of height, before the field is ever shrunk. When the welcome heading
+  (`intro=1`) shares the frame it is dropped sooner, below 540 px with `input=bottom` and below
+  560 px with `input=center`. Those limits were measured with a heading of two lines at 320 px;
+  a long `appName` wraps onto more lines and needs more height, so with one that long give the
+  frame more room or leave the welcome heading out.
+- `config.suggestions` is announced in the `capabilities` of `ready`; a widget older than that
+  ignores the field.
+
 ## Sizing
 
 The widget budgets a short iframe by descending priority: the composer is never
 shrunk, the message list takes the flexible space, and elements are dropped as
-height runs out. Below roughly 240 px the top button bar hides; below 120 px the
+height runs out. Below 400 px the starter suggestions of the host are dropped (540 or 560 px with the welcome heading); below roughly 240 px the top button bar hides; below 120 px the
 message list goes too, leaving a bare composer. Anything from about 400 px up
 behaves like a normal chat.
 

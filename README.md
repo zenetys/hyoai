@@ -550,7 +550,7 @@ compare and availability, tool calling and MCP, and the model and reasoning opti
 
 - Starter suggestions: the config can list a few prompts, by language and category, that show as pills
   under the field of an empty conversation. Pointing at one previews its prompt in the field, choosing it
-  sends it; the embed shows none (see [docs/features.md](docs/features.md#starter-suggestions))
+  sends it; the embed shows only the ones its host page sends (see [docs/features.md](docs/features.md#starter-suggestions))
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/suggestions.png">

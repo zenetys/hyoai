@@ -801,7 +801,8 @@ A deployment can list a few starter prompts in its `config.json`, under `suggest
 empty conversation does not start from a blank field. They show under the message box as one pill
 per category, only while the conversation is empty and the field has no text: they disappear as soon
 as you type, while an answer is being produced, in a [compare](compare.md#compare-mode) view and in
-the embedded widget. They also show in the empty conversation of a project. Without the key, or
+the embedded widget, which offers only the ones its host page sends, see
+[Starter suggestions](embed.md#starter-suggestions) of the embed. They also show in the empty conversation of a project. Without the key, or
 with no usable category for the language, nothing is shown.
 
 <picture>
