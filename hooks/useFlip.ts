@@ -2,6 +2,8 @@
 
 import { type RefObject, useEffect, useLayoutEffect, useRef } from "react";
 
+import { motionReduced } from "@/lib/motion";
+
 interface Snapshot {
     key: unknown;
     height: number;
@@ -57,11 +59,7 @@ export function useFlip(
 
         cancelAnimationFrame(frame.current);
         const stored = previous.current;
-        if (
-            !stored ||
-            stored.key === key ||
-            window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ) {
+        if (!stored || stored.key === key || motionReduced()) {
             frame.current = requestAnimationFrame(() => {
                 previous.current = snapshot();
             });

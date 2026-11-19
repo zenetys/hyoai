@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
+import { useStore } from "@/hooks/useStore";
+import { REDUCED_MOTION_QUERY } from "@/lib/motion";
+import { settingsStore } from "@/lib/stores/settings";
+
 // Cache MediaQueryList objects so we don't create a new one on every render.
 const mediaQueryLists = new Map<string, MediaQueryList>();
 
@@ -78,10 +82,13 @@ export function useIsCompact(): boolean {
 }
 
 /**
- * Whether the reader asks the system for less motion.
+ * Whether the interface should stand still: the reader asks the system for less motion, or
+ * turned the animations off in the settings.
  */
 export function useReducedMotion(): boolean {
-    return useMediaQuery("(prefers-reduced-motion: reduce)");
+    const system = useMediaQuery(REDUCED_MOTION_QUERY);
+    const off = useStore(settingsStore, (state) => !state.settings.display.animations);
+    return system || off;
 }
 
 /**

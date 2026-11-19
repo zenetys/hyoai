@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { useCallback } from "react";
 
+import { motionReduced } from "@/lib/motion";
 import { switchTheme } from "@/lib/theme";
 
 /**
@@ -15,8 +16,7 @@ export function useThemeSwitch(): { theme: string | undefined; setTheme: (theme:
     const { theme, setTheme } = useTheme();
     const change = useCallback(
         (next: string) => {
-            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            switchTheme(() => setTheme(next), document, reduced);
+            switchTheme(() => setTheme(next), document, motionReduced());
         },
         [setTheme],
     );
