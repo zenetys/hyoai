@@ -232,6 +232,28 @@ html[data-embed] body:has([data-embed-root]) {
     animation-duration: 200ms;
 }
 
+/*
+ * The animations can be turned off in the settings, which mark the page root with data-motion="off".
+ * The motion variants then answer as they do for a reader who asks the system for reduced motion.
+ */
+@custom-variant motion-reduce {
+    &:where(:root[data-motion="off"], :root[data-motion="off"] *) {
+        @slot;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        @slot;
+    }
+}
+
+@custom-variant motion-safe {
+    @media (prefers-reduced-motion: no-preference) {
+        &:where(:root:not([data-motion="off"]), :root:not([data-motion="off"]) *) {
+            @slot;
+        }
+    }
+}
+
 /* Reduced motion: dialogs, menus and sheets keep their fade but lose the zoom and the slide */
 @media (prefers-reduced-motion: reduce) {
     [data-slot$="-content"],
@@ -247,6 +269,14 @@ html[data-embed] body:has([data-embed-root]) {
     .animate-pulse {
         animation: none;
     }
+}
+
+/* Animations off in the settings: nothing fades, slides or eases, but a spinner still turns */
+:root[data-motion="off"] *:not(.animate-spin),
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+    animation: none !important;
+    transition: none !important;
 }
 
 /* Cheap rendering win on long message lists without virtualization */

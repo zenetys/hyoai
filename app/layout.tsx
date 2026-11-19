@@ -33,12 +33,13 @@ export const metadata: Metadata = {
  * before first paint to avoid any flash, mirroring what next-themes does for the
  * dark class. In embed mode the look comes from the URL so the widget paints the
  * host's requested skin/theme immediately; otherwise the persisted skin is read
- * from localStorage. The skin list, storage key and default are interpolated
+ * from localStorage, and the animations switch is read from its own mirror key so a page
+ * whose animations are off never plays one at first paint. The skin list, storage key and default are interpolated
  * from the shared sources so the script never duplicates them. A failure leaves
  * the default skin. Outside embed mode the locale has no pre-paint visual impact
  * and is resolved at mount by hydrateLocale.
  */
-const bootScript = `(function(){try{var d=document.documentElement;var SK=${JSON.stringify(SKIN_IDS)};var DEF=${JSON.stringify(DEFAULT_SETTINGS.skin)};var q=new URLSearchParams(location.search);if(q.has("embed")){d.dataset.embed="1";var es=q.get("skin");d.dataset.skin=(SK.indexOf(es)>=0)?es:DEF;var el=q.get("lang");d.lang=(el==="fr"||el==="en")?el:(((navigator.language||"fr").slice(0,2)==="en")?"en":"fr");var et=q.get("theme");if(et==="dark"||et==="light"){d.classList.toggle("dark",et==="dark");}}else{var s=localStorage.getItem(${JSON.stringify(STORAGE_KEYS.skin)});d.dataset.skin=(SK.indexOf(s)>=0)?s:DEF;}}catch(e){document.documentElement.dataset.skin=${JSON.stringify(DEFAULT_SETTINGS.skin)};}})();`;
+const bootScript = `(function(){try{var d=document.documentElement;var SK=${JSON.stringify(SKIN_IDS)};var DEF=${JSON.stringify(DEFAULT_SETTINGS.skin)};var q=new URLSearchParams(location.search);if(q.has("embed")){d.dataset.embed="1";var es=q.get("skin");d.dataset.skin=(SK.indexOf(es)>=0)?es:DEF;var el=q.get("lang");d.lang=(el==="fr"||el==="en")?el:(((navigator.language||"fr").slice(0,2)==="en")?"en":"fr");var et=q.get("theme");if(et==="dark"||et==="light"){d.classList.toggle("dark",et==="dark");}}else{var s=localStorage.getItem(${JSON.stringify(STORAGE_KEYS.skin)});d.dataset.skin=(SK.indexOf(s)>=0)?s:DEF;if(localStorage.getItem(${JSON.stringify(STORAGE_KEYS.motion)})==="off"){d.dataset.motion="off";}}}catch(e){document.documentElement.dataset.skin=${JSON.stringify(DEFAULT_SETTINGS.skin)};}})();`;
 
 /**
  * Root layout: fonts, pre-paint boot script and client providers.
