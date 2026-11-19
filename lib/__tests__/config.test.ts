@@ -328,3 +328,70 @@ describe("loadAppConfig", () => {
         ]);
     });
 });
+
+describe("normalizeConfig with embed origins", () => {
+    const origins = (embedOrigins: string[]) =>
+        ready({ models: [model], embedOrigins }).embedOrigins;
+
+    it("reduces a full URL to its origin", () => {
+        expect(
+            origins(["https://intranet.example.com:443/path/", "http://10.0.0.12:8080"]),
+        ).toEqual(["https://intranet.example.com", "http://10.0.0.12:8080"]);
+    });
+
+    it("keeps a bare host, an IP and a host:port token as written", () => {
+        expect(
+            origins([
+                "localhost",
+                "10.0.0.12",
+                "10.0.0.12:8080",
+                "localhost:4302",
+                "intranet.example.com:8443",
+            ]),
+        ).toEqual([
+            "localhost",
+            "10.0.0.12",
+            "10.0.0.12:8080",
+            "localhost:4302",
+            "intranet.example.com:8443",
+        ]);
+    });
+
+    it("drops blank entries and trims the others", () => {
+        expect(origins(["  ", " localhost:4302 "])).toEqual(["localhost:4302"]);
+    });
+
+    it("never produces an opaque origin", () => {
+        expect(origins(["localhost:4302", "mailto:x", "javascript:alert(1)"])).not.toContain(
+            "null",
+        );
+    });
+});
+
+describe("isEmbedOriginAllowed", () => {
+    it("admits a host:port token whose host starts with a letter", async () => {
+        vi.resetModules();
+        vi.doMock("@/lib/plugins/registry", () => ({
+            getServerType: () => ({ capabilities: { tools: true } }),
+        }));
+        const config = await import("@/lib/config");
+        stored.override = null;
+        vi.stubGlobal(
+            "fetch",
+            async () =>
+                new Response(
+                    JSON.stringify({
+                        models: [model],
+                        embedOrigins: ["localhost:4302", "intranet.example.com:8443"],
+                    }),
+                ),
+        );
+        await config.loadAppConfig();
+
+        expect(config.isEmbedOriginAllowed("http://localhost:4302")).toBe(true);
+        expect(config.isEmbedOriginAllowed("https://intranet.example.com:8443")).toBe(true);
+        expect(config.isEmbedOriginAllowed("http://localhost:4303")).toBe(false);
+        expect(config.isEmbedOriginAllowed("null")).toBe(false);
+        vi.unstubAllGlobals();
+    });
+});

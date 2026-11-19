@@ -213,7 +213,7 @@ function normalizeEmbedOrigins(origins: string[]): string[] {
         const entry = raw.trim();
         if (!entry) continue;
         try {
-            result.push(new URL(entry).origin);
+            result.push(entry.includes("://") ? new URL(entry).origin : entry);
         } catch {
             result.push(entry);
         }
