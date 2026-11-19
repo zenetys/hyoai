@@ -60,8 +60,6 @@ Nothing has to change when upgrading from 1.5.0: `config.json`, local overrides 
 
 The README and the features, models and embed guides describe the project documents, the context pages and the starter suggestions, and carry the new screenshots, in the light and dark folders.
 
-**Full changelog**: [v1.5.0...v1.6.0](https://github.com/zenetys/hyoai/compare/v1.5.0...v1.6.0)
-
 ## [1.5.0](https://github.com/zenetys/hyoai/releases/tag/v1.5.0) - 2026-11-16
 
 This release adds projects, which group conversations under shared instructions and a default model, brings the command palette to phones and touch screens, and replaces the thinking JSON fields of the model form with switches and a list of effort levels.
@@ -110,8 +108,6 @@ Nothing has to change when upgrading from 1.4.3: `config.json`, local overrides 
 
 The README and the features, models, compare, MCP and embed guides describe projects, the touch palette and the thinking controls, and carry the new screenshots, in the light and dark folders, including the recaptured model menu.
 
-**Full changelog**: [v1.4.3...v1.5.0](https://github.com/zenetys/hyoai/compare/v1.4.3...v1.5.0)
-
 ## [1.4.3](https://github.com/zenetys/hyoai/releases/tag/v1.4.3) - 2026-11-12
 
 This release adds a Changelog page to the Settings window, with the release notes of every version, and a changelog file to the repository.
@@ -134,8 +130,6 @@ Nothing has to change when upgrading from 1.4.2: `config.json`, local overrides 
 
 The features guide describes the Changelog page and the address that opens it. The README lists the changelog among the guides and the script in the structure of the repository.
 
-**Full changelog**: [v1.4.2...v1.4.3](https://github.com/zenetys/hyoai/compare/v1.4.2...v1.4.3)
-
 ## [1.4.2](https://github.com/zenetys/hyoai/releases/tag/v1.4.2) - 2026-11-12
 
 This release replaces the Modalities JSON field of the model form with two selects, and makes the `?settings` link work on its own and follow the dialog.
@@ -157,8 +151,6 @@ Nothing has to change when upgrading from 1.4.1: `config.json`, local overrides 
 ### Documentation
 
 The models guide lists the two attachment selects in place of the Modalities (JSON) row, and the features guide describes the parameter written when the window opens and the bare `?settings`.
-
-**Full changelog**: [v1.4.1...v1.4.2](https://github.com/zenetys/hyoai/compare/v1.4.1...v1.4.2)
 
 ## [1.4.1](https://github.com/zenetys/hyoai/releases/tag/v1.4.1) - 2026-11-12
 
@@ -187,8 +179,6 @@ Nothing has to change when upgrading from 1.4.0: `config.json`, local overrides 
 ### Documentation
 
 The models guide describes `thinking.disabled` and the root keys kept by the generated JSON. The embed and features guides say that the sidebar shortcut hints are hidden on touch devices and in the widget.
-
-**Full changelog**: [v1.4.0...v1.4.1](https://github.com/zenetys/hyoai/compare/v1.4.0...v1.4.1)
 
 ## [1.4.0](https://github.com/zenetys/hyoai/releases/tag/v1.4.0) - 2026-11-10
 
@@ -256,8 +246,6 @@ The dot that shows a call waiting for your approval now sits inside the corner o
 
 The guides describe the new window: the navigation, the search, the `?settings=` link, the phone screens and where each setting moved. They document `notice` and `placeholders` among the root keys of `config.json` and name the Style row. The README and the guides on models, MCP, tools, compare and the embed use the new page names. The screenshots of the guides are recaptured in the light and dark folders. The French interface also gets a few wording fixes.
 
-**Full changelog**: [v1.3.2...v1.4.0](https://github.com/zenetys/hyoai/compare/v1.3.2...v1.4.0)
-
 ## [1.3.2](https://github.com/zenetys/hyoai/releases/tag/v1.3.2) - 2026-11-06
 
 This release fixes the status of a tool call that showed up one step late, says plainly when a tool is hidden from the model, and makes the toasts follow the look of the rest of the interface.
@@ -282,8 +270,6 @@ The description of the model availability setting is shorter: a model that stops
 
 The README and the tools and MCP guides use the new label, and the guides describe the hidden count in the tools panel. The screenshots of the tool settings, of an MCP server with its tools and of the model availability setting are recaptured with the new texts, in the light and dark folders.
 
-**Full changelog**: [v1.3.1...v1.3.2](https://github.com/zenetys/hyoai/compare/v1.3.1...v1.3.2)
-
 ## [1.3.1](https://github.com/zenetys/hyoai/releases/tag/v1.3.1) - 2026-11-06
 
 This release fixes how the reasoning of a model is handled during tool calls, and a button that was cut off in the settings. A conversation that uses no tools, or a model that does not reason, behaves as before.
@@ -303,8 +289,6 @@ The last control of a settings tab, such as the Reset approvals button of the To
 ### Documentation
 
 The screenshots in `docs/images` are now split into `light` and `dark` folders, with the same file names and without the `-light` or `-dark` suffix: `docs/images/light/tool-flow.png` replaces `docs/images/tool-flow-light.png`. The README and the guides use the new paths. Links pinned to a tag, such as the images of the 1.3.0 release, keep working. The tools guide has a new section, Reasoning during a flow, its table of errors lists the new message, and the models guide says that the opt-in applies with Send context off.
-
-**Full changelog**: [v1.3.0...v1.3.1](https://github.com/zenetys/hyoai/compare/v1.3.0...v1.3.1)
 
 ## [1.3.0](https://github.com/zenetys/hyoai/releases/tag/v1.3.0) - 2026-11-05
 
@@ -360,8 +344,6 @@ The native browser tooltips were removed from the conversation title in the head
 
 Five guides join the embed guide in `docs/`: models, tools, MCP servers, compare mode with model availability, and a tour of the features. The embed guide now says what the widget leaves out. The README links them in a Documentation table. The new screenshots are in `docs/images`. The six old screenshots that the README used to display are removed, so a site built from this version no longer serves them under `/images/`.
 
-**Full changelog**: [v1.2.0...v1.3.0](https://github.com/zenetys/hyoai/compare/v1.2.0...v1.3.0)
-
 ## [1.2.0](https://github.com/zenetys/hyoai/releases/tag/v1.2.0) - 2026-11-05
 
 This release lets models call tools. A tool is a function the model can ask for while it answers: by default every call is shown to you with its arguments and waits for your approval before it runs. The application ships a Clock provider with one tool, Current time, that returns the current date and time, to try it with, and plugins can bring their own.
@@ -390,8 +372,6 @@ By default every tool asks before it runs. "Always allow" applies to one tool, n
 
 A plugin can now declare tool providers next to its server types, and the contract is documented in `plugins/README.md`. Tool calls and their results are kept in the HYOAI and llama.cpp web interface JSON exports and read back by the import. A llama.cpp file keeps the calls, their arguments and their results, but not their timings, status or approval. The Markdown export leaves out the calls and their results; the OpenAI (JSONL) export leaves out the calls and keeps each result as text appended to the user message it answers. Earlier versions of the application reject a HYOAI JSON file that contains tool results.
 
-**Full changelog**: [v1.1.1...v1.2.0](https://github.com/zenetys/hyoai/compare/v1.1.1...v1.2.0)
-
 ## [1.1.1](https://github.com/zenetys/hyoai/releases/tag/v1.1.1) - 2026-11-05
 
 This release changes nothing you can see. It is a maintenance release that splits the compare code into smaller modules and moves the tests next to the code they cover.
@@ -399,8 +379,6 @@ This release changes nothing you can see. It is a maintenance release that split
 ### Code organisation
 
 The pane instance slots, the pane conversation assignment, the compare broadcast and the compare analysis each have their own module, and the hooks and components import them directly. The unit tests now live in `__tests__` folders. These changes make the next releases easier to build on and do not alter any behaviour.
-
-**Full changelog**: [v1.1.0...v1.1.1](https://github.com/zenetys/hyoai/compare/v1.1.0...v1.1.1)
 
 ## [1.1.0](https://github.com/zenetys/hyoai/releases/tag/v1.1.0) - 2026-11-05
 
@@ -431,8 +409,6 @@ The transport that was specific to one private backend now lives in a plugin ins
 - Opening a page other than the home page no longer starts the application setup (migrations, config loading, conversation loading) a second time.
 - Next.js is updated to 16.4.4, zod 4.6.7 or later is required, shadcn moves to the dev dependencies, and `next dev` no longer writes agent rule files into the repository.
 
-**Full changelog**: [v1.0.2...v1.1.0](https://github.com/zenetys/hyoai/compare/v1.0.2...v1.1.0)
-
 ## [1.0.2](https://github.com/zenetys/hyoai/releases/tag/v1.0.2) - 2026-11-03
 
 This release brings math and diagrams to the chat, makes the context window visible on more servers, lets models keep their reasoning across turns when you ask for it, and adds two new export formats. Part of it comes from community pull requests, credited below.
@@ -459,8 +435,6 @@ The export dialog now offers two more formats next to the native JSON and the ll
 
 For contributors, the unit tests now run with vitest.
 
-**Full changelog**: [v1.0.1...v1.0.2](https://github.com/zenetys/hyoai/compare/v1.0.1...v1.0.2)
-
 ## [1.0.1](https://github.com/zenetys/hyoai/releases/tag/v1.0.1) - 2026-10-06
 
 A maintenance release that updates Next.js for the remote code execution advisories and fixes reasoning, compare-mode and mobile dialog issues reported since 1.0.0. Upgrading is recommended, in particular for anyone running the development server.
@@ -480,8 +454,6 @@ Each pane now stays on a model the configuration actually offers. After a model 
 ### Mobile
 
 The model information dialog now fills the full screen height on small screens.
-
-**Full changelog**: [v1.0.0...v1.0.1](https://github.com/zenetys/hyoai/compare/v1.0.0...v1.0.1)
 
 ## [1.0.0](https://github.com/zenetys/hyoai/releases/tag/v1.0.0) - 2026-10-06
 
