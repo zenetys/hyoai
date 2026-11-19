@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { SettingRow } from "@/components/settings/fields/SettingRow";
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useIsCoarsePointer, useIsMobile, useIsNarrow } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { useThemeSwitch } from "@/hooks/useThemeSwitch";
 import { localeStore, setLocale } from "@/lib/stores/locale";
 import { setSkin, settingsStore, updateSettings } from "@/lib/stores/settings";
 import { uiStore } from "@/lib/stores/ui";
@@ -31,7 +31,7 @@ export function AppearanceTab() {
     const th = useTranslations("header");
     const settings = useStore(settingsStore, (state) => state.settings);
     const locale = useStore(localeStore, (state) => state.locale);
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme } = useThemeSwitch();
     const isMobile = useIsMobile();
     const isNarrow = useIsNarrow();
     const noHover = useIsCoarsePointer();

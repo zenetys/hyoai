@@ -2,9 +2,9 @@
 
 import { ChevronLeft, Monitor, Moon, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 
 import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { useThemeSwitch } from "@/hooks/useThemeSwitch";
 
 const THEMES = [
     { id: "light", Icon: Sun },
@@ -22,7 +22,7 @@ export function useThemeChoice(): {
     theme: (typeof THEMES)[number]["id"];
     setTheme: (theme: (typeof THEMES)[number]["id"]) => void;
 } {
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme } = useThemeSwitch();
     return { theme: theme === "light" || theme === "dark" ? theme : "system", setTheme };
 }
 

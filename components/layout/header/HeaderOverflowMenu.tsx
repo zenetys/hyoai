@@ -2,7 +2,6 @@
 
 import { Check, Columns2, Link, Monitor, Moon, MoreVertical, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useIsMobile, useOnBreakpointCross } from "@/hooks/useMediaQuery";
 import { useStore } from "@/hooks/useStore";
+import { useThemeSwitch } from "@/hooks/useThemeSwitch";
 import { closeCompare } from "@/lib/chat/panes";
 import { compareStore } from "@/lib/stores/compare";
 import { localeStore, setLocale } from "@/lib/stores/locale";
@@ -35,7 +35,7 @@ export function HeaderOverflowMenu() {
     const tt = useTranslations("header.theme");
     const tsk = useTranslations("header.skin");
     const tc = useTranslations("common");
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme } = useThemeSwitch();
     const locale = useStore(localeStore, (state) => state.locale);
     const skin = useStore(settingsStore, (state) => state.settings.skin);
     const compareEnabled = useStore(compareStore, (state) => state.enabled);
