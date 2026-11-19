@@ -42,7 +42,8 @@ function DialogOverlay({
 
 /**
  * Content of a dialog, full screen below md. Ctrl+Enter (Cmd+Enter on Apple platforms)
- * clicks the main action marked with data-confirm, and a click on a toast does not dismiss it.
+ * clicks the main action marked with data-confirm, and a click on a toast, or one that lands on the
+ * page root while the theme fades, does not dismiss it.
  *
  * @param showCloseButton - Show the close button, true by default
  * @param scrollable - Wrap the children in a scrolling body, true by default; false renders
@@ -79,7 +80,11 @@ function DialogContent({
                     confirmOnKey(event);
                 }}
                 onInteractOutside={(event) => {
-                    if ((event.target as Element | null)?.closest?.("[data-sonner-toaster]")) {
+                    // While the page fades between two themes the pointer lands on the page root
+                    if (
+                        event.target === document.documentElement ||
+                        (event.target as Element | null)?.closest?.("[data-sonner-toaster]")
+                    ) {
                         event.preventDefault();
                         return;
                     }

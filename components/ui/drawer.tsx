@@ -36,11 +36,15 @@ function DrawerOverlay({
 /**
  * Bottom sheet content with a drag handle. vaul makes the whole sheet
  * draggable, so a swipe down dismisses it; the handle is the visual grip. The
- * sheet follows the popover token set to match the app's dropdowns.
+ * sheet follows the popover token set to match the app's dropdowns. A tap that lands on the
+ * page root while the theme fades does not dismiss it.
+ *
+ * @param onInteractOutside - Called when the pointer goes down or the focus moves outside
  */
 function DrawerContent({
     className,
     children,
+    onInteractOutside,
     ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
     return (
@@ -55,6 +59,14 @@ function DrawerContent({
                     className,
                 )}
                 {...props}
+                onInteractOutside={(event) => {
+                    // While the page fades between two themes the pointer lands on the page root
+                    if (event.target === document.documentElement) {
+                        event.preventDefault();
+                        return;
+                    }
+                    onInteractOutside?.(event);
+                }}
             >
                 <div className="mx-auto mt-2.5 hidden h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/30 group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
                 {children}
