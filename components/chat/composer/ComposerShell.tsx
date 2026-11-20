@@ -418,8 +418,6 @@ export function ComposerShell({
             onDrop={handleDrop}
             onDragOver={(event) => event.preventDefault()}
         >
-            {banner}
-            <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
             {suggestions && suggestions.length > 0 && suggestionsPlacement === "above" && (
                 <Suggestions
                     entries={suggestions}
@@ -431,6 +429,8 @@ export function ComposerShell({
                     onChoose={chooseSuggestion}
                 />
             )}
+            {banner}
+            <ComposerAttachments attachments={att.attachments} onRemove={att.remove} />
             <div
                 ref={boxRef}
                 className={cn(

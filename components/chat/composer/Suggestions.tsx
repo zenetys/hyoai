@@ -33,9 +33,9 @@ const PILL =
  * and it has a fixed height that stays while the field has text, only emptied, so neither
  * opening a panel nor typing moves the field.
  *
- * In an embed the slot takes its own fixed room instead: under the field, or above it when the
- * field is docked at the bottom edge of the frame, where the room grows upward and the field stays
- * where it was, with nothing below it. The whole slot is dropped below 400 px of height, before the
+ * In an embed the slot sits under the field, taking its own fixed room, or above it when the
+ * field is docked at the bottom edge of the frame, where it hangs upward without taking any room,
+ * so the welcome heading keeps its place and the field stays where it was, with nothing below it. The whole slot is dropped below 400 px of height, before the
  * field is ever squeezed, and sooner when the welcome heading shares the frame. A list of exactly one category, and no direct suggestion, shows its items as pills at once there.
  *
  * @param entries - The categories and direct suggestions to offer, in the order written
@@ -75,15 +75,17 @@ export function Suggestions({
 
     if (placement === "above") {
         return (
-            <div
-                className={cn(
-                    "mb-3 flex h-44 flex-col justify-end",
-                    withIntro
-                        ? "[@media(max-height:539px)]:hidden"
-                        : "[@media(max-height:399px)]:hidden",
-                )}
-            >
-                {content}
+            <div className="relative h-0">
+                <div
+                    className={cn(
+                        "pointer-events-none absolute inset-x-0 bottom-0 mb-3 flex h-44 flex-col justify-end [&>*]:pointer-events-auto",
+                        withIntro
+                            ? "[@media(max-height:539px)]:hidden"
+                            : "[@media(max-height:399px)]:hidden",
+                    )}
+                >
+                    {content}
+                </div>
             </div>
         );
     }
