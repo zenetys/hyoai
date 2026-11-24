@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Sora } from "next/font/google";
+import { Inter, JetBrains_Mono, Outfit } from "next/font/google";
 
 import { Providers } from "@/app/providers";
 import { DEFAULT_SETTINGS, SKIN_IDS } from "@/types/settings";
@@ -12,8 +12,8 @@ const inter = Inter({
     subsets: ["latin"],
 });
 
-const sora = Sora({
-    variable: "--font-sora",
+const outfit = Outfit({
+    variable: "--font-outfit",
     subsets: ["latin"],
 });
 
@@ -55,7 +55,7 @@ export default function RootLayout({
         <html
             lang="fr"
             suppressHydrationWarning
-            className={`${inter.variable} ${sora.variable} ${jetbrainsMono.variable} h-full antialiased`}
+            className={`${inter.variable} ${outfit.variable} ${jetbrainsMono.variable} h-full antialiased`}
         >
             <body suppressHydrationWarning className="h-full overflow-hidden">
                 <script dangerouslySetInnerHTML={{ __html: bootScript }} />

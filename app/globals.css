@@ -20,8 +20,8 @@
     --color-foreground: var(--foreground);
     --font-sans: var(--font-inter);
     --font-mono: var(--font-jetbrains-mono);
-    --font-display: var(--font-sora);
-    --font-heading: var(--font-sora);
+    --font-display: var(--font-outfit);
+    --font-heading: var(--font-outfit);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -316,7 +316,7 @@ html[data-embed] body:has([data-embed-root]) {
     .chat-markdown h2,
     .chat-markdown h3,
     .chat-markdown h4 {
-        font-family: var(--font-sora);
+        font-family: var(--font-outfit);
         margin-block: 1.2em 0.5em;
         font-weight: 600;
         line-height: 1.3;
