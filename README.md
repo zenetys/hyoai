@@ -479,8 +479,9 @@ Other good projects, grouped by architecture:
 
 ```
 app/            layout (fonts, anti-FOUC script), single page, globals.css (tokens), appearance/ (skins)
-components/     chat/ (view, message, composer, dialogs), settings/ (tabs, fields,
-                editors, dialogs, mcp), layout/ (shells, header, sidebar), compare/,
+components/     chat/ (view, message, composer/ with attachments, tools, suggestions and context,
+                dialogs), settings/ (tabs, fields, editors, dialogs, mcp), layout/ (shells,
+                header, sidebar), compare/,
                 markdown/, common/ (cross-domain), ui/ (shadcn)
 hooks/          useStore (useSyncExternalStore + selectors), useActiveChat, useConversations
 lib/            api/ (SSE, params mapping), plugins/ (registry, SDK), tools/ (catalog, runner),
