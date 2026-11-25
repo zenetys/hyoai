@@ -159,22 +159,26 @@ answers a message type it does not know.
 
 Every message carries `channel: "hyoai-embed"` and a `type`.
 
-| `type`   | Fields                                                                                 | Effect                                                                                                                                                |
-| -------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config` | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`, `suggestions?`, `placeholder?`         | Hot update. The theme sent here overrides the one from the URL; `suggestions` replaces the host list, see [Starter suggestions](#starter-suggestions) |
-| `send`   | `text`                                                                                 | Injects a user turn into the active conversation; blank text is ignored                                                                               |
-| `run`    | `id`, `command`, `systemPrompt?`, `temperature?`, `maxTokens?`, `thinking?`, `silent?` | Headless one-shot run, streamed back and correlated by `id`. The options apply to that run only                                                       |
-| `abort`  | `id`                                                                                   | Cancels the in-flight run with that `id`; no terminal message follows, and an unknown `id` is ignored                                                 |
+| `type`            | Fields                                                                                 | Effect                                                                                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config`          | `systemPrompt?`, `lang?` (`fr`/`en`), `theme?`, `suggestions?`, `placeholder?`         | Hot update. The theme sent here overrides the one from the URL; `suggestions` replaces the host list, see [Starter suggestions](#starter-suggestions) |
+| `send`            | `text`                                                                                 | Injects a user turn into the active conversation; blank text is ignored                                                                               |
+| `run`             | `id`, `command`, `systemPrompt?`, `temperature?`, `maxTokens?`, `thinking?`, `silent?` | Headless one-shot run, streamed back and correlated by `id`. The options apply to that run only                                                       |
+| `abort`           | `id`                                                                                   | Cancels the in-flight run with that `id`; no terminal message follows, and an unknown `id` is ignored                                                 |
+| `getBudget`       | (none)                                                                                 | Asks for the `budget` message, even when nothing changed since it was last posted. Announced as `budget.request`                                      |
+| `newConversation` | (none)                                                                                 | Starts a fresh conversation, as the new-chat button of the widget does. Announced as `conversation.new`                                               |
 
 ### Widget to host
 
-| `type`  | Fields                      | Meaning                                                                                                                                                                                                                                              |
-| ------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ready` | `version?`, `capabilities?` | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `config.suggestions.actions`, `config.placeholder`, `send`, `run`, `run.options`, `abort` |
-| `state` | `generating`                | A generation started or settled, so a host control can gate on it                                                                                                                                                                                    |
-| `chunk` | `id`, `delta`               | One content delta of a headless run                                                                                                                                                                                                                  |
-| `done`  | `id`, `text`                | Final assembled text of a headless run                                                                                                                                                                                                               |
-| `error` | `id`, `message`             | A headless run failed; nothing further follows for that `id`                                                                                                                                                                                         |
+| `type`   | Fields                                                                                                                   | Meaning                                                                                                                                                                                                                                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready`  | `version?`, `capabilities?`                                                                                              | Handshake complete; the widget accepts actions. `capabilities` lists the inbound types and options it handles, for example `config`, `config.suggestions`, `config.suggestions.actions`, `config.placeholder`, `send`, `run`, `run.options`, `abort`, `budget`, `budget.request`, `usage`, `conversation.new` |
+| `state`  | `generating`                                                                                                             | A generation started or settled, so a host control can gate on it                                                                                                                                                                                                                                             |
+| `chunk`  | `id`, `delta`                                                                                                            | One content delta of a headless run                                                                                                                                                                                                                                                                           |
+| `done`   | `id`, `text`                                                                                                             | Final assembled text of a headless run                                                                                                                                                                                                                                                                        |
+| `error`  | `id`, `message`, `code?`, `requested?`, `available?`                                                                     | A headless run failed; nothing further follows for that `id`. `code` tells why, see [Errors](#errors)                                                                                                                                                                                                         |
+| `budget` | `model`, `contextWindow`, `source`, `outputReserve`, `fraction`, `inputBudget`, `charsPerToken`, `charsPerTokenMeasured` | What the host may send, see [Budget and usage](#budget-and-usage)                                                                                                                                                                                                                                             |
+| `usage`  | `id?`, `promptTokens?`, `completionTokens?`, `contextWindow`, `source`                                                   | The exact token counts of a chat generation or of a run, see [Budget and usage](#budget-and-usage)                                                                                                                                                                                                            |
 
 A host that ignores `state` degrades cleanly.
 
@@ -205,6 +209,91 @@ A host that ignores `state` degrades cleanly.
 </script>
 ```
 
+### Which system prompt applies
+
+The `systemPrompt` of a `config` message is stored in the settings of the widget: it is global, and it
+goes with every request of the chat and of every run until another `config` replaces it. It is not
+kept per conversation or per ticket, so a host that changes context has to send the new prompt
+first. A `systemPrompt` on a `run` replaces it for that run alone.
+
+### Host ordering
+
+Servers that cache the prompt prefix (llama.cpp does, with its slots) reuse everything up to the
+first token that changed. Put the parts of the system prompt that stay the same first and the
+volatile ones last: the instructions and the ticket metadata at the start, then the thread, and
+the current date and time and the newest messages at the very end. A date at the top of the prompt
+invalidates the cache of the whole request every time it changes.
+
+## Budget and usage
+
+A host that builds a prompt, such as a ticket and its thread, needs to know how much fits. The
+widget tells it, and reports what a request really took.
+
+### budget
+
+```js
+{
+    channel: "hyoai-embed",
+    type: "budget",
+    model: "ministral",         // upstream model id, null until one is resolved
+    contextWindow: 8192,        // tokens of one request, null while unknown
+    source: "props",            // "props" | "probe" | "fallback" | "unknown"
+    outputReserve: 2048,        // tokens kept free for the answer
+    fraction: 0.8,              // share of the window filled before the widget compacts
+    inputBudget: 4505,          // floor(contextWindow * fraction) - outputReserve, null when unknown
+    charsPerToken: 3.4,         // to turn the budget into a length
+    charsPerTokenMeasured: true // false when it is the default 4
+}
+```
+
+- It is posted to the acknowledged origins when the window, the model, `maxTokens` or the
+  fraction changes, and never twice in a row with the same content. It is a separate message from
+  `ready`, because the window is not known when `ready` is posted: the props of the server are
+  still loading. A host that mounted after it was posted sends `{ type: "getBudget" }` and gets it
+  back at once, even when nothing changed. A host that only acknowledged after the last change,
+  such as one reachable by a bare IP that spoke first, should ask the same way.
+- `source` says how far to trust the window. `props` is the `/props` of a llama.cpp server and
+  `probe` the info endpoint of vLLM or SGLang. `fallback` means the server reports no window, so
+  the widget assumes its configured default (65,536 tokens): a host should stay well under it.
+  `unknown` means the model or its props are still resolving; `contextWindow` and `inputBudget`
+  are `null`, and a new message follows once they are known.
+- `inputBudget` is never below 0. It counts the whole request, system prompt included.
+- `charsPerToken` is measured by the server tokenizer on a short sample of French and English when
+  the model entry enables `tokenize`, once per server and model, so it is an estimate for
+  that kind of text. Without a tokenizer it is 4 and `charsPerTokenMeasured` is `false`.
+- With llama.cpp's `--parallel N` the `contextWindow` is the window of one slot, not the total of the
+  server: `/props` reports `default_generation_settings.n_ctx`, the size a request may use.
+
+### usage
+
+```js
+{ channel: "hyoai-embed", type: "usage", id: "run-1", promptTokens: 537, completionTokens: 12,
+  contextWindow: 8192, source: "run" }
+```
+
+- `source: "chat"` follows a chat generation that settled, before the `state` message with
+  `generating: false`, and has no `id`. `source: "run"` comes just before the `done` of the run
+  with that `id`.
+- The counts are the ones the server reports. `promptTokens` is the whole prompt, the tokens the
+  server served from its cache included. A count the server does not report is left out, and
+  when it reports neither no `usage` message is posted.
+- `contextWindow` is the same as in `budget`, `null` while unknown.
+
+### Errors
+
+An `error` message may carry a `code`; a host that only reads `message` keeps working.
+
+| `code`             | Meaning                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `context_overflow` | The request did not fit. `requested` and `available` hold the tokens it needed and the window offered |
+| `aborted`          | The server or the transport ended the request                                                         |
+| `http`             | The server answered with a failure status, an authorization one included                              |
+| `network`          | The server was not reached, did not answer in time or broke the stream                                |
+
+A failure that matches none of them has no `code`, such as a run cut by the token limit or
+`no model available`. On `context_overflow`, shorten the prompt to under `available` less the
+output reserve and run again.
+
 ## Headless runs
 
 A `run` message computes an answer without showing a chat: the host can load
@@ -231,7 +320,7 @@ example to summarise the page the user is on.
 - Reusing an `id` that is still in flight aborts the earlier run, and so does an
   `abort` message with that `id`.
 - Exactly one terminal message (`done` or `error`) follows zero or more
-  `chunk`s. An aborted run — by `abort`, by a reused `id` or by the iframe going
+  `chunk`s, with a `usage` message just before `done`. An aborted run — by `abort`, by a reused `id` or by the iframe going
   away — emits none.
 
 ```js
