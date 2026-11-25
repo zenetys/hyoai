@@ -96,7 +96,7 @@ export const SETTINGS_SEARCH: SettingsSearchEntry[] = [
         [undefined, "exportTitle", "exportDescription"],
         [undefined, "importTitle", "importDescription"],
         [undefined, "storageTitle", "storageHint"],
-        [undefined, "clearAllTitle", "clearAllDescription"],
+        [undefined, "deleteTitle", "deleteDescription"],
     ]),
     ...entries("config", "settings.config", [
         ["config-app-name", "appName"],

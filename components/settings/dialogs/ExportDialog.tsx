@@ -26,7 +26,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useConversationList } from "@/hooks/useConversations";
+import { useStore } from "@/hooks/useStore";
 import { exportFilename } from "@/lib/format";
+import { uiStore } from "@/lib/stores/ui";
 import {
     downloadJson,
     downloadText,
@@ -60,6 +62,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     const ts = useTranslations("sidebar");
     const locale = useLocale();
     const list = useConversationList();
+    const embed = useStore(uiStore, (state) => state.embed);
     const [selected, setSelected] = useSelection(
         open,
         list.map((meta) => meta.id),
@@ -163,6 +166,11 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                             onCheckedChange={setIncludeSettings}
                         />
                     </div>
+                    {!embed && (
+                        <p className="text-xs text-muted-foreground">
+                            {t("data.projectsNotExported")}
+                        </p>
+                    )}
                     <CheckList
                         items={list.map((meta) => ({
                             id: meta.id,

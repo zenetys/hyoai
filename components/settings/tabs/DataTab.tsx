@@ -5,20 +5,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { DeleteConversationsDialog } from "@/components/settings/dialogs/DeleteConversationsDialog";
 import { ExportDialog } from "@/components/settings/dialogs/ExportDialog";
 import { SettingGroup } from "@/components/settings/fields/SettingGroup";
 import { SettingRow } from "@/components/settings/fields/SettingRow";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -67,15 +57,16 @@ function parseAnyImport(
 /**
  * Data page of the settings: selective JSON export (native or llama.cpp webui
  * format), import of both formats, a local storage meter with the full,
- * scrollable per-conversation breakdown and a confirmed clear-all action. The export row
+ * scrollable per-conversation breakdown and a deletion of chosen conversations, which also
+ * offers the confirmed clear-all action. The export row
  * also states that projects are not exported, except in an embed, which has no projects.
  */
 export function DataTab() {
     const t = useTranslations("settings");
-    const tc = useTranslations("common");
     const ts = useTranslations("sidebar");
     const locale = useLocale();
     const [exportOpen, setExportOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
     const [importing, setImporting] = useState(false);
     const phone = useIsMobile();
     const usage = useStore(storageStore, (state) => state.usage);
@@ -130,12 +121,7 @@ export function DataTab() {
         <SettingGroup>
             <SettingRow
                 label={t("data.exportTitle")}
-                description={
-                    <>
-                        <p>{t("data.exportDescription")}</p>
-                        {!embed && <p>{t("data.projectsNotExported")}</p>}
-                    </>
-                }
+                description={t("data.exportDescription")}
                 stacked={phone}
             >
                 <Button type="button" variant="outline" onClick={() => setExportOpen(true)}>
@@ -213,35 +199,19 @@ export function DataTab() {
                 </div>
             </SettingRow>
             <SettingRow
-                label={t("data.clearAllTitle")}
-                description={t("data.clearAllDescription")}
+                label={t("data.deleteTitle")}
+                description={t("data.deleteDescription")}
                 stacked={phone}
             >
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button type="button" variant="destructive">
-                            <Trash2 aria-hidden="true" />
-                            {t("data.clearAll")}
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>{t("data.clearAllTitle")}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                {t("data.clearAllDescription")}
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
-                            <AlertDialogAction
-                                variant="destructive"
-                                onClick={() => void handleClearAll()}
-                            >
-                                {tc("delete")}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                <Button type="button" variant="outline" onClick={() => setDeleteOpen(true)}>
+                    <Trash2 aria-hidden="true" />
+                    {t("data.deleteOpen")}
+                </Button>
+                <DeleteConversationsDialog
+                    open={deleteOpen}
+                    onOpenChange={setDeleteOpen}
+                    onClearAll={() => void handleClearAll()}
+                />
             </SettingRow>
         </SettingGroup>
     );
