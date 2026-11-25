@@ -83,6 +83,7 @@ const stageTimingSchema = z.object({
 
 const messageStatsSchema = z.object({
     promptTokens: z.number().optional(),
+    cachedTokens: z.number().optional(),
     promptMs: z.number().optional(),
     promptPerSecond: z.number().optional(),
     completionTokens: z.number().optional(),

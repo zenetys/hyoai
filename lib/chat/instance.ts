@@ -822,6 +822,7 @@ export class ChatInstance {
                     case "usage":
                         stats.promptTokens = event.usage.promptTokens;
                         stats.completionTokens = event.usage.completionTokens;
+                        stats.cachedTokens = undefined;
                         queueFlush();
                         break;
                     case "timings":
@@ -839,6 +840,9 @@ export class ChatInstance {
                         }
                         if (event.timings.promptTokens !== undefined) {
                             stats.promptTokens = event.timings.promptTokens;
+                        }
+                        if (event.timings.cachedTokens !== undefined) {
+                            stats.cachedTokens = event.timings.cachedTokens;
                         }
                         if (event.timings.completionTokens !== undefined) {
                             stats.completionTokens = event.timings.completionTokens;

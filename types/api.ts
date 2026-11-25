@@ -101,6 +101,7 @@ export interface ApiTimings {
     promptMs?: number;
     predictedMs?: number;
     promptTokens?: number;
+    cachedTokens?: number;
     completionTokens?: number;
 }
 
@@ -182,6 +183,7 @@ export interface ApiStreamChunk {
         predicted_per_second?: number;
         prompt_n?: number;
         predicted_n?: number;
+        cache_n?: number;
     };
     error?: {
         message?: string;

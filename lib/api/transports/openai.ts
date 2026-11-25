@@ -357,6 +357,7 @@ export async function* streamOpenAiCompatChat(
                     promptMs: chunk.timings.prompt_ms,
                     predictedMs: chunk.timings.predicted_ms,
                     promptTokens: chunk.timings.prompt_n,
+                    cachedTokens: chunk.timings.cache_n,
                     completionTokens: chunk.timings.predicted_n,
                 },
             };

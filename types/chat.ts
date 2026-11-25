@@ -143,10 +143,13 @@ export interface ToolResultMeta {
 /**
  * Generation statistics attached to an assistant message. The footer shows
  * either the reading (prompt processing) phase or the generation (token
- * output) phase, hence the two parallel sets of token/duration/rate fields.
+ * output) phase, hence the two parallel sets of token/duration/rate fields. The cachedTokens are
+ * the prompt tokens the server served from its cache, which promptTokens leaves out when the
+ * server reports only the tokens it processed.
  */
 export interface MessageStats {
     promptTokens?: number;
+    cachedTokens?: number;
     promptMs?: number;
     promptPerSecond?: number;
     completionTokens?: number;
