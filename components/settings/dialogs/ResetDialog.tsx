@@ -2,11 +2,10 @@
 
 import { RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 
+import { CheckList, useSelection } from "@/components/common/CheckList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { confirmProps } from "@/components/ui/confirm";
 import {
     Dialog,
@@ -55,24 +54,12 @@ const MODE_VARIANT = {
 export function ResetDialog({ open, onOpenChange, items, onConfirm }: ResetDialogProps) {
     const t = useTranslations("settings");
     const tc = useTranslations("common");
-    const [selected, setSelected] = useState<Set<string>>(new Set());
-    const [wasOpen, setWasOpen] = useState(false);
+    const [selected, setSelected] = useSelection(open, []);
 
-    if (open !== wasOpen) {
-        setWasOpen(open);
-        if (open) setSelected(new Set());
-    }
-
-    const allSelected = items.length > 0 && selected.size === items.length;
-
-    const toggle = (key: string, checked: boolean) => {
-        setSelected((previous) => {
-            const next = new Set(previous);
-            if (checked) next.add(key);
-            else next.delete(key);
-            return next;
-        });
-    };
+    // The entries in the order of their categories, which the list turns into groups
+    const ordered = CATEGORIES.flatMap((category) =>
+        items.filter((item) => item.category === category),
+    );
 
     // Primary label of an entry, with the value interpolated where it helps.
     const primary = (item: OverrideItem): string => {
@@ -121,63 +108,35 @@ export function ResetDialog({ open, onOpenChange, items, onConfirm }: ResetDialo
                 {items.length === 0 ? (
                     <p className="text-sm text-muted-foreground">{t("config.resetNothing")}</p>
                 ) : (
-                    <div className="rounded-lg border border-border">
-                        <label className="flex cursor-pointer items-center gap-2.5 border-b border-border px-3 py-2 text-sm font-medium">
-                            <Checkbox
-                                checked={allSelected}
-                                onCheckedChange={(checked) =>
-                                    setSelected(
-                                        checked === true
-                                            ? new Set(items.map((item) => item.key))
-                                            : new Set(),
-                                    )
-                                }
-                            />
-                            {t("data.selectAll", { count: selected.size, total: items.length })}
-                        </label>
-                        <div className="max-h-72 overflow-y-auto p-1">
-                            {CATEGORIES.map((category) => {
-                                const group = items.filter((item) => item.category === category);
-                                if (group.length === 0) return null;
-                                return (
-                                    <div key={category} className="mb-1 last:mb-0">
-                                        <p className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">
-                                            {t(`config.resetCat.${category}`)}
-                                        </p>
-                                        {group.map((item) => (
-                                            <label
-                                                key={item.key}
-                                                className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-                                            >
-                                                <Checkbox
-                                                    checked={selected.has(item.key)}
-                                                    onCheckedChange={(checked) =>
-                                                        toggle(item.key, checked === true)
-                                                    }
-                                                />
-                                                <span className="min-w-0 flex-1 truncate">
-                                                    {primary(item)}
-                                                    {secondary(item) && (
-                                                        <span className="ml-1.5 text-muted-foreground">
-                                                            {secondary(item)}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                                {item.mode && (
-                                                    <Badge
-                                                        variant={MODE_VARIANT[item.mode]}
-                                                        className="shrink-0"
-                                                    >
-                                                        {t(`config.mode.${item.mode}`)}
-                                                    </Badge>
-                                                )}
-                                            </label>
-                                        ))}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    <CheckList
+                        items={ordered.map((item) => ({
+                            id: item.key,
+                            group: item.category,
+                            label: (
+                                <>
+                                    {primary(item)}
+                                    {secondary(item) && (
+                                        <span className="ml-1.5 text-muted-foreground">
+                                            {secondary(item)}
+                                        </span>
+                                    )}
+                                </>
+                            ),
+                            trailing: item.mode && (
+                                <Badge variant={MODE_VARIANT[item.mode]} className="shrink-0">
+                                    {t(`config.mode.${item.mode}`)}
+                                </Badge>
+                            ),
+                        }))}
+                        selected={selected}
+                        onChange={setSelected}
+                        selectAllLabel={t("data.selectAll", {
+                            count: selected.size,
+                            total: items.length,
+                        })}
+                        groupLabel={(group) => t(`config.resetCat.${group}`)}
+                        className="max-h-72"
+                    />
                 )}
                 <DialogFooter>
                     <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

@@ -5,8 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { CheckList, useSelection } from "@/components/common/CheckList";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmHint, confirmProps } from "@/components/ui/confirm";
 import {
     Dialog,
@@ -60,31 +60,18 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     const ts = useTranslations("sidebar");
     const locale = useLocale();
     const list = useConversationList();
-    const [selected, setSelected] = useState<Set<string>>(new Set());
+    const [selected, setSelected] = useSelection(
+        open,
+        list.map((meta) => meta.id),
+    );
     const [format, setFormat] = useState<ExportFormat>("native");
     const [includeSettings, setIncludeSettings] = useState(true);
     const [exporting, setExporting] = useState(false);
-    const [wasOpen, setWasOpen] = useState(false);
 
-    if (open !== wasOpen) {
-        setWasOpen(open);
-        if (open) setSelected(new Set(list.map((meta) => meta.id)));
-    }
-
-    const allSelected = selected.size === list.length && list.length > 0;
     const dateFormat = useMemo(
         () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
         [locale],
     );
-
-    const toggle = (id: string, checked: boolean) => {
-        setSelected((previous) => {
-            const next = new Set(previous);
-            if (checked) next.add(id);
-            else next.delete(id);
-            return next;
-        });
-    };
 
     const handleExport = async () => {
         const ids = list.map((meta) => meta.id).filter((id) => selected.has(id));
@@ -176,47 +163,28 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                             onCheckedChange={setIncludeSettings}
                         />
                     </div>
-                    <div className="rounded-lg border border-border">
-                        <label className="flex cursor-pointer items-center gap-2.5 border-b border-border px-3 py-2 text-sm font-medium">
-                            <Checkbox
-                                checked={allSelected}
-                                onCheckedChange={(checked) =>
-                                    setSelected(
-                                        checked === true
-                                            ? new Set(list.map((meta) => meta.id))
-                                            : new Set(),
-                                    )
-                                }
-                            />
-                            {t("data.selectAll", { count: selected.size, total: list.length })}
-                        </label>
-                        <div className="max-h-56 overflow-y-auto p-1">
-                            {list.map((meta) => (
-                                <label
-                                    key={meta.id}
-                                    className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-                                >
-                                    <Checkbox
-                                        checked={selected.has(meta.id)}
-                                        onCheckedChange={(checked) =>
-                                            toggle(meta.id, checked === true)
-                                        }
-                                    />
-                                    <span className="min-w-0 flex-1 truncate">
-                                        {meta.title || ts("untitled")}
-                                    </span>
-                                    <span className="shrink-0 text-xs text-muted-foreground">
-                                        {dateFormat.format(meta.lastModified)}
-                                    </span>
-                                </label>
-                            ))}
-                            {list.length === 0 && (
-                                <p className="px-2 py-3 text-sm text-muted-foreground">
-                                    {ts("noConversations")}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    <CheckList
+                        items={list.map((meta) => ({
+                            id: meta.id,
+                            label: meta.title || ts("untitled"),
+                            trailing: (
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                    {dateFormat.format(meta.lastModified)}
+                                </span>
+                            ),
+                        }))}
+                        selected={selected}
+                        onChange={setSelected}
+                        selectAllLabel={t("data.selectAll", {
+                            count: selected.size,
+                            total: list.length,
+                        })}
+                        empty={
+                            <p className="px-2 py-3 text-sm text-muted-foreground">
+                                {ts("noConversations")}
+                            </p>
+                        }
+                    />
                 </div>
                 <DialogFooter>
                     <Button
