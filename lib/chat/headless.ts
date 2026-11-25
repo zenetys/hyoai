@@ -1,8 +1,10 @@
 import { streamChatCompletion } from "@/lib/api/chat";
 import { endingMessage } from "@/lib/chat/endings";
+import { parseContextOverflow } from "@/lib/compaction";
+import type { EmbedErrorCode } from "@/lib/embed";
 import { getActiveEntry, getUpstreamModel, modelsStore } from "@/lib/stores/models";
 import { settingsStore } from "@/lib/stores/settings";
-import type { ApiMessage, ChatRequestParams } from "@/types/api";
+import { ApiError, type ApiErrorKind, type ApiMessage, type ChatRequestParams } from "@/types/api";
 import type { ModelConfig } from "@/types/server";
 
 // Longest a run waits for the URL-forced model's upstream id to resolve.
@@ -14,13 +16,61 @@ const MODEL_WAIT_MS = 10000;
  * aborted run fires none.
  *
  * @param onChunk - One content delta as it streams in
+ * @param onUsage - Exact token counts the server reported, called just before onDone and only
+ *   when it reported some
  * @param onDone - Final assembled text once the stream completes
- * @param onError - Human-readable failure message; no further callbacks follow
+ * @param onError - Human-readable failure message, with its class when it could be told; no
+ *   further callbacks follow
  */
 export interface HeadlessCallbacks {
     onChunk: (delta: string) => void;
+    onUsage?: (usage: HeadlessUsage) => void;
     onDone: (text: string) => void;
-    onError: (message: string) => void;
+    onError: (message: string, detail?: HeadlessErrorDetail) => void;
+}
+
+/**
+ * Token counts of a run. The prompt count includes the tokens the server served from its cache.
+ */
+export interface HeadlessUsage {
+    promptTokens?: number;
+    completionTokens?: number;
+}
+
+/**
+ * Class of a failed run: the code, and for a context overflow the tokens the request needed and
+ * the window the server offers.
+ */
+export interface HeadlessErrorDetail {
+    code?: EmbedErrorCode;
+    requested?: number;
+    available?: number;
+}
+
+/**
+ * Tell what kind of failure an error message and its API kind describe. A context overflow is
+ * recognised by its message, whatever the status the server answered with.
+ *
+ * @param message - Error message of the server or the client
+ * @param kind - Kind of the API error, when it came from one
+ * @returns The class of the failure, empty when it matches none
+ */
+export function classifyRunError(message: string, kind?: ApiErrorKind): HeadlessErrorDetail {
+    const overflow = parseContextOverflow(message);
+    if (overflow) return { code: "context_overflow", ...overflow };
+    switch (kind) {
+        case "aborted":
+            return { code: "aborted" };
+        case "http":
+        case "auth":
+            return { code: "http" };
+        case "network":
+        case "timeout":
+        case "stream":
+            return { code: "network" };
+        default:
+            return {};
+    }
 }
 
 /**
@@ -154,16 +204,24 @@ export async function runHeadless(
     let text = "";
     let settled = false;
 
+    // The usage event is exact; the timings carry the tokens the server processed plus its cache hits
+    const usage: HeadlessUsage = {};
+    let cached = 0;
+
     const done = () => {
         if (settled || signal.aborted) return;
         settled = true;
+        const prompt = usage.promptTokens === undefined ? undefined : usage.promptTokens + cached;
+        if (prompt !== undefined || usage.completionTokens !== undefined) {
+            cb.onUsage?.({ promptTokens: prompt, completionTokens: usage.completionTokens });
+        }
         cb.onDone(text);
     };
 
-    const fail = (message: string) => {
+    const fail = (message: string, kind?: ApiErrorKind) => {
         if (settled || signal.aborted) return;
         settled = true;
-        cb.onError(message);
+        cb.onError(message, classifyRunError(message, kind));
     };
 
     try {
@@ -172,18 +230,33 @@ export async function runHeadless(
             if (event.type === "content") {
                 text += event.text;
                 cb.onChunk(event.text);
+            } else if (event.type === "usage") {
+                usage.promptTokens = event.usage.promptTokens;
+                usage.completionTokens = event.usage.completionTokens;
+                cached = 0;
+            } else if (event.type === "timings") {
+                if (event.timings.promptTokens !== undefined) {
+                    usage.promptTokens = event.timings.promptTokens;
+                    cached = event.timings.cachedTokens ?? 0;
+                }
+                if (event.timings.completionTokens !== undefined) {
+                    usage.completionTokens = event.timings.completionTokens;
+                }
             } else if (event.type === "finish") {
                 if (event.reason === "truncated") fail(endingMessage("truncated"));
                 else done();
                 return;
             } else if (event.type === "error") {
-                fail(event.error.message);
+                fail(event.error.message, event.error.kind);
                 return;
             }
         }
         done();
     } catch (error) {
         if (signal.aborted) return;
-        fail(error instanceof Error ? error.message : String(error));
+        fail(
+            error instanceof Error ? error.message : String(error),
+            error instanceof ApiError ? error.kind : undefined,
+        );
     }
 }

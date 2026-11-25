@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { parseRunOptions, runHeadless } from "@/lib/chat/headless";
-import type { ChatRequestParams, StreamEvent } from "@/types/api";
+import { classifyRunError, parseRunOptions, runHeadless } from "@/lib/chat/headless";
+import { ApiError, type ChatRequestParams, type StreamEvent } from "@/types/api";
 
 const mocks = vi.hoisted(() => ({
     calls: [] as ChatRequestParams[],
@@ -196,5 +196,130 @@ describe("parseRunOptions", () => {
 
     it("returns no keys for a message without options", () => {
         expect(parseRunOptions({ id: "x", command: "go", silent: true })).toEqual({});
+    });
+});
+
+describe("runHeadless usage and errors", () => {
+    beforeEach(() => {
+        mocks.calls.length = 0;
+        mocks.events = null;
+        mocks.ready = true;
+        mocks.listeners.clear();
+    });
+
+    /**
+     * Run to the end with the usage and the error sinks recorded in order.
+     *
+     * @param events - What the server streams
+     * @returns The calls of the usage, done and error sinks, in order
+     */
+    async function settle(events: StreamEvent[]) {
+        mocks.events = events;
+        const order: unknown[][] = [];
+        await runHeadless(
+            "go",
+            {
+                onChunk: () => {},
+                onUsage: (usage) => order.push(["usage", usage]),
+                onDone: (text) => order.push(["done", text]),
+                onError: (message, detail) => order.push(["error", message, detail]),
+            },
+            new AbortController().signal,
+        );
+        return order;
+    }
+
+    it("reports the usage of the server just before done", async () => {
+        const order = await settle([
+            { type: "content", text: "ok" },
+            { type: "usage", usage: { promptTokens: 537, completionTokens: 1 } },
+            { type: "finish", reason: "stop" },
+        ]);
+
+        expect(order).toEqual([
+            ["usage", { promptTokens: 537, completionTokens: 1 }],
+            ["done", "ok"],
+        ]);
+    });
+
+    it("counts the cached tokens of the timings with the processed ones", async () => {
+        const order = await settle([
+            { type: "usage", usage: { promptTokens: 537, completionTokens: 1 } },
+            {
+                type: "timings",
+                timings: { promptTokens: 4, cachedTokens: 533, completionTokens: 1 },
+            },
+            { type: "finish", reason: "stop" },
+        ]);
+
+        expect(order[0]).toEqual(["usage", { promptTokens: 537, completionTokens: 1 }]);
+    });
+
+    it("falls back to the timings when the server sends no usage chunk", async () => {
+        const order = await settle([
+            {
+                type: "timings",
+                timings: { promptTokens: 4, cachedTokens: 533, completionTokens: 2 },
+            },
+            { type: "finish", reason: "stop" },
+        ]);
+
+        expect(order[0]).toEqual(["usage", { promptTokens: 537, completionTokens: 2 }]);
+    });
+
+    it("reports no usage when the server sent none", async () => {
+        const order = await settle([
+            { type: "content", text: "ok" },
+            { type: "finish", reason: "stop" },
+        ]);
+
+        expect(order).toEqual([["done", "ok"]]);
+    });
+
+    it("classifies a context overflow with the counts of the server", async () => {
+        const message =
+            "request (40536 tokens) exceeds the available context size (8192 tokens), try increasing it";
+        const order = await settle([{ type: "error", error: new ApiError("http", message, 400) }]);
+
+        expect(order).toEqual([
+            ["error", message, { code: "context_overflow", requested: 40536, available: 8192 }],
+        ]);
+    });
+
+    it("classifies the other failures by their kind", async () => {
+        const order = await settle([{ type: "error", error: new ApiError("auth", "no", 401) }]);
+
+        expect(order).toEqual([["error", "no", { code: "http" }]]);
+    });
+
+    it("leaves an error without a class when nothing tells it", async () => {
+        const order = await settle([{ type: "finish", reason: "truncated" }]);
+
+        expect(order[0][0]).toBe("error");
+        expect(order[0][2]).toEqual({});
+    });
+});
+
+describe("classifyRunError", () => {
+    it("reads the llama.cpp and the vLLM phrasings of an overflow", () => {
+        expect(
+            classifyRunError(
+                "This model's maximum context length is 4096 tokens. However, you requested 5000 tokens",
+                "http",
+            ),
+        ).toEqual({ code: "context_overflow", requested: 5000, available: 4096 });
+    });
+
+    it("maps each kind to a code", () => {
+        expect(classifyRunError("x", "aborted")).toEqual({ code: "aborted" });
+        expect(classifyRunError("x", "http")).toEqual({ code: "http" });
+        expect(classifyRunError("x", "auth")).toEqual({ code: "http" });
+        expect(classifyRunError("x", "network")).toEqual({ code: "network" });
+        expect(classifyRunError("x", "timeout")).toEqual({ code: "network" });
+        expect(classifyRunError("x", "stream")).toEqual({ code: "network" });
+    });
+
+    it("has no code for an error of unknown kind", () => {
+        expect(classifyRunError("boom")).toEqual({});
     });
 });
