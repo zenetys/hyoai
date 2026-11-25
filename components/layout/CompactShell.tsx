@@ -16,12 +16,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useActivePathIds, useChatBusy } from "@/hooks/useActiveChat";
 import { useStore } from "@/hooks/useStore";
 import { sendMessage, startNewConversation } from "@/lib/actions";
-import { ChatInstanceProvider, ForegroundChatProvider } from "@/lib/chat/context";
+import { ChatInstanceProvider, ForegroundChatProvider, useChatInstance } from "@/lib/chat/context";
 import { activeChatStore } from "@/lib/chat/foreground";
 import { parseRunOptions, runHeadless } from "@/lib/chat/headless";
 import { ChatInstance } from "@/lib/chat/instance";
 import { getEmbedOrigins, isEmbedOriginAllowed } from "@/lib/config";
-import { EMBED_CAPABILITIES, EMBED_CHANNEL, type EmbedOutbound } from "@/lib/embed";
+import { buildUsage, EMBED_CAPABILITIES, EMBED_CHANNEL, type EmbedOutbound } from "@/lib/embed";
+import { createBudgetPublisher, currentWindow, lastUsage, readBudget } from "@/lib/embedBudget";
 import { setLocale } from "@/lib/stores/locale";
 import { modelsStore } from "@/lib/stores/models";
 import { settingsStore, updateSettings } from "@/lib/stores/settings";
@@ -39,7 +40,7 @@ import { CHAT_WIDTH_CLASS } from "@/types/settings";
 
 /**
  * Host postMessage channel for the widget. Accepts config (system prompt, locale, theme, starter
- * suggestions and placeholder), send, run and abort
+ * suggestions and placeholder), send, run, abort, getBudget and newConversation
  * actions on the "hyoai-embed" channel only from allowed origins (same-origin plus the
  * configured embedOrigins, which may be bare host/IP tokens), announces
  * readiness by pinging each concrete origin (never a "*" target) and acks the
@@ -48,16 +49,19 @@ import { CHAT_WIDTH_CLASS } from "@/types/settings";
  * handshake once it speaks. A message of an unknown type gets no reply at all.
  *
  * @param onSend - Sink for host-sent text, injected into the active conversation
+ * @param onNew - Starts a fresh conversation when the host asks for one
  * @returns The set of acknowledged host origins, shared with the state bridge
  */
-function useEmbedChannel(onSend: (text: string) => void): Set<string> {
+function useEmbedChannel(onSend: (text: string) => void, onNew: () => void): Set<string> {
     const sendRef = useRef(onSend);
+    const newRef = useRef(onNew);
     const [hostOrigins] = useState(() => new Set<string>());
     const [runs] = useState(() => new Map<string, AbortController>());
 
     useEffect(() => {
         sendRef.current = onSend;
-    }, [onSend]);
+        newRef.current = onNew;
+    }, [onSend, onNew]);
 
     useEffect(() => {
         const ackReady = (origin: string) => {
@@ -75,6 +79,17 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                 // A blocked target origin must not stop the others.
             }
         };
+
+        const publishBudget = createBudgetPublisher((budget) => {
+            const message: EmbedOutbound = { channel: EMBED_CHANNEL, type: "budget", ...budget };
+            for (const origin of hostOrigins) {
+                try {
+                    window.parent.postMessage(message, origin);
+                } catch {
+                    // A blocked target origin must not stop the others.
+                }
+            }
+        });
 
         const onMessage = (event: MessageEvent) => {
             if (event.origin !== window.location.origin && !isEmbedOriginAllowed(event.origin)) {
@@ -128,12 +143,27 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                         {
                             onChunk: (delta) =>
                                 emit({ channel: EMBED_CHANNEL, type: "chunk", id, delta }),
+                            onUsage: (usage) => {
+                                const message = buildUsage(
+                                    usage,
+                                    currentWindow().contextWindow,
+                                    "run",
+                                    id,
+                                );
+                                if (message) emit(message);
+                            },
                             onDone: (text) => {
                                 emit({ channel: EMBED_CHANNEL, type: "done", id, text });
                                 runs.delete(id);
                             },
-                            onError: (message) => {
-                                emit({ channel: EMBED_CHANNEL, type: "error", id, message });
+                            onError: (message, detail) => {
+                                emit({
+                                    channel: EMBED_CHANNEL,
+                                    type: "error",
+                                    id,
+                                    message,
+                                    ...detail,
+                                });
                                 runs.delete(id);
                             },
                         },
@@ -142,6 +172,25 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
                     );
                     break;
                 }
+                case "getBudget": {
+                    const origin = event.origin;
+                    void readBudget().then((budget) => {
+                        try {
+                            const message: EmbedOutbound = {
+                                channel: EMBED_CHANNEL,
+                                type: "budget",
+                                ...budget,
+                            };
+                            window.parent.postMessage(message, origin);
+                        } catch {
+                            // A blocked target origin must not stop the widget.
+                        }
+                    });
+                    break;
+                }
+                case "newConversation":
+                    newRef.current();
+                    break;
                 case "abort": {
                     const id = data.id;
                     if (typeof id !== "string") break;
@@ -162,10 +211,16 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
 
         window.addEventListener("message", onMessage);
         pingConcrete();
-        const unsubscribe = modelsStore.subscribe(pingConcrete);
+        publishBudget();
+        const unsubscribeModels = modelsStore.subscribe(() => {
+            pingConcrete();
+            publishBudget();
+        });
+        const unsubscribeSettings = settingsStore.subscribe(publishBudget);
         return () => {
             window.removeEventListener("message", onMessage);
-            unsubscribe();
+            unsubscribeModels();
+            unsubscribeSettings();
             for (const controller of runs.values()) controller.abort();
             runs.clear();
         };
@@ -186,20 +241,36 @@ function useEmbedChannel(onSend: (text: string) => void): Set<string> {
  */
 function EmbedStateBridge({ hostOrigins }: { hostOrigins: Set<string> }) {
     const generating = useChatBusy();
+    const { store } = useChatInstance();
     const lastRef = useRef<boolean | null>(null);
 
     useEffect(() => {
         if (lastRef.current === generating) return;
+        const settled = lastRef.current === true && !generating;
         lastRef.current = generating;
-        const state: EmbedOutbound = { channel: EMBED_CHANNEL, type: "state", generating };
-        for (const origin of hostOrigins) {
-            try {
-                window.parent.postMessage(state, origin);
-            } catch {
-                // A blocked target origin must not stop the others.
+
+        const post = (message: EmbedOutbound) => {
+            for (const origin of hostOrigins) {
+                try {
+                    window.parent.postMessage(message, origin);
+                } catch {
+                    // A blocked target origin must not stop the others.
+                }
             }
+        };
+
+        // The counts go first, so a host that reads them on state:false already has them
+        if (settled) {
+            const { nodes, currNode } = store.getState();
+            const usage = buildUsage(
+                lastUsage(nodes, currNode),
+                currentWindow().contextWindow,
+                "chat",
+            );
+            if (usage) post(usage);
         }
-    }, [generating, hostOrigins]);
+        post({ channel: EMBED_CHANNEL, type: "state", generating });
+    }, [generating, hostOrigins, store]);
 
     return null;
 }
@@ -358,7 +429,10 @@ function MinimalShell() {
         return () => instance.dispose();
     }, [instance]);
 
-    const hostOrigins = useEmbedChannel((text) => void instance.sendMessage(text));
+    const hostOrigins = useEmbedChannel(
+        (text) => void instance.sendMessage(text),
+        () => instance.startNewConversation(),
+    );
 
     return (
         <ChatInstanceProvider instance={instance}>
@@ -381,7 +455,7 @@ function SidebarShell() {
     const mobileOpen = useStore(uiStore, (state) => state.mobileSidebarOpen);
     const foregroundEpoch = useStore(activeChatStore, (state) => state.epoch);
 
-    const hostOrigins = useEmbedChannel((text) => void sendMessage(text));
+    const hostOrigins = useEmbedChannel((text) => void sendMessage(text), startNewConversation);
 
     return (
         <>
