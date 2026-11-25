@@ -3,14 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
-import { ComposerReply } from "@/components/chat/composer/ComposerReply";
 import { ComposerShell } from "@/components/chat/composer/ComposerShell";
-import { ModelUnavailable } from "@/components/chat/composer/ModelUnavailable";
-import { ProjectInstructionsDialog } from "@/components/chat/composer/ProjectInstructionsDialog";
-import { SystemMessageChip } from "@/components/chat/composer/SystemMessageChip";
-import { ToolsOffNotice } from "@/components/chat/composer/ToolsOffNotice";
-import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
+import { ChunkingControl } from "@/components/chat/composer/context/ChunkingControl";
+import { ComposerReply } from "@/components/chat/composer/context/ComposerReply";
+import { ModelUnavailable } from "@/components/chat/composer/context/ModelUnavailable";
+import { ProjectInstructionsDialog } from "@/components/chat/composer/context/ProjectInstructionsDialog";
+import { SystemMessageChip } from "@/components/chat/composer/context/SystemMessageChip";
+import { ToolsOffNotice } from "@/components/chat/composer/tools/ToolsOffNotice";
+import { ToolsToggle } from "@/components/chat/composer/tools/ToolsToggle";
 import { ComposerModelSelector, PaneModelSelector } from "@/components/common/model/ModelSelector";
 import {
     useActivePathIds,

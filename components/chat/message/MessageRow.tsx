@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { memo, useState } from "react";
 
-import { AttachmentThumb } from "@/components/chat/composer/ComposerAttachments";
+import { AttachmentThumb } from "@/components/chat/composer/attachments/ComposerAttachments";
 import { ActivityTrace } from "@/components/chat/message/ActivityTrace";
 import { ChapterMessage } from "@/components/chat/message/ChapterMessage";
 import { MessageActions } from "@/components/chat/message/MessageActions";

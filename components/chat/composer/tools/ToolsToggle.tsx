@@ -4,7 +4,7 @@ import { Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { ToolsPanel } from "@/components/chat/composer/ToolsPanel";
+import { ToolsPanel } from "@/components/chat/composer/tools/ToolsPanel";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

@@ -4,7 +4,7 @@ import { ArrowUpRight, TextCursorInput, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
-import { SuggestionIcon } from "@/components/chat/composer/SuggestionIcon";
+import { SuggestionIcon } from "@/components/chat/composer/suggestions/SuggestionIcon";
 import { Button } from "@/components/ui/button";
 import { directSuggestions, isCategory, type SuggestionsPlacement } from "@/lib/suggestions";
 import { cn } from "@/lib/utils";

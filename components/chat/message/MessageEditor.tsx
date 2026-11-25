@@ -4,8 +4,8 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
-import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
+import { AttachmentMenu } from "@/components/chat/composer/attachments/AttachmentMenu";
+import { ComposerAttachments } from "@/components/chat/composer/attachments/ComposerAttachments";
 import { Button } from "@/components/ui/button";
 import { ConfirmHint, confirmOnKey, confirmProps } from "@/components/ui/confirm";
 import { Textarea } from "@/components/ui/textarea";

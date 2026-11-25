@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Composer } from "@/components/chat/composer/Composer";
-import { SelectionReply } from "@/components/chat/composer/SelectionReply";
+import { SelectionReply } from "@/components/chat/composer/context/SelectionReply";
 import { MessageList } from "@/components/chat/message/MessageList";
 import { ChatEmptyState } from "@/components/chat/view/ChatEmptyState";
 import { ContextBar } from "@/components/chat/view/ContextBar";

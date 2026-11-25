@@ -4,10 +4,10 @@ import { ArrowUp, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { AttachmentMenu } from "@/components/chat/composer/AttachmentMenu";
-import { ComposerAttachments } from "@/components/chat/composer/ComposerAttachments";
-import { RollingPlaceholder } from "@/components/chat/composer/RollingPlaceholder";
-import { Suggestions } from "@/components/chat/composer/Suggestions";
+import { AttachmentMenu } from "@/components/chat/composer/attachments/AttachmentMenu";
+import { ComposerAttachments } from "@/components/chat/composer/attachments/ComposerAttachments";
+import { RollingPlaceholder } from "@/components/chat/composer/suggestions/RollingPlaceholder";
+import { Suggestions } from "@/components/chat/composer/suggestions/Suggestions";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

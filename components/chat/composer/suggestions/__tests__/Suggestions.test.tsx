@@ -2,7 +2,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { Suggestions } from "@/components/chat/composer/Suggestions";
+import { Suggestions } from "@/components/chat/composer/suggestions/Suggestions";
 import type { SuggestionEntry } from "@/types/server";
 
 const messages = {

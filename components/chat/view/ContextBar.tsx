@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
 
-import { CompactionControl } from "@/components/chat/composer/CompactionControl";
+import { CompactionControl } from "@/components/chat/composer/context/CompactionControl";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Progress } from "@/components/ui/progress";
 import { useIsCoarsePointer } from "@/hooks/useMediaQuery";

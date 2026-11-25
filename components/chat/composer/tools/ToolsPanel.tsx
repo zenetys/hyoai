@@ -4,7 +4,7 @@ import { Settings, ShieldQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { ToolsProviderRow } from "@/components/chat/composer/ToolsProviderRow";
+import { ToolsProviderRow } from "@/components/chat/composer/tools/ToolsProviderRow";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";

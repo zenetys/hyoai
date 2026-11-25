@@ -4,8 +4,8 @@ import { PenLine, ShieldQuestion, Square, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { ChunkingControl } from "@/components/chat/composer/ChunkingControl";
-import { ToolsToggle } from "@/components/chat/composer/ToolsToggle";
+import { ChunkingControl } from "@/components/chat/composer/context/ChunkingControl";
+import { ToolsToggle } from "@/components/chat/composer/tools/ToolsToggle";
 import { MessageList } from "@/components/chat/message/MessageList";
 import { ContextBar } from "@/components/chat/view/ContextBar";
 import { PaneModelSelector } from "@/components/common/model/ModelSelector";
