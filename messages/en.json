@@ -558,7 +558,7 @@
         },
         "data": {
             "exportTitle": "Export",
-            "exportDescription": "Download your conversations as native JSON, OpenAI-format JSONL, Markdown, or the llama.cpp web UI format.",
+            "exportDescription": "Download your conversations as JSON, JSONL, Markdown or the llama.cpp format.",
             "projectsNotExported": "Projects are not exported: only conversations are, without their project.",
             "exportOpen": "Export conversations",
             "exportDialogTitle": "Export conversations",
@@ -587,6 +587,14 @@
             "storageManage": "Open storage settings",
             "storageHint": "Conversations are compressed in the browser localStorage.",
             "storageDocuments": "Project documents: {size}, kept in IndexedDB and not counted above.",
+            "deleteTitle": "Delete",
+            "deleteDescription": "Choose conversations to delete, or clear all data.",
+            "deleteOpen": "Delete conversations",
+            "deleteDialogTitle": "Delete conversations",
+            "deleteDialogDescription": "Choose the conversations to delete for good from this browser. Unchecked ones are kept.",
+            "deleteAllWarning": "Every conversation is checked: they will be deleted for good from this browser.",
+            "deleteSelected": "Delete ({count})",
+            "deleteDone": "{count, plural, one {# conversation deleted} other {# conversations deleted}}",
             "clearAll": "Clear everything",
             "clearAllTitle": "Clear all data",
             "clearAllDescription": "Conversations, projects, documents and settings will be permanently removed from this browser."

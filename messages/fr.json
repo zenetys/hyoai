@@ -558,7 +558,7 @@
         },
         "data": {
             "exportTitle": "Exporter",
-            "exportDescription": "Télécharge tes conversations en JSON natif, en JSONL au format OpenAI, en Markdown ou au format de l'interface web llama.cpp.",
+            "exportDescription": "Télécharge tes conversations en JSON, JSONL, Markdown ou au format llama.cpp.",
             "projectsNotExported": "Les projets ne sont pas exportés : seules les conversations le sont, sans leur projet.",
             "exportOpen": "Exporter des conversations",
             "exportDialogTitle": "Exporter des conversations",
@@ -587,6 +587,14 @@
             "storageManage": "Ouvrir les réglages de stockage",
             "storageHint": "Les conversations sont compressées dans le localStorage du navigateur.",
             "storageDocuments": "Documents des projets : {size}, conservés dans IndexedDB et non comptés ci-dessus.",
+            "deleteTitle": "Supprimer",
+            "deleteDescription": "Choisis des conversations à supprimer, ou efface toutes les données.",
+            "deleteOpen": "Supprimer des conversations",
+            "deleteDialogTitle": "Supprimer des conversations",
+            "deleteDialogDescription": "Choisis les conversations à supprimer définitivement de ce navigateur. Les éléments décochés sont conservés.",
+            "deleteAllWarning": "Toutes les conversations sont cochées : elles seront supprimées définitivement de ce navigateur.",
+            "deleteSelected": "Supprimer ({count})",
+            "deleteDone": "{count, plural, one {# conversation supprimée} other {# conversations supprimées}}",
             "clearAll": "Tout effacer",
             "clearAllTitle": "Effacer toutes les données",
             "clearAllDescription": "Conversations, projets, documents et paramètres seront définitivement supprimés de ce navigateur."
